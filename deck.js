@@ -30,9 +30,17 @@ function shuffle(array) {
 function initDeck(){
     var deck = [];
     var suits = ["hearts", "diamonds", "spades", "clubs"];
+    var edgeCards = {
+        1: "ace",
+        11: "jack",
+        12: "queen",
+        13: "king"
+    };
     suits.forEach(function(suit){
         for (var i = 0; i < 13; i++){
-            deck.push(new Card(suit, i+1));
+            var cardValue = edgeCards[i+1] || i+1;
+            var pathToImg = "img/" + i+1 + "_of_" + suit +".svg";
+            deck.push(new Card(suit, i+1, "img/" + pathToImg));
         }
     });
     return shuffle(deck);
