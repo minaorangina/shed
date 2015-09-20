@@ -1,0 +1,24 @@
+{
+  "name": "shed",
+  "version": "1.0.0",
+  "description": "interactive card game",
+  "main": "server.js",
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/minaorangina/Shed.git"
+  },
+  "keywords": [
+    "game",
+    "javascript",
+    "realtime"
+  ],
+  "author": "minaorangina",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/minaorangina/Shed/issues"
+  },
+  "homepage": "https://github.com/minaorangina/Shed#readme"
+}
