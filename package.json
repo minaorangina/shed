@@ -20,5 +20,8 @@
   "bugs": {
     "url": "https://github.com/minaorangina/Shed/issues"
   },
-  "homepage": "https://github.com/minaorangina/Shed#readme"
+  "homepage": "https://github.com/minaorangina/Shed#readme",
+  "dependencies": {
+    "browserify": "^11.1.0"
+  }
 }
