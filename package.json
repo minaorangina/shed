@@ -4,7 +4,8 @@
   "description": "interactive card game",
   "main": "server.js",
   "scripts": {
-    "test": "test"
+    "test": "test",
+    "nodemon": "server.js"
   },
   "repository": {
     "type": "git",
@@ -24,5 +25,8 @@
   "dependencies": {
     "browserify": "^11.1.0",
     "hapi": "^10.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^1.7.0"
   }
 }
