@@ -16,6 +16,14 @@ var div = document.getElementsByClassName("pic")[0];
 module.exports = displayCards;
 
 },{}],2:[function(require,module,exports){
+var deck = require('./initDeck');
+var displayCards = require('./displayCards');
+var faceDownCards = deck.slice(0,3);
+var handCards = deck.slice(0,3);
+displayCards(faceDownCards);
+displayCards(handCards);
+
+},{"./displayCards":1,"./initDeck":3}],3:[function(require,module,exports){
 var shuffle = require('./shuffle');
 
 function Card(suitName, value, image){
@@ -48,11 +56,7 @@ function initDeck(){
 
 module.exports = initDeck();
 
-},{"./shuffle":5}],3:[function(require,module,exports){
-
-},{}],4:[function(require,module,exports){
-arguments[4][3][0].apply(exports,arguments)
-},{"dup":3}],5:[function(require,module,exports){
+},{"./shuffle":4}],4:[function(require,module,exports){
 function shuffle(array) {
   var currentIndex = array.length,
       temporaryValue,
@@ -74,10 +78,4 @@ function shuffle(array) {
 }
 module.exports = shuffle;
 
-},{}],6:[function(require,module,exports){
-var deck = require('./initDeck');
-var displayCards = require('./displayCards');
-
-displayCards(deck.slice(0,3));
-
-},{"./displayCards":1,"./initDeck":2}]},{},[1,2,3,4,5,6]);
+},{}]},{},[2]);
