@@ -29,4 +29,4 @@ function initDeck(){
     return shuffle(deck);
 }
 
-module.exports = initDeck;
+module.exports = initDeck();
