@@ -39,11 +39,16 @@ function initDeck(){
     suits.forEach(function(suit){
         for (var i = 0; i < 13; i++){
             var cardValue = edgeCards[i+1] || i+1;
-            var pathToImg = "img/" + i+1 + "_of_" + suit +".svg";
-            deck.push(new Card(suit, i+1, "img/" + pathToImg));
+            var pathToImg = "img/" + cardValue + "_of_" + suit +".svg";
+            console.log(pathToImg);
+            deck.push(new Card(suit, i+1, pathToImg));
         }
     });
     return shuffle(deck);
 }
 var deck = initDeck();
-console.log(deck);
+var img = document.createElement("img");
+img.src = deck[0].image;
+console.log(img.src);
+var div = document.getElementsByClassName("pic")[0];
+div.appendChild(img);
