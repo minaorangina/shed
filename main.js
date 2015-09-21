@@ -1,7 +1,8 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-var deck = require('./initDeck');
+
 
 function displayCards(cardArray) {
+    console.log(cardArray);
     cardArray.forEach(function(card) {
         var img = document.createElement("img");
         img.src = card.image;
@@ -11,9 +12,10 @@ function displayCards(cardArray) {
 }
 
 var div = document.getElementsByClassName("pic")[0];
-displayCards(deck);
 
-},{"./initDeck":2}],2:[function(require,module,exports){
+module.exports = displayCards;
+
+},{}],2:[function(require,module,exports){
 var shuffle = require('./shuffle');
 
 function Card(suitName, value, image){
@@ -38,7 +40,6 @@ function initDeck(){
         for (var i = 0; i < 13; i++){
             var cardValue = edgeCards[i+1] || i+1;
             var pathToImg = "img/" + cardValue + "_of_" + suit +".svg";
-            console.log(pathToImg);
             deck.push(new Card(suit, i+1, pathToImg));
         }
     });
@@ -47,7 +48,11 @@ function initDeck(){
 
 module.exports = initDeck();
 
-},{"./shuffle":3}],3:[function(require,module,exports){
+},{"./shuffle":5}],3:[function(require,module,exports){
+
+},{}],4:[function(require,module,exports){
+arguments[4][3][0].apply(exports,arguments)
+},{"dup":3}],5:[function(require,module,exports){
 function shuffle(array) {
   var currentIndex = array.length,
       temporaryValue,
@@ -69,4 +74,10 @@ function shuffle(array) {
 }
 module.exports = shuffle;
 
-},{}]},{},[1]);
+},{}],6:[function(require,module,exports){
+var deck = require('./initDeck');
+var displayCards = require('./displayCards');
+
+displayCards(deck.slice(0,3));
+
+},{"./displayCards":1,"./initDeck":2}]},{},[1,2,3,4,5,6]);

@@ -22,7 +22,6 @@ function initDeck(){
         for (var i = 0; i < 13; i++){
             var cardValue = edgeCards[i+1] || i+1;
             var pathToImg = "img/" + cardValue + "_of_" + suit +".svg";
-            console.log(pathToImg);
             deck.push(new Card(suit, i+1, pathToImg));
         }
     });

@@ -1,6 +1,7 @@
-var deck = require('./initDeck');
+
 
 function displayCards(cardArray) {
+    console.log(cardArray);
     cardArray.forEach(function(card) {
         var img = document.createElement("img");
         img.src = card.image;
@@ -10,4 +11,5 @@ function displayCards(cardArray) {
 }
 
 var div = document.getElementsByClassName("pic")[0];
-displayCards(deck);
+
+module.exports = displayCards;
