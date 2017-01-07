@@ -1,2 +1,7 @@
 #node modules
 node_modules/
+
+#sass cache
+public/css/.sass-cache/
+.DS_Store
+npm-debug.log
