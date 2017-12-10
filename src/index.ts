@@ -1,4 +1,6 @@
-import func from './fake';
+import Deck from "./deck";
 
-const message: string = 'This is my message'
-func(message);
+const message: string = "This is my message";
+console.log(new Deck().cards);
+
+class GameEngine {}
