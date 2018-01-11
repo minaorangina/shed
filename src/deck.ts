@@ -11,9 +11,7 @@ class Deck {
         this.cards.push({
           value,
           suit,
-          name: Deck.generateName(value, suit),
-          visibleToAll: false,
-          inPlay: true
+          name: Deck.generateName(value, suit)
         });
         value++;
       } while (value <= 13);
@@ -53,6 +51,33 @@ class Deck {
       this.cards[toShuffle] = this.cards[randCard];
       this.cards[randCard] = tmp;
     }
+  }
+
+  order() {
+    this.cards = this.cards.sort(this.orderByProperty(["suit", "value"]));
+  }
+
+  private orderByProperty(props: Array<any>) {
+    const currentArg = props[0];
+    const restArgs = props.slice(1);
+    const self = this;
+    return function(a, b) {
+      let equality;
+      if (a[currentArg] < b[currentArg]) {
+        equality = -1;
+      } else if (a[currentArg] > b[currentArg]) {
+        equality = 1;
+      } else {
+        equality = 0;
+      }
+      // if of equal value, and there are still properties to compare by
+      // recall the function, comparing the same two values,
+      // but compare with the next property
+      if (equality === 0 && props.length > 1) {
+        return self.orderByProperty.call(self, restArgs)(a, b);
+      }
+      return equality;
+    };
   }
 }
 

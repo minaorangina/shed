@@ -1,15 +1,13 @@
 module.exports = {
-  entry: './src/index.ts',
+  entry: "./src/index.ts",
   output: {
-    filename: 'dist/bundle.js'
+    filename: "dist/index.js"
   },
-  devtool: 'source-map', // or inline-source-map?  
+  devtool: "source-map", // or inline-source-map?
   resolve: {
-      extensions: ['.ts', '.js', '.json']
+    extensions: [".ts", ".js", ".json"]
   },
   module: {
-    rules: [
-      { test: /\.ts$/, use: 'awesome-typescript-loader' }
-    ]
+    rules: [{ test: /\.ts$/, use: "awesome-typescript-loader" }]
   }
-}
+};

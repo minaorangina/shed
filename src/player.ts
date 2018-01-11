@@ -1,6 +1,6 @@
 import { Card } from "./types";
 
-class Player {
+export default class Player {
   name: string;
   tableCards: Card[];
   handCards: Card[];

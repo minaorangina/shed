@@ -1,6 +1,5 @@
-import Deck from "./deck";
+import GameEngine from "./game-engine";
 
 const message: string = "This is my message";
-console.log(new Deck().cards);
-
-class GameEngine {}
+const state = {};
+console.log(new GameEngine([{ name: "Ed" }, { name: "Emma" }]));

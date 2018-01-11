@@ -2,8 +2,8 @@ export interface Card {
   value: number;
   suit: string;
   name: string;
-  visibleToAll: boolean;
-  inPlay: boolean;
+  visibleToAll?: boolean;
+  inPlay?: boolean;
 }
 
 export enum Suit {

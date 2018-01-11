@@ -5,17 +5,14 @@
   "main": "index.js",
   "scripts": {
     "start": "node index",
+    "test": "jest --watchAll --no-cache",
     "webpack": "webpack -d --watch"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/minaorangina/Shed.git"
   },
-  "keywords": [
-    "game",
-    "javascript",
-    "realtime"
-  ],
+  "keywords": ["game", "javascript", "realtime"],
   "author": "minaorangina",
   "license": "ISC",
   "bugs": {
@@ -34,16 +31,11 @@
     "ts-jest": "^21.2.4"
   },
   "jest": {
+    "roots": ["<rootDir>/spec"],
     "transform": {
       "^.+\\.tsx?$": "ts-jest"
     },
     "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
-    "moduleFileExtensions": [
-      "ts",
-      "tsx",
-      "js",
-      "jsx",
-      "json"
-    ]
+    "moduleFileExtensions": ["ts", "tsx", "js", "jsx", "json"]
   }
 }
