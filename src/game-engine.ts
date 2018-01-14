@@ -10,10 +10,10 @@ export default class GameEngine {
     if (numPlayers < 2) {
       throw new RangeError("You need at least 2 players to play :)");
     }
-    this.initGame(players);
+    this.init(players);
   }
 
-  initGame(players: Array<any>) {
+  init(players: Player[]) {
     this.game = new Game(players);
   }
 }
@@ -26,7 +26,7 @@ export class Game {
     this.dealCards(players);
   }
 
-  dealCards(players: Array<any>) {
+  dealCards(players: Player[]) {
     const deck = new Deck();
     const cardsPerPlayer = 9;
     this.unplayed = deck.cards.slice(cardsPerPlayer * players.length);
@@ -34,10 +34,8 @@ export class Game {
     this.players = players.map((player, i) => {
       const startIndex = cardsPerPlayer * i;
       const endIndex = startIndex + cardsPerPlayer;
-      return new Player({
-        name: player.name,
-        cards: deck.cards.slice(startIndex, endIndex)
-      });
+      player.startingHand = deck.cards.slice(startIndex, endIndex);
+      return player;
     });
   }
 }

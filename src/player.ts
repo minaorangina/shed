@@ -5,9 +5,11 @@ export default class Player {
   tableCards: Card[];
   handCards: Card[];
 
-  constructor({ name, cards }) {
+  constructor({ name }) {
     this.name = name;
-    // separate hand cards and table cards
+  }
+
+  set startingHand(cards: Card[]) {
     this.tableCards = cards.slice(0, 6);
     let handCards = cards.slice(6, cards.length);
 
@@ -17,7 +19,7 @@ export default class Player {
     this.handCards = handCards;
   }
 
-  getCards() {
+  get cards() {
     return {
       tableCards: this.tableCards,
       handCards: this.handCards

@@ -1,7 +1,8 @@
 import GameEngine from "../src/game-engine";
+import Player from "../src/player";
 
 describe("Game Engine", () => {
-  const players = [{ name: "Nancy" }, { name: "Mae" }];
+  const players = [new Player({ name: "Nancy" }), new Player({ name: "Mae" })];
   const engine = new GameEngine(players);
 
   describe("Initial state", () => {

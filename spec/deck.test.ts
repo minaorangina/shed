@@ -1,7 +1,7 @@
 import Deck from "../src/deck";
 import { orderedCards } from "./fixtures";
 
-describe.only("Deck", () => {
+describe("Deck", () => {
   const deck = new Deck();
   deck.order();
 
