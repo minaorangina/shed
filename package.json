@@ -2,20 +2,17 @@
   "name": "shed",
   "version": "1.0.0",
   "description": "interactive card game",
-  "main": "server.js",
+  "main": "index.js",
   "scripts": {
-    "test": "test",
-    "nodemon": "server.js"
+    "start": "node index",
+    "test": "jest --watchAll --no-cache",
+    "webpack": "webpack -d --watch"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/minaorangina/Shed.git"
   },
-  "keywords": [
-    "game",
-    "javascript",
-    "realtime"
-  ],
+  "keywords": ["game", "javascript", "realtime"],
   "author": "minaorangina",
   "license": "ISC",
   "bugs": {
@@ -23,10 +20,22 @@
   },
   "homepage": "https://github.com/minaorangina/Shed#readme",
   "dependencies": {
-    "browserify": "^11.1.0",
-    "hapi": "^10.0.0"
+    "typescript": "^2.6.2",
+    "webpack": "^3.9.1"
   },
   "devDependencies": {
-    "nodemon": "^1.7.0"
+    "@types/jest": "^21.1.8",
+    "@types/node": "^8.0.54",
+    "awesome-typescript-loader": "^3.4.1",
+    "jest": "^21.2.1",
+    "ts-jest": "^21.2.4"
+  },
+  "jest": {
+    "roots": ["<rootDir>/spec"],
+    "transform": {
+      "^.+\\.tsx?$": "ts-jest"
+    },
+    "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
+    "moduleFileExtensions": ["ts", "tsx", "js", "jsx", "json"]
   }
 }
