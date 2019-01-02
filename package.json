@@ -4,21 +4,20 @@
   "description": "interactive card game",
   "main": "index.js",
   "scripts": {
-    "start": "node index",
     "test": "jest --watchAll --no-cache",
     "webpack": "webpack -d --watch"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/minaorangina/Shed.git"
+    "url": "git+https://github.com/minaorangina/shed.git"
   },
   "keywords": ["game", "javascript", "realtime"],
   "author": "minaorangina",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/minaorangina/Shed/issues"
+    "url": "https://github.com/minaorangina/shed/issues"
   },
-  "homepage": "https://github.com/minaorangina/Shed#readme",
+  "homepage": "https://github.com/minaorangina/shed#readme",
   "dependencies": {
     "typescript": "^2.6.2",
     "webpack": "^3.9.1"

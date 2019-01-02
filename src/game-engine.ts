@@ -3,27 +3,21 @@ import { Card } from "./types";
 import Player from "./player";
 
 export default class GameEngine {
-  game: Game;
-
-  constructor(players = []) {
-    let numPlayers = players.length;
-    if (numPlayers < 2) {
-      throw new RangeError("You need at least 2 players to play :)");
-    }
-    this.init(players);
-  }
-
-  init(players: Player[]) {
-    this.game = new Game(players);
-  }
-}
-
-export class Game {
   players: Player[];
   unplayed: Card[];
 
-  constructor(players) {
+  constructor(playerNames: string[]) {
+    let numPlayers = playerNames.length;
+    if (numPlayers < 2) {
+      throw new RangeError("You need at least 2 players to play :)");
+    }
+
+    const players = playerNames.map(name => {
+      return new Player(name);
+    });
+
     this.dealCards(players);
+    this.players = players;
   }
 
   dealCards(players: Player[]) {
@@ -31,11 +25,30 @@ export class Game {
     const cardsPerPlayer = 9;
     this.unplayed = deck.cards.slice(cardsPerPlayer * players.length);
 
-    this.players = players.map((player, i) => {
+    players.forEach((player, i) => {
       const startIndex = cardsPerPlayer * i;
       const endIndex = startIndex + cardsPerPlayer;
-      player.startingHand = deck.cards.slice(startIndex, endIndex);
-      return player;
+      const cards = deck.cards.slice(startIndex, endIndex);
+
+      const handCards = cards.slice(0, 3);
+      const visibleTableCards = cards.slice(3, 6);
+      visibleTableCards.forEach(card => (card.visibleToAll = true));
+      const hiddenTableCards = cards.slice(6, 9);
+
+      player.setCards({
+        handCards,
+        visibleTableCards,
+        hiddenTableCards
+      });
+    });
+  }
+
+  getCardsInPlay() {
+    return this.players.map(p => {
+      return {
+        hand: p.hand,
+        tableCards: p.getTableCards()
+      };
     });
   }
 }

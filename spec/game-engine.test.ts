@@ -1,9 +1,10 @@
 import GameEngine from "../src/game-engine";
 import Player from "../src/player";
+import { orderedCards } from "./fixtures";
 
 describe("Game Engine", () => {
-  const players = [new Player({ name: "Nancy" }), new Player({ name: "Mae" })];
-  const engine = new GameEngine(players);
+  const playerNames = ["Nancy", "Mae"];
+  const engine = new GameEngine(playerNames);
 
   describe("Initial state", () => {
     test("Requires min 2 players", () => {
@@ -14,18 +15,28 @@ describe("Game Engine", () => {
     });
 
     test("Correct number of unplayed cards", () => {
-      const expected = 52 - players.length * 9;
-      expect(engine.game.unplayed.length).toBe(expected);
+      const expected = 52 - playerNames.length * 9;
+      expect(engine.unplayed.length).toBe(expected);
     });
 
     test("Players dealt correct number of cards", () => {
-      expect(engine.game.players.length).toBe(players.length);
-      engine.game.players.forEach(player => {
-        expect(player.tableCards.length).toBe(6);
-      });
-      engine.game.players.forEach(player => {
-        expect(player.handCards.length).toBe(3);
+      const cardsInPlay = engine.getCardsInPlay();
+      cardsInPlay.forEach(playerCards => {
+        expect(playerCards.hand.length).toEqual(3);
+        expect(playerCards.tableCards.length).toEqual(6);
       });
     });
+
+    test("Players' hand cards are visible", () => {
+      const cardsInPlay = engine.getCardsInPlay();
+      cardsInPlay.forEach(playerCards => {
+        playerCards.hand.forEach(card => {
+          expect(card.visibleToAll).toBeTruthy()
+        })
+      });
+    });
+  });
+  test("dummy test", () => {
+    expect(1 + 1).toEqual(2);
   });
 });

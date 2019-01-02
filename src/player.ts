@@ -1,28 +1,46 @@
-import { Card } from "./types";
+import { Card, HandState } from "./types";
+import { getNextHandState } from "./hand-state-machine";
 
 export default class Player {
   name: string;
-  tableCards: Card[];
+  handState: HandState;
+  visibleTableCards: Card[];
+  hiddenTableCards: Card[];
   handCards: Card[];
 
-  constructor({ name }) {
+  constructor(name: string) {
     this.name = name;
   }
 
-  set startingHand(cards: Card[]) {
-    this.tableCards = cards.slice(0, 6);
-    let handCards = cards.slice(6, cards.length);
-
-    for (let i = 0; i < 3; i++) {
-      handCards[i].visibleToAll = true;
-    }
+  setCards({
+    handCards,
+    visibleTableCards,
+    hiddenTableCards,
+    handState = HandState.A
+  }) {
     this.handCards = handCards;
+    this.visibleTableCards = visibleTableCards;
+    this.hiddenTableCards = hiddenTableCards;
+    this.handState = handState;
   }
 
-  get cards() {
-    return {
-      tableCards: this.tableCards,
-      handCards: this.handCards
-    };
+  // updating the hand in a turn
+  set hand(cards: Card[]) {
+    this.handCards = this.handCards.concat(cards);
+
+    const cardsRemaining = true;
+
+    this.handState = getNextHandState(this.handState, {
+      cardsRemaining,
+      nextHandCount: this.handCards.length
+    });
+  }
+
+  get hand() {
+    return [...this.handCards];
+  }
+
+  getTableCards() {
+    return [...this.visibleTableCards, ...this.hiddenTableCards]
   }
 }
