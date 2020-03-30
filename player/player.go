@@ -2,7 +2,7 @@ package player
 
 // Player represents a player in the game
 type Player struct {
-	name string
+	Name string
 }
 
 // New constructs a new player
