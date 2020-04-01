@@ -6,14 +6,25 @@ import (
 	"github.com/minaorangina/shed/player"
 )
 
-// gamePlayStatus represents the status of the current game
+// gameState represents the state of the current game
 // idle -> no game play (pre game and post game)
 // inProgress -> game in progress
 // paused -> game is paused
-type gamePlayStatus int
+type gameState int
+
+func (gps gameState) String() string {
+	if gps == 0 {
+		return "idle"
+	} else if gps == 1 {
+		return "inProgress"
+	} else if gps == 2 {
+		return "paused"
+	}
+	return ""
+}
 
 const (
-	idle gamePlayStatus = iota
+	idle gameState = iota
 	inProgress
 	paused
 )
@@ -29,7 +40,7 @@ const (
 
 // GameEngine represents the engine of the game
 type GameEngine struct {
-	gameplayStatus gamePlayStatus
+	gameState gameState
 	// should player be in its own package?
 	players []player.Player
 	stage   stage
@@ -40,6 +51,10 @@ func New(playerNames []string) (GameEngine, error) {
 	if len(playerNames) < 2 {
 		return GameEngine{}, fmt.Errorf("Could not construct GameEngine: minimum 2 players required (supplied %d)", len(playerNames))
 	}
+	if len(playerNames) > 4 {
+		return GameEngine{}, fmt.Errorf("Could not construct GameEngine: maximum of 4 players allowed (supplied %d)", len(playerNames))
+	}
+
 	players, err := namesToPlayers(playerNames)
 	if err != nil {
 		return GameEngine{}, err
@@ -50,6 +65,25 @@ func New(playerNames []string) (GameEngine, error) {
 	}
 
 	return engine, nil
+}
+
+// Init initialises a new game
+func (ge *GameEngine) Init() error {
+	if ge.gameState != idle {
+		return fmt.Errorf("Cannot call `GameEngine.Init()` when game is not idle (currently %s)", ge.gameState.String())
+	}
+	ge.start()
+
+	return nil
+}
+
+// GameState returns the current gameplay status
+func (ge *GameEngine) GameState() string {
+	return ge.gameState.String()
+}
+
+func (ge *GameEngine) start() {
+	ge.gameState = inProgress
 }
 
 func namesToPlayers(names []string) ([]player.Player, error) {
