@@ -1,6 +1,9 @@
 package deck
 
-import "fmt"
+import (
+	"math/rand"
+	"time"
+)
 
 // Deck represents a deck of cards
 type Deck []Card
@@ -20,5 +23,10 @@ func New() Deck {
 
 // Shuffle shuffles the deck of cards
 func (d *Deck) Shuffle() {
-
+	rand.Seed(time.Now().UnixNano())
+	actualDeck := (*d)
+	for i := len(actualDeck) - 1; i > 0; i-- {
+		randomNumber := rand.Intn(i)
+		actualDeck[i], actualDeck[randomNumber] = actualDeck[randomNumber], actualDeck[i]
+	}
 }
