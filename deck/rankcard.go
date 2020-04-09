@@ -1,7 +1,6 @@
 package deck
 
 import (
-	"errors"
 	"fmt"
 )
 
@@ -46,11 +45,11 @@ type RankCard struct {
 }
 
 // NewRankCard constructs a card
-func NewRankCard(rank, suit int) (Card, error) {
+func NewRankCard(rank, suit int) Card {
 	if rank < 0 || rank > int(King) || suit < 0 || suit > int(Spades) {
-		return RankCard{}, errors.New("arguments out of range")
+		panic("arguments out of range")
 	}
-	return RankCard{rank: Rank(rank), suit: Suit(suit)}, nil
+	return RankCard{rank: Rank(rank), suit: Suit(suit)}
 }
 
 // Rank returns a card's rank

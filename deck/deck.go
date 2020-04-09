@@ -1,5 +1,7 @@
 package deck
 
+import "fmt"
+
 // Deck represents a deck of cards
 type Deck []Card
 
@@ -9,7 +11,7 @@ func New() Deck {
 	cards := []Card{}
 	for suit := range suitNames {
 		for rank := range rankNames {
-			c, _ := NewRankCard(rank, suit)
+			c := NewRankCard(rank, suit)
 			cards = append(cards, c)
 		}
 	}
