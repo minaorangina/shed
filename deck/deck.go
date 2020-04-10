@@ -30,3 +30,15 @@ func (d *Deck) Shuffle() {
 		actualDeck[i], actualDeck[randomNumber] = actualDeck[randomNumber], actualDeck[i]
 	}
 }
+
+// Deal deals n number of cards from the deck, until it is empty
+func (d *Deck) Deal(n int) []Card {
+	numCardsInDeck := len(*d)
+	startingIndex := numCardsInDeck - n
+	if startingIndex < 0 {
+		return []Card{}
+	}
+	subSlice := (*d)[startingIndex:numCardsInDeck]
+	*d = (*d)[:startingIndex]
+	return subSlice
+}
