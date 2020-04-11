@@ -9,6 +9,9 @@ import (
 func failureMessage(expected, actual string) string {
 	return fmt.Sprintf("\nExpected: %s\nActual: %s", expected, actual)
 }
+func tableFailureMessage(testName, expected, actual string) string {
+	return fmt.Sprintf("%s\nExpected: %s\nActual: %s", testName, expected, actual)
+}
 func TestRankCard(t *testing.T) {
 	// lowest value card
 	lowestValueCard := NewRankCard(0, 0)

@@ -37,8 +37,12 @@ func TestDeck(t *testing.T) {
 		}
 	}()
 
-	// Take a card off the deck
 	deckToRemoveFrom := New()
+	type deckTest struct {
+		testName             string
+		numCardsToRemove     int
+		expectedNumRemaining int
+	}
 
 	// Empty list of cards
 	zeroCards := deckToRemoveFrom.Deal(0)
@@ -46,62 +50,25 @@ func TestDeck(t *testing.T) {
 		t.Errorf(failureMessage(strconv.Itoa(0), strconv.Itoa(len(zeroCards))))
 	}
 
-	numCardsToRemove := 1
-	expectedNumRemaining := 51
-	expectedCardName := deckToRemoveFrom[expectedNumRemaining].String()
-	oneCard := deckToRemoveFrom.Deal(numCardsToRemove)
-	if len(oneCard) != numCardsToRemove {
-		t.Errorf(failureMessage(strconv.Itoa(numCardsToRemove), strconv.Itoa(len(oneCard))))
-	}
-	if oneCard[0].String() != expectedCardName {
-		t.Errorf(failureMessage(expectedCardName, oneCard[0].String()))
-	}
-	if len(deckToRemoveFrom) != expectedNumRemaining {
-		t.Errorf(failureMessage(strconv.Itoa(expectedNumRemaining), strconv.Itoa(len(deckToRemoveFrom))))
+	deckTests := []deckTest{
+		{"remove first card", 1, 51},
+		{"remove second card", 1, 50},
+		{"remove four cards", 4, 46},
+		{"remove all but one card", 45, 1},
+		{"remove last card", 1, 0},
 	}
 
-	// Take off another card from the same deck
-	numCardsToRemove = 1
-	expectedNumRemaining = 50
-	expectedCardName = deckToRemoveFrom[expectedNumRemaining].String()
-	oneCard = deckToRemoveFrom.Deal(numCardsToRemove)
-	if len(oneCard) != numCardsToRemove {
-		t.Errorf(failureMessage(strconv.Itoa(numCardsToRemove), strconv.Itoa(len(oneCard))))
-	}
-	if oneCard[0].String() != expectedCardName {
-		t.Errorf(failureMessage(expectedCardName, oneCard[0].String()))
-	}
-	if len(deckToRemoveFrom) != expectedNumRemaining {
-		t.Errorf(failureMessage(strconv.Itoa(expectedNumRemaining), strconv.Itoa(len(deckToRemoveFrom))))
-	}
-
-	// Take off 50 cards
-	numCardsToRemove = 49
-	expectedNumRemaining = 1
-	expectedCardName = deckToRemoveFrom[expectedNumRemaining].String()
-	removedCards := deckToRemoveFrom.Deal(numCardsToRemove)
-	if len(removedCards) != numCardsToRemove {
-		t.Errorf(failureMessage(strconv.Itoa(numCardsToRemove), strconv.Itoa(len(removedCards))))
-	}
-	if len(deckToRemoveFrom) != expectedNumRemaining {
-		t.Errorf(failureMessage(strconv.Itoa(expectedNumRemaining), strconv.Itoa(len(deckToRemoveFrom))))
-	}
-
-	// Take off last card
-	numCardsToRemove = 1
-	expectedNumRemaining = 0
-	expectedCardName = deckToRemoveFrom[expectedNumRemaining].String()
-	removedCards = deckToRemoveFrom.Deal(numCardsToRemove)
-	if len(removedCards) != numCardsToRemove {
-		t.Errorf(failureMessage(strconv.Itoa(numCardsToRemove), strconv.Itoa(len(removedCards))))
-	}
-	if len(deckToRemoveFrom) != expectedNumRemaining {
-		t.Errorf(failureMessage(strconv.Itoa(expectedNumRemaining), strconv.Itoa(len(deckToRemoveFrom))))
-	}
-
-	// Deal on an empty deck returns an empty slice of cards
-	empty := deckToRemoveFrom.Deal(1)
-	if len(empty) != 0 {
-		t.Errorf(failureMessage(strconv.Itoa(0), strconv.Itoa(len(empty))))
+	for _, dt := range deckTests {
+		expectedCardName := deckToRemoveFrom[len(deckToRemoveFrom)-1].String()
+		removedCards := deckToRemoveFrom.Deal(dt.numCardsToRemove)
+		if len(removedCards) != dt.numCardsToRemove {
+			t.Errorf(tableFailureMessage(dt.testName, strconv.Itoa(dt.numCardsToRemove), strconv.Itoa(len(removedCards))))
+		}
+		if removedCards[dt.numCardsToRemove-1].String() != expectedCardName {
+			t.Errorf(tableFailureMessage(dt.testName, expectedCardName, removedCards[dt.numCardsToRemove-1].String()))
+		}
+		if len(deckToRemoveFrom) != dt.expectedNumRemaining {
+			t.Errorf(tableFailureMessage(dt.testName, strconv.Itoa(dt.expectedNumRemaining), strconv.Itoa(len(deckToRemoveFrom))))
+		}
 	}
 }
