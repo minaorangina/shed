@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+
+	utils "github.com/minaorangina/shed/internal"
 )
 
 var fullDeckCount = 52
@@ -13,7 +15,7 @@ func TestDeck(t *testing.T) {
 	deckOfCards := New()
 
 	if len(deckOfCards) != fullDeckCount {
-		t.Errorf(failureMessage(strconv.Itoa(fullDeckCount), strconv.Itoa(len(deckOfCards))))
+		t.Errorf(utils.FailureMessage(strconv.Itoa(fullDeckCount), strconv.Itoa(len(deckOfCards))))
 	}
 
 	// Shuffle
@@ -23,7 +25,7 @@ func TestDeck(t *testing.T) {
 		t.Errorf("Deck was not shuffled")
 	}
 	if len(deckOfCards) != len(anotherDeckOfCards) {
-		t.Errorf(failureMessage(strconv.Itoa(len(deckOfCards)), strconv.Itoa(len(anotherDeckOfCards))))
+		t.Errorf(utils.FailureMessage(strconv.Itoa(len(deckOfCards)), strconv.Itoa(len(anotherDeckOfCards))))
 	}
 	func() {
 		seenCards := map[string]bool{}
@@ -47,7 +49,7 @@ func TestDeck(t *testing.T) {
 	// Empty list of cards
 	zeroCards := deckToRemoveFrom.Deal(0)
 	if len(zeroCards) != 0 {
-		t.Errorf(failureMessage(strconv.Itoa(0), strconv.Itoa(len(zeroCards))))
+		t.Errorf(utils.FailureMessage(strconv.Itoa(0), strconv.Itoa(len(zeroCards))))
 	}
 
 	deckTests := []deckTest{
@@ -62,13 +64,13 @@ func TestDeck(t *testing.T) {
 		expectedCardName := deckToRemoveFrom[len(deckToRemoveFrom)-1].String()
 		removedCards := deckToRemoveFrom.Deal(dt.numCardsToRemove)
 		if len(removedCards) != dt.numCardsToRemove {
-			t.Errorf(tableFailureMessage(dt.testName, strconv.Itoa(dt.numCardsToRemove), strconv.Itoa(len(removedCards))))
+			t.Errorf(utils.TableFailureMessage(dt.testName, strconv.Itoa(dt.numCardsToRemove), strconv.Itoa(len(removedCards))))
 		}
 		if removedCards[dt.numCardsToRemove-1].String() != expectedCardName {
-			t.Errorf(tableFailureMessage(dt.testName, expectedCardName, removedCards[dt.numCardsToRemove-1].String()))
+			t.Errorf(utils.TableFailureMessage(dt.testName, expectedCardName, removedCards[dt.numCardsToRemove-1].String()))
 		}
 		if len(deckToRemoveFrom) != dt.expectedNumRemaining {
-			t.Errorf(tableFailureMessage(dt.testName, strconv.Itoa(dt.expectedNumRemaining), strconv.Itoa(len(deckToRemoveFrom))))
+			t.Errorf(utils.TableFailureMessage(dt.testName, strconv.Itoa(dt.expectedNumRemaining), strconv.Itoa(len(deckToRemoveFrom))))
 		}
 	}
 }

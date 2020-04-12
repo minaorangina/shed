@@ -45,7 +45,7 @@ type RankCard struct {
 }
 
 // NewRankCard constructs a card
-func NewRankCard(rank, suit int) Card {
+func newRankCard(rank, suit int) Card {
 	if rank < 0 || rank > int(King) || suit < 0 || suit > int(Spades) {
 		panic("arguments out of range")
 	}

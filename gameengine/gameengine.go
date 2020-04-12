@@ -34,7 +34,7 @@ type stage int
 
 const (
 	handOrganisation stage = iota
-	clearCardQueue
+	clearDeck
 	clearHand
 )
 
@@ -49,7 +49,7 @@ type GameEngine struct {
 // New constructs a new GameEngine
 func New(playerNames []string) (GameEngine, error) {
 	if len(playerNames) < 2 {
-		return GameEngine{}, fmt.Errorf("Could not construct GameEngine: minimum 2 players required (supplied %d)", len(playerNames))
+		return GameEngine{}, fmt.Errorf("Could not construct GameEngine: minimum of 2 players required (supplied %d)", len(playerNames))
 	}
 	if len(playerNames) > 4 {
 		return GameEngine{}, fmt.Errorf("Could not construct GameEngine: maximum of 4 players allowed (supplied %d)", len(playerNames))

@@ -1,26 +1,41 @@
 package gameengine
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
+	utils "github.com/minaorangina/shed/internal"
 	"github.com/minaorangina/shed/player"
 )
 
 func TestGameEngine(t *testing.T) {
-	// minimum of 2 players
-	tooFewPlayers := []string{"Grace"}
-	_, err := New(tooFewPlayers)
-	if err == nil {
-		t.Errorf("\nToo few players - expected GameEngine to return error, but it didn't")
+	type engineTest struct {
+		testName string
+		input    []string
+		expected error
 	}
 
-	// maximum of 4 players
-	tooManyPlayers := []string{"Ada", "Katherine", "Grace", "Hedy", "Marlyn"}
-	_, err = New(tooManyPlayers)
-	if err == nil {
-		t.Errorf("\nToo many players - expected GameEngine to return error, but it didn't")
+	testsShouldError := []engineTest{
+		{
+			"too few players",
+			[]string{"Grace"},
+			errors.New("Could not construct GameEngine: minimum of 2 players required (supplied 1)"),
+		},
+		{
+			"too many players",
+			[]string{"Ada", "Katherine", "Grace", "Hedy", "Marlyn"},
+			errors.New("Could not construct GameEngine: maximum of 4 players required (supplied 5)"),
+		},
+	}
+
+	for _, et := range testsShouldError {
+		_, err := New(et.input)
+		if err == nil {
+			t.Errorf(utils.TableFailureMessage(et.testName, strings.Join(et.input, ","), et.expected.Error()))
+		}
 	}
 
 	// Construct a GameEngine
