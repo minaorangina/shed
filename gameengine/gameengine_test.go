@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	utils "github.com/minaorangina/shed/internal"
-	"github.com/minaorangina/shed/player"
 )
 
 func TestGameEngine(t *testing.T) {
@@ -44,7 +43,7 @@ func TestGameEngine(t *testing.T) {
 	if err != nil {
 		t.Fail()
 	}
-	expectedPlayers := []player.Player{{Name: "Ada"}, {Name: "Katherine"}}
+	expectedPlayers := []Player{{Name: "Ada"}, {Name: "Katherine"}}
 	expectedEngine := GameEngine{
 		players: expectedPlayers,
 	}

@@ -5,16 +5,16 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/minaorangina/shed/player"
+	"github.com/minaorangina/shed/deck"
 )
 
 func TestGame(t *testing.T) {
-	player1, _ := player.New("Harry")
-	player2, _ := player.New("Sally")
-	somePlayers := []player.Player{player1, player2}
+	player1, _ := NewPlayer("Harry")
+	player2, _ := NewPlayer("Sally")
+	somePlayers := []Player{player1, player2}
 
-	game := NewGame(somePlayers)
-	expectedGame := Game{"Shed", somePlayers}
+	game := NewGame(&somePlayers)
+	expectedGame := Game{"Shed", &somePlayers, deck.New()}
 	if !reflect.DeepEqual(expectedGame, game) {
 		t.Errorf(fmt.Sprintf("\nExpected: %+v\nActual: %v\n", expectedGame, game))
 	}

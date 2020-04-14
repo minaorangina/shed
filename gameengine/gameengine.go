@@ -2,8 +2,6 @@ package gameengine
 
 import (
 	"fmt"
-
-	"github.com/minaorangina/shed/player"
 )
 
 // gameState represents the state of the current game
@@ -32,7 +30,7 @@ const (
 // GameEngine represents the engine of the game
 type GameEngine struct {
 	gameState gameState
-	players   []player.Player // this might be superfluous
+	players   []Player // this might be superfluous
 	game      *Game
 }
 
@@ -81,12 +79,12 @@ func (ge *GameEngine) start() {
 	ge.gameState = inProgress
 }
 
-func namesToPlayers(names []string) ([]player.Player, error) {
-	players := make([]player.Player, 0, len(names))
+func namesToPlayers(names []string) ([]Player, error) {
+	players := make([]Player, 0, len(names))
 	for _, name := range names {
-		p, playerErr := player.New(name)
+		p, playerErr := NewPlayer(name)
 		if playerErr != nil {
-			return []player.Player{}, playerErr
+			return []Player{}, playerErr
 		}
 		players = append(players, p)
 	}

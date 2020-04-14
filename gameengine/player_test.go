@@ -1,4 +1,4 @@
-package player
+package gameengine
 
 import (
 	"reflect"
@@ -7,12 +7,13 @@ import (
 
 func TestPlayer(t *testing.T) {
 	name := "my name"
-	p, err := New(name)
+	p, err := NewPlayer(name)
 
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	if !reflect.DeepEqual(Player{name}, p) {
+	pc := playerCards{}
+	if !reflect.DeepEqual(Player{name, &pc}, p) {
 		t.Fail()
 	}
 }

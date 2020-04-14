@@ -4,11 +4,10 @@ import (
 	"testing"
 
 	utils "github.com/minaorangina/shed/internal"
-	"github.com/minaorangina/shed/player"
 )
 
 func TestInit(t *testing.T) {
-	expectedPlayers := []player.Player{{Name: "Ada"}, {Name: "Katherine"}}
+	expectedPlayers := []Player{{Name: "Ada"}, {Name: "Katherine"}}
 
 	type test struct {
 		testName   string
