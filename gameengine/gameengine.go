@@ -29,21 +29,11 @@ const (
 	paused
 )
 
-// stage represents the main stages in the game
-type stage int
-
-const (
-	handOrganisation stage = iota
-	clearDeck
-	clearHand
-)
-
 // GameEngine represents the engine of the game
 type GameEngine struct {
 	gameState gameState
-	// should player be in its own package?
-	players []player.Player
-	stage   stage
+	players   []player.Player // this might be superfluous
+	game      *Game
 }
 
 // New constructs a new GameEngine
@@ -70,9 +60,14 @@ func New(playerNames []string) (GameEngine, error) {
 // Init initialises a new game
 func (ge *GameEngine) Init() error {
 	if ge.gameState != idle {
-		return fmt.Errorf("Cannot call `GameEngine.Init()` when game is not idle (currently %s)", ge.gameState.String())
+		return nil
 	}
-	ge.start()
+	// new game
+	shedGame := NewGame(ge.players)
+	ge.game = &shedGame
+
+	ge.gameState = inProgress
+	ge.game.start()
 
 	return nil
 }

@@ -2,7 +2,6 @@ package gameengine
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -51,36 +50,5 @@ func TestGameEngine(t *testing.T) {
 	}
 	if !reflect.DeepEqual(expectedEngine, engine) {
 		t.Errorf("\nExpected: GameEngine %+v\nActual: %+v", expectedEngine, engine)
-	}
-
-	// .Init
-	// Should error if game not idle
-	engineWithGameInProgress := GameEngine{
-		players:   expectedPlayers,
-		gameState: inProgress,
-	}
-	err = engineWithGameInProgress.Init()
-	if err == nil {
-		t.Errorf("\nExpected GameEngine.Init() to return an error (game not in idle state)")
-	}
-
-	engineWithGamePaused := GameEngine{
-		players:   expectedPlayers,
-		gameState: paused,
-	}
-	err = engineWithGamePaused.Init()
-	if err == nil {
-		t.Errorf("\nExpected GameEngine.Init() to return an error (game not in idle state)")
-	}
-
-	// Success case
-	err = engine.Init()
-	if err != nil {
-		t.Errorf("\nFailed to call GameEngine.Init(): %s", err.Error())
-	}
-	fmt.Printf("after +%v\n", engine)
-	expectedGameState := "inProgress"
-	if engine.GameState() != expectedGameState {
-		t.Errorf("\nExpected game state: %s\nActual: %s", expectedGameState, engine.GameState())
 	}
 }
