@@ -63,7 +63,7 @@ func (ge *GameEngine) Init() error {
 		return nil
 	}
 	// new game
-	shedGame := NewGame(ge.players)
+	shedGame := NewGame(&ge.players)
 	ge.game = &shedGame
 
 	ge.gameState = inProgress

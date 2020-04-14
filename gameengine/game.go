@@ -5,7 +5,7 @@ import "github.com/minaorangina/shed/player"
 // Game represents a game
 type Game struct {
 	Name    string
-	players []player.Player
+	players *[]player.Player
 }
 
 // Stage represents the main stages in the game
@@ -18,7 +18,7 @@ const (
 )
 
 // NewGame instantiates a new game of Shed
-func NewGame(players []player.Player) Game {
+func NewGame(players *[]player.Player) Game {
 	return Game{"Shed", players}
 }
 
