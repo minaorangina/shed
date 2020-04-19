@@ -40,6 +40,17 @@ func NewGame(playerNames []string) *Game {
 	return &Game{"Shed", &players, cards}
 }
 
-func (g Game) start() {
+func (g *Game) start() {
+	g.deck.Shuffle()
+	// deal cards
+	for _, p := range *g.players {
+		dealtHand := g.deck.Deal(3)
+		dealtSeen := g.deck.Deal(3)
+		dealtUnseen := g.deck.Deal(3)
 
+		p.cards.hand = &dealtHand
+		p.cards.seen = &dealtSeen
+		p.cards.unseen = &dealtUnseen
+	}
+	// move state machine to hand organisation stage
 }
