@@ -29,9 +29,9 @@ const (
 
 // GameEngine represents the engine of the game
 type GameEngine struct {
-	gameState gameState
-	players   []Player // this might be superfluous
-	game      *Game
+	gameState   gameState
+	playerNames []string
+	game        *Game
 }
 
 // New constructs a new GameEngine
@@ -43,16 +43,7 @@ func New(playerNames []string) (GameEngine, error) {
 		return GameEngine{}, fmt.Errorf("Could not construct GameEngine: maximum of 4 players allowed (supplied %d)", len(playerNames))
 	}
 
-	players, err := namesToPlayers(playerNames)
-	if err != nil {
-		return GameEngine{}, err
-	}
-
-	engine := GameEngine{
-		players: players,
-	}
-
-	return engine, nil
+	return GameEngine{playerNames: playerNames}, nil
 }
 
 // Init initialises a new game
@@ -61,8 +52,8 @@ func (ge *GameEngine) Init() error {
 		return nil
 	}
 	// new game
-	shedGame := NewGame(&ge.players)
-	ge.game = &shedGame
+	shedGame := NewGame(ge.playerNames)
+	ge.game = shedGame
 
 	ge.gameState = inProgress
 	ge.game.start()
@@ -77,17 +68,4 @@ func (ge *GameEngine) GameState() string {
 
 func (ge *GameEngine) start() {
 	ge.gameState = inProgress
-}
-
-func namesToPlayers(names []string) ([]Player, error) {
-	players := make([]Player, 0, len(names))
-	for _, name := range names {
-		p, playerErr := NewPlayer(name)
-		if playerErr != nil {
-			return []Player{}, playerErr
-		}
-		players = append(players, p)
-	}
-
-	return players, nil
 }

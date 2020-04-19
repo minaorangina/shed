@@ -43,11 +43,10 @@ func TestGameEngine(t *testing.T) {
 	if err != nil {
 		t.Fail()
 	}
-	expectedPlayers := []Player{{Name: "Ada"}, {Name: "Katherine"}}
 	expectedEngine := GameEngine{
-		players: expectedPlayers,
+		playerNames: playerNames,
 	}
 	if !reflect.DeepEqual(expectedEngine, engine) {
-		t.Errorf("\nExpected: GameEngine %+v\nActual: %+v", expectedEngine, engine)
+		t.Errorf("\nExpected: %+v\nActual: %+v", expectedEngine, engine)
 	}
 }
