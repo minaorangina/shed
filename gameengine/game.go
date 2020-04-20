@@ -42,7 +42,12 @@ func NewGame(playerNames []string) *Game {
 
 func (g *Game) start() {
 	g.deck.Shuffle()
-	// deal cards
+	g.dealHand()
+
+	// move state machine to hand organisation stage
+}
+
+func (g *Game) dealHand() {
 	for _, p := range *g.players {
 		dealtHand := g.deck.Deal(3)
 		dealtSeen := g.deck.Deal(3)
@@ -52,5 +57,4 @@ func (g *Game) start() {
 		p.cards.seen = &dealtSeen
 		p.cards.unseen = &dealtUnseen
 	}
-	// move state machine to hand organisation stage
 }
