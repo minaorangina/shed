@@ -7,6 +7,7 @@ import (
 // Game represents a game
 type Game struct {
 	Name    string
+	engine  *GameEngine
 	players *[]Player
 	deck    deck.Deck
 }
@@ -34,17 +35,15 @@ func namesToPlayers(names []string) ([]Player, error) {
 }
 
 // NewGame instantiates a new game of Shed
-func NewGame(playerNames []string) *Game {
+func NewGame(engine *GameEngine, playerNames []string) *Game {
 	cards := deck.New()
 	players, _ := namesToPlayers(playerNames)
-	return &Game{"Shed", &players, cards}
+	return &Game{Name: "Shed", engine: engine, players: &players, deck: cards}
 }
 
 func (g *Game) start() {
 	g.deck.Shuffle()
 	g.dealHand()
-
-	// move state machine to hand organisation stage
 }
 
 func (g *Game) dealHand() {

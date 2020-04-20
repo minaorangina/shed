@@ -9,12 +9,13 @@ import (
 )
 
 func TestGame(t *testing.T) {
+	gameEngine, _ := New([]string{"Harry", "Sally"})
 	player1, _ := NewPlayer("Harry")
 	player2, _ := NewPlayer("Sally")
 	somePlayers := []Player{player1, player2}
 
-	game := NewGame([]string{"Harry", "Sally"})
-	expectedGame := Game{"Shed", &somePlayers, deck.New()}
+	game := NewGame(&gameEngine, []string{"Harry", "Sally"})
+	expectedGame := Game{Name: "Shed", players: &somePlayers, deck: deck.New(), engine: &gameEngine}
 	if !reflect.DeepEqual(expectedGame, *game) {
 		t.Errorf(fmt.Sprintf("\nExpected: %+v\nActual: %+v\n", expectedGame, game))
 	}
