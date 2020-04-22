@@ -4,14 +4,6 @@ import (
 	"github.com/minaorangina/shed/deck"
 )
 
-// Game represents a game
-type Game struct {
-	Name    string
-	engine  *GameEngine
-	players *[]Player
-	deck    deck.Deck
-}
-
 // Stage represents the main stages in the game
 type Stage int
 
@@ -20,6 +12,26 @@ const (
 	clearDeck
 	clearHand
 )
+
+func (s Stage) String() string {
+	if s == 0 {
+		return "handOrganisation"
+	} else if s == 1 {
+		return "clearDeck"
+	} else if s == 2 {
+		return "clearHand"
+	}
+	return ""
+}
+
+// Game represents a game
+type Game struct {
+	Name    string
+	engine  *GameEngine
+	players *[]Player
+	stage   Stage
+	deck    deck.Deck
+}
 
 func namesToPlayers(names []string) ([]Player, error) {
 	players := make([]Player, 0, len(names))
@@ -56,4 +68,9 @@ func (g *Game) dealHand() {
 		p.cards.seen = &dealtSeen
 		p.cards.unseen = &dealtUnseen
 	}
+}
+
+// Stage returns the game's current stage
+func (g *Game) Stage() string {
+	return g.stage.String()
 }

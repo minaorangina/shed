@@ -20,6 +20,11 @@ func TestGame(t *testing.T) {
 		t.Errorf(fmt.Sprintf("\nExpected: %+v\nActual: %+v\n", expectedGame, game))
 	}
 
+	expectedStage := "handOrganisation"
+	if game.Stage() != expectedStage {
+		t.Errorf(fmt.Sprintf("\nExpected: %+v\nActual: %+v\n", expectedStage, game.Stage()))
+	}
+
 	game.start()
 
 	if game.players == nil {
