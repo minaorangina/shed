@@ -72,7 +72,14 @@ func (g *Game) dealHand() {
 }
 
 func (g *Game) informPlayersAwaitReply() {
+	// construct opponents
 	// construct object per player
+	messages := make([]messageToPlayer, 0, len(*g.players))
+	for _, p := range *g.players {
+		o := buildOpponents(p.id, *g.players)
+		m := g.buildMessageToPlayer(p, o, "Rearrange your hand")
+		messages = append(messages, m)
+	}
 	// send on to game engine
 	// wait for all responses to come back
 }
@@ -80,4 +87,36 @@ func (g *Game) informPlayersAwaitReply() {
 // Stage returns the game's current stage
 func (g *Game) Stage() string {
 	return g.stage.String()
+}
+
+// to test (easier when state hydration exists)
+func (g *Game) buildMessageToPlayer(player Player, opponents []opponent, message string) messageToPlayer {
+	return messageToPlayer{
+		PlayState: g.engine.playState,
+		GameStage: g.stage,
+		PlayerID:  player.id,
+		Message:   message,
+		HandCards: *player.cards.hand,
+		SeenCards: *player.cards.seen,
+		Opponents: opponents,
+	}
+}
+
+func buildOpponents(playerID int, players []Player) []opponent {
+	opponents := []opponent{}
+	for id, p := range players {
+		if id == playerID {
+			continue
+		}
+		var seen []deck.Card
+		if p.cards.seen == nil {
+			seen = nil
+		} else {
+			seen = *p.cards.seen
+		}
+		opponents = append(opponents, opponent{
+			ID: id, Name: p.name, SeenCards: seen,
+		})
+	}
+	return opponents
 }

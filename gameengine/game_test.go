@@ -2,6 +2,7 @@ package gameengine
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 )
 
@@ -46,5 +47,14 @@ func TestGame(t *testing.T) {
 			formatStr := "hand - %d\nseen - %d\nunseen - %d\n"
 			t.Errorf("Expected all threes. Actual:\n" + fmt.Sprintf(formatStr, numHand, numSeen, numUnseen))
 		}
+	}
+
+	// buildOpponents
+	player0, _ := NewPlayer(0, "Hermione")
+	someMorePlayers := []Player{player0, player1, player2}
+	expectedOpponents := []opponent{{ID: 0, Name: "Hermione"}, {ID: 2, Name: "Sally"}}
+	opponents := buildOpponents(1, someMorePlayers)
+	if !reflect.DeepEqual(opponents, expectedOpponents) {
+		t.Errorf("\nExpected: %+v\nActual: %+v\n", expectedOpponents, opponents)
 	}
 }
