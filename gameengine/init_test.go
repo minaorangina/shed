@@ -12,7 +12,7 @@ func TestInit(t *testing.T) {
 	type test struct {
 		testName   string
 		gameEngine GameEngine
-		expected   gameState
+		expected   playState
 	}
 	initNoopTests := []test{
 		{
@@ -24,7 +24,7 @@ func TestInit(t *testing.T) {
 			testName: "`Init` does nothing if game in progress",
 			gameEngine: GameEngine{
 				playerNames: expectedPlayerNames,
-				gameState:   inProgress,
+				playState:   inProgress,
 			},
 			expected: inProgress,
 		},
@@ -32,7 +32,7 @@ func TestInit(t *testing.T) {
 			testName: "`Init` does nothing if game paused",
 			gameEngine: GameEngine{
 				playerNames: expectedPlayerNames,
-				gameState:   paused,
+				playState:   paused,
 			},
 			expected: paused,
 		},
@@ -43,8 +43,8 @@ func TestInit(t *testing.T) {
 		if err != nil {
 			t.Errorf(utils.TableFailureMessage(test.testName, "[no error]", err.Error()))
 		}
-		if test.expected != test.gameEngine.gameState {
-			t.Errorf(utils.TableFailureMessage(test.testName, test.expected.String(), test.gameEngine.gameState.String()))
+		if test.expected != test.gameEngine.playState {
+			t.Errorf(utils.TableFailureMessage(test.testName, test.expected.String(), test.gameEngine.playState.String()))
 		}
 	}
 }
