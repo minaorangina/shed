@@ -7,21 +7,21 @@ import (
 	utils "github.com/minaorangina/shed/internal"
 )
 
-func TestRankCard(t *testing.T) {
+func TestCard(t *testing.T) {
 	// lowest value card
-	lowestValueCard := newRankCard(0, 0)
+	lowestValueCard := newCard(0, 0)
 	if lowestValueCard.String() != "Ace of Clubs" {
 		t.Errorf(utils.FailureMessage("Ace of Clubs", lowestValueCard.String()))
 	}
 
 	// specific card
-	specificCard := newRankCard(11, 2)
+	specificCard := newCard(11, 2)
 	if specificCard.String() != "Queen of Hearts" {
 		t.Errorf(utils.FailureMessage("Queen of Hearts", specificCard.String()))
 	}
 
 	// end of range
-	lastCard := newRankCard(12, 3)
+	lastCard := newCard(12, 3)
 	if lastCard.String() != "King of Spades" {
 		t.Errorf(utils.FailureMessage("King of Spades", lastCard.String()))
 	}
@@ -33,19 +33,19 @@ func TestRankCard(t *testing.T) {
 				t.Errorf("Expected to panic, but it didn't")
 			}
 		}()
-		newRankCard(13, 2)
-		newRankCard(4, 4)
+		newCard(13, 2)
+		newCard(4, 4)
 	}()
 
 	// get rank
-	six := newRankCard(5, rand.Intn(4))
-	if six.Rank() != "Six" {
-		t.Errorf(utils.FailureMessage("Six", six.Rank()))
+	six := newCard(5, rand.Intn(4))
+	if six.Rank.String() != "Six" {
+		t.Errorf(utils.FailureMessage("Six", six.Rank.String()))
 	}
 
 	// get suit
-	spade := newRankCard(rand.Intn(13), 3)
-	if spade.Suit() != "Spades" {
-		t.Errorf(utils.FailureMessage("Spades", spade.Suit()))
+	spade := newCard(rand.Intn(13), 3)
+	if spade.Suit.String() != "Spades" {
+		t.Errorf(utils.FailureMessage("Spades", spade.Suit.String()))
 	}
 }
