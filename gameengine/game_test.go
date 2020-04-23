@@ -15,7 +15,7 @@ func TestGame(t *testing.T) {
 	somePlayers := []Player{player1, player2}
 
 	game := NewGame(&gameEngine, []string{"Harry", "Sally"})
-	expectedGame := Game{Name: "Shed", players: &somePlayers, deck: deck.New(), engine: &gameEngine}
+	expectedGame := Game{name: "Shed", players: &somePlayers, deck: deck.New(), engine: &gameEngine}
 	if !reflect.DeepEqual(expectedGame, *game) {
 		t.Errorf(fmt.Sprintf("\nExpected: %+v\nActual: %+v\n", expectedGame, game))
 	}

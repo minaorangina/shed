@@ -26,7 +26,7 @@ func (s Stage) String() string {
 
 // Game represents a game
 type Game struct {
-	Name    string
+	name    string
 	engine  *GameEngine
 	players *[]Player
 	stage   Stage
@@ -50,12 +50,13 @@ func namesToPlayers(names []string) ([]Player, error) {
 func NewGame(engine *GameEngine, playerNames []string) *Game {
 	cards := deck.New()
 	players, _ := namesToPlayers(playerNames)
-	return &Game{Name: "Shed", engine: engine, players: &players, deck: cards}
+	return &Game{name: "Shed", engine: engine, players: &players, deck: cards}
 }
 
 func (g *Game) start() {
 	g.deck.Shuffle()
 	g.dealHand()
+	g.informPlayersAwaitReply()
 }
 
 func (g *Game) dealHand() {
@@ -68,6 +69,12 @@ func (g *Game) dealHand() {
 		p.cards.seen = &dealtSeen
 		p.cards.unseen = &dealtUnseen
 	}
+}
+
+func (g *Game) informPlayersAwaitReply() {
+	// construct object per player
+	// send on to game engine
+	// wait for all responses to come back
 }
 
 // Stage returns the game's current stage
