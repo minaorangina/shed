@@ -2,22 +2,28 @@ package gameengine
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
-
-	"github.com/minaorangina/shed/deck"
 )
 
 func TestGame(t *testing.T) {
 	gameEngine, _ := New([]string{"Harry", "Sally"})
-	player1, _ := NewPlayer("Harry")
-	player2, _ := NewPlayer("Sally")
+	player1, err := NewPlayer(1, "Harry")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	player2, err := NewPlayer(2, "Sally")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
 	somePlayers := []Player{player1, player2}
+	_ = somePlayers
 
 	game := NewGame(&gameEngine, []string{"Harry", "Sally"})
-	expectedGame := Game{name: "Shed", players: &somePlayers, deck: deck.New(), engine: &gameEngine}
-	if !reflect.DeepEqual(expectedGame, *game) {
-		t.Errorf(fmt.Sprintf("\nExpected: %+v\nActual: %+v\n", expectedGame, game))
+	if len(game.deck) != 52 {
+		t.Errorf(fmt.Sprintf("\nExpected: %+v\nActual: %+v\n", 52, len(game.deck)))
+	}
+	if len(*game.players) != 2 {
+		t.Errorf(fmt.Sprintf("\nExpected: %+v\nActual: %+v\n", 2, len(*game.players)))
 	}
 
 	expectedStage := "handOrganisation"

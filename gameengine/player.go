@@ -4,7 +4,8 @@ import "github.com/minaorangina/shed/deck"
 
 // Player represents a player in the game
 type Player struct {
-	Name  string
+	id    int
+	name  string
 	cards *playerCards
 }
 
@@ -15,7 +16,7 @@ type playerCards struct {
 }
 
 // NewPlayer constructs a new player
-func NewPlayer(name string) (Player, error) {
+func NewPlayer(id int, name string) (Player, error) {
 	pc := playerCards{}
-	return Player{name, &pc}, nil
+	return Player{id: id, name: name, cards: &pc}, nil
 }

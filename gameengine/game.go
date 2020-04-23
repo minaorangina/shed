@@ -35,8 +35,8 @@ type Game struct {
 
 func namesToPlayers(names []string) ([]Player, error) {
 	players := make([]Player, 0, len(names))
-	for _, name := range names {
-		p, playerErr := NewPlayer(name)
+	for i, name := range names {
+		p, playerErr := NewPlayer(i, name)
 		if playerErr != nil {
 			return []Player{}, playerErr
 		}
