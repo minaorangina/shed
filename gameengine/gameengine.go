@@ -2,6 +2,9 @@ package gameengine
 
 import (
 	"fmt"
+	"sync"
+
+	uuid "github.com/satori/go.uuid"
 )
 
 // playState represents the state of the current game
@@ -29,9 +32,9 @@ const (
 
 // GameEngine represents the engine of the game
 type GameEngine struct {
-	playState   playState
-	playerNames []string
-	game        *Game
+	playState  playState
+	playerInfo []playerInfo
+	game       *Game
 }
 
 // New constructs a new GameEngine
@@ -43,7 +46,12 @@ func New(playerNames []string) (GameEngine, error) {
 		return GameEngine{}, fmt.Errorf("Could not construct GameEngine: maximum of 4 players allowed (supplied %d)", len(playerNames))
 	}
 
-	return GameEngine{playerNames: playerNames}, nil
+	info := make([]playerInfo, 0, len(playerNames))
+	for _, name := range playerNames {
+		info = append(info, playerInfo{name: name, id: uuid.NewV4().String()})
+	}
+
+	return GameEngine{playerInfo: info}, nil
 }
 
 // Init initialises a new game
@@ -51,8 +59,10 @@ func (ge *GameEngine) Init() error {
 	if ge.playState != idle {
 		return nil
 	}
-	// new game
-	shedGame := NewGame(ge, ge.playerNames)
+
+	// create external players
+
+	shedGame := NewGame(ge, ge.playerInfo)
 	ge.game = shedGame
 
 	ge.playState = inProgress
@@ -68,4 +78,24 @@ func (ge *GameEngine) PlayState() string {
 
 func (ge *GameEngine) start() {
 	ge.playState = inProgress
+}
+
+func (ge *GameEngine) messagePlayersAwaitReply(messages []messageToPlayer) ([]reorganisedHand, error) {
+	resp := make(chan []reorganisedHand)
+	_ = resp
+	var wg sync.WaitGroup
+	// go routines, populate slice
+	for _, msg := range messages {
+		_ = msg
+		wg.Add(1)
+		// player := externalPlayers[msg.PlayerID]
+		// go messagePlayer(player, msg)
+	}
+
+	// send slice back
+	return []reorganisedHand{}, nil
+}
+
+func (ge *GameEngine) messagePlayer(player, message messageToPlayer) (reorganisedHand, error) {
+	return reorganisedHand{}, nil
 }

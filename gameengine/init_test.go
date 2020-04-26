@@ -7,8 +7,6 @@ import (
 )
 
 func TestInit(t *testing.T) {
-	expectedPlayerNames := []string{"Ada", "Katherine"}
-
 	type test struct {
 		testName   string
 		gameEngine GameEngine
@@ -17,22 +15,20 @@ func TestInit(t *testing.T) {
 	initNoopTests := []test{
 		{
 			testName:   "`Init` puts game engine into inProgress state",
-			gameEngine: GameEngine{playerNames: expectedPlayerNames},
+			gameEngine: GameEngine{},
 			expected:   inProgress,
 		},
 		{
 			testName: "`Init` does nothing if game in progress",
 			gameEngine: GameEngine{
-				playerNames: expectedPlayerNames,
-				playState:   inProgress,
+				playState: inProgress,
 			},
 			expected: inProgress,
 		},
 		{
 			testName: "`Init` does nothing if game paused",
 			gameEngine: GameEngine{
-				playerNames: expectedPlayerNames,
-				playState:   paused,
+				playState: paused,
 			},
 			expected: paused,
 		},

@@ -33,10 +33,10 @@ type Game struct {
 	deck    deck.Deck
 }
 
-func namesToPlayers(names []string) ([]Player, error) {
-	players := make([]Player, 0, len(names))
-	for i, name := range names {
-		p, playerErr := NewPlayer(i, name)
+func makePlayers(playerInfo []playerInfo) ([]Player, error) {
+	players := make([]Player, 0, len(playerInfo))
+	for _, info := range playerInfo {
+		p, playerErr := NewPlayer(info.id, info.name)
 		if playerErr != nil {
 			return []Player{}, playerErr
 		}
@@ -47,31 +47,34 @@ func namesToPlayers(names []string) ([]Player, error) {
 }
 
 // NewGame instantiates a new game of Shed
-func NewGame(engine *GameEngine, playerNames []string) *Game {
+func NewGame(engine *GameEngine, playerInfo []playerInfo) *Game {
 	cards := deck.New()
-	players, _ := namesToPlayers(playerNames)
+	players, _ := makePlayers(playerInfo)
 	return &Game{name: "Shed", engine: engine, players: &players, deck: cards}
 }
 
 func (g *Game) start() {
 	g.deck.Shuffle()
 	g.dealHand()
-	g.informPlayersAwaitReply()
+	err := g.informPlayersAwaitReply()
+	if err != nil {
+		// handle error
+	}
 }
 
 func (g *Game) dealHand() {
-	for _, p := range *g.players {
+	for i := range *g.players {
 		dealtHand := g.deck.Deal(3)
 		dealtSeen := g.deck.Deal(3)
 		dealtUnseen := g.deck.Deal(3)
 
-		p.cards.hand = &dealtHand
-		p.cards.seen = &dealtSeen
-		p.cards.unseen = &dealtUnseen
+		(*g.players)[i].hand = append((*g.players)[i].hand, dealtHand...)
+		(*g.players)[i].seen = append((*g.players)[i].seen, dealtSeen...)
+		(*g.players)[i].unseen = append((*g.players)[i].unseen, dealtUnseen...)
 	}
 }
 
-func (g *Game) informPlayersAwaitReply() {
+func (g *Game) informPlayersAwaitReply() error {
 	// construct opponents
 	// construct object per player
 	messages := make([]messageToPlayer, 0, len(*g.players))
@@ -81,7 +84,14 @@ func (g *Game) informPlayersAwaitReply() {
 		messages = append(messages, m)
 	}
 	// send on to game engine
+
+	reorganised, err := g.engine.messagePlayersAwaitReply(messages)
+	if err != nil {
+		return err
+	}
+	_ = reorganised
 	// wait for all responses to come back
+	return nil
 }
 
 // Stage returns the game's current stage
@@ -96,26 +106,20 @@ func (g *Game) buildMessageToPlayer(player Player, opponents []opponent, message
 		GameStage: g.stage,
 		PlayerID:  player.id,
 		Message:   message,
-		HandCards: *player.cards.hand,
-		SeenCards: *player.cards.seen,
+		HandCards: player.cards().hand,
+		SeenCards: player.cards().seen,
 		Opponents: opponents,
 	}
 }
 
-func buildOpponents(playerID int, players []Player) []opponent {
+func buildOpponents(playerID string, players []Player) []opponent {
 	opponents := []opponent{}
-	for id, p := range players {
-		if id == playerID {
+	for _, p := range players {
+		if p.id == playerID {
 			continue
 		}
-		var seen []deck.Card
-		if p.cards.seen == nil {
-			seen = nil
-		} else {
-			seen = *p.cards.seen
-		}
 		opponents = append(opponents, opponent{
-			ID: id, Name: p.name, SeenCards: seen,
+			ID: p.id, SeenCards: p.cards().seen,
 		})
 	}
 	return opponents

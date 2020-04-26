@@ -7,13 +7,16 @@ import (
 
 func TestPlayer(t *testing.T) {
 	name := "my name"
-	p, err := NewPlayer(1, name)
+	p, err := NewPlayer("player-1", name)
 
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	pc := playerCards{}
-	if !reflect.DeepEqual(Player{1, name, &pc}, p) {
+	expectedPlayer := Player{
+		name: name,
+		id:   "player-1",
+	}
+	if !reflect.DeepEqual(expectedPlayer, p) {
 		t.Fail()
 	}
 }

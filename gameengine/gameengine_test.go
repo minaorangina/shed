@@ -2,7 +2,6 @@ package gameengine
 
 import (
 	"errors"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -38,15 +37,8 @@ func TestGameEngine(t *testing.T) {
 
 	// Construct a GameEngine
 	playerNames := []string{"Ada", "Katherine"}
-	engine, err := New(playerNames)
-
+	_, err := New(playerNames)
 	if err != nil {
 		t.Fail()
-	}
-	expectedEngine := GameEngine{
-		playerNames: playerNames,
-	}
-	if !reflect.DeepEqual(expectedEngine, engine) {
-		t.Errorf("\nExpected: %+v\nActual: %+v", expectedEngine, engine)
 	}
 }
