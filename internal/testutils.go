@@ -11,3 +11,8 @@ func FailureMessage(expected, actual string) string {
 func TableFailureMessage(testName, expected, actual string) string {
 	return fmt.Sprintf("%s\nExpected: %s\nActual: %s", testName, expected, actual)
 }
+
+// TypeToString returns the string representation of a non-string type
+func TypeToString(obj interface{}) string {
+	return fmt.Sprintf("%+v", obj)
+}

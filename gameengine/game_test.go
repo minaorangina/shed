@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+
+	utils "github.com/minaorangina/shed/internal"
 )
 
 func TestGame(t *testing.T) {
@@ -56,5 +58,21 @@ func TestGame(t *testing.T) {
 	opponents := buildOpponents(1, someMorePlayers)
 	if !reflect.DeepEqual(opponents, expectedOpponents) {
 		t.Errorf("\nExpected: %+v\nActual: %+v\n", expectedOpponents, opponents)
+	}
+
+	// buildMessageToPlayer
+	playerToContact := (*game.players)[1]
+	message := game.buildMessageToPlayer(playerToContact, opponents, "Let the games begin!")
+	expectedMessage := messageToPlayer{
+		Message:   "Let the games begin!",
+		PlayState: gameEngine.playState,
+		GameStage: game.stage,
+		PlayerID:  playerToContact.id,
+		HandCards: *playerToContact.cards.hand,
+		SeenCards: *playerToContact.cards.seen,
+		Opponents: expectedOpponents,
+	}
+	if !reflect.DeepEqual(expectedMessage, message) {
+		t.Errorf(utils.FailureMessage(utils.TypeToString(expectedMessage), utils.TypeToString(message)))
 	}
 }
