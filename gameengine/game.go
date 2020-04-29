@@ -75,16 +75,14 @@ func (g *Game) dealHand() {
 }
 
 func (g *Game) informPlayersAwaitReply() error {
-	// construct opponents
-	// construct object per player
 	messages := make([]messageToPlayer, 0, len(*g.players))
 	for _, p := range *g.players {
 		o := buildOpponents(p.id, *g.players)
 		m := g.buildMessageToPlayer(p, o, "Rearrange your hand")
 		messages = append(messages, m)
 	}
-	// send on to game engine
 
+	// send on to game engine
 	reorganised, err := g.engine.messagePlayersAwaitReply(messages)
 	if err != nil {
 		return err
@@ -119,7 +117,7 @@ func buildOpponents(playerID string, players []Player) []opponent {
 			continue
 		}
 		opponents = append(opponents, opponent{
-			ID: p.id, SeenCards: p.cards().seen,
+			ID: p.id, SeenCards: p.cards().seen, Name: p.name,
 		})
 	}
 	return opponents

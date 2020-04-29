@@ -60,11 +60,8 @@ func (ge *GameEngine) Init() error {
 		return nil
 	}
 
-	// create external players
-
 	shedGame := NewGame(ge, ge.playerInfo)
 	ge.game = shedGame
-
 	ge.playState = inProgress
 	ge.game.start()
 

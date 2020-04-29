@@ -2,7 +2,10 @@ package gameengine
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
+
+	utils "github.com/minaorangina/shed/internal"
 )
 
 func TestGame(t *testing.T) {
@@ -49,30 +52,30 @@ func TestGame(t *testing.T) {
 	}
 
 	// buildOpponents
-	// player0, _ := NewPlayer("hermy-0", "Hermione")
-	// someMorePlayers := []Player{player0, player2}
-	// expectedOpponents := []opponent{
-	// 	{ID: player0.id, Name: "hermy-0", SeenCards: *player0.cards.seen},
-	// 	{ID: "sally-2", Name: "Sally", SeenCards: *player2.cards.seen},
-	// }
-	// opponents := buildOpponents("harry-1", someMorePlayers)
-	// if !reflect.DeepEqual(opponents, expectedOpponents) {
-	// 	t.Errorf("\nExpected: %+v\nActual: %+v\n", expectedOpponents, opponents)
-	// }
+	player0, _ := NewPlayer("hermy-0", "Hermione")
+	someMorePlayers := []Player{player0, player2}
+	expectedOpponents := []opponent{
+		{ID: player0.id, Name: player0.name, SeenCards: player0.cards().seen},
+		{ID: player2.id, Name: player2.name, SeenCards: player2.cards().seen},
+	}
+	opponents := buildOpponents("harry-1", someMorePlayers)
+	if !reflect.DeepEqual(opponents, expectedOpponents) {
+		t.Errorf("\nExpected: %+v\nActual: %+v\n", expectedOpponents, opponents)
+	}
 
 	// buildMessageToPlayer
-	// playerToContact := (*game.players)[1]
-	// message := game.buildMessageToPlayer(playerToContact, opponents, "Let the games begin!")
-	// expectedMessage := messageToPlayer{
-	// 	Message:   "Let the games begin!",
-	// 	PlayState: gameEngine.playState,
-	// 	GameStage: game.stage,
-	// 	PlayerID:  playerToContact.id,
-	// 	HandCards: *playerToContact.cards.hand,
-	// 	SeenCards: *playerToContact.cards.seen,
-	// 	Opponents: expectedOpponents,
-	// }
-	// if !reflect.DeepEqual(expectedMessage, message) {
-	// 	t.Errorf(utils.FailureMessage(utils.TypeToString(expectedMessage), utils.TypeToString(message)))
-	// }
+	playerToContact := (*game.players)[1]
+	message := game.buildMessageToPlayer(playerToContact, opponents, "Let the games begin!")
+	expectedMessage := messageToPlayer{
+		Message:   "Let the games begin!",
+		PlayState: gameEngine.playState,
+		GameStage: game.stage,
+		PlayerID:  playerToContact.id,
+		HandCards: playerToContact.cards().hand,
+		SeenCards: playerToContact.cards().seen,
+		Opponents: expectedOpponents,
+	}
+	if !reflect.DeepEqual(expectedMessage, message) {
+		t.Errorf(utils.FailureMessage(utils.TypeToString(expectedMessage), utils.TypeToString(message)))
+	}
 }
