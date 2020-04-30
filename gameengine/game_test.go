@@ -76,6 +76,6 @@ func TestGame(t *testing.T) {
 		Opponents: expectedOpponents,
 	}
 	if !reflect.DeepEqual(expectedMessage, message) {
-		t.Errorf(utils.FailureMessage(utils.TypeToString(expectedMessage), utils.TypeToString(message)))
+		t.Errorf(utils.FailureMessage(expectedMessage, message))
 	}
 }
