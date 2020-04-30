@@ -2,7 +2,8 @@ package gameengine
 
 import (
 	"fmt"
-	"sync"
+	"math/rand"
+	"time"
 
 	uuid "github.com/satori/go.uuid"
 )
@@ -78,21 +79,30 @@ func (ge *GameEngine) start() {
 }
 
 func (ge *GameEngine) messagePlayersAwaitReply(messages []messageToPlayer) ([]reorganisedHand, error) {
-	resp := make(chan []reorganisedHand)
-	_ = resp
-	var wg sync.WaitGroup
-	// go routines, populate slice
+	cnl := make(chan reorganisedHand)
+
 	for _, msg := range messages {
-		_ = msg
-		wg.Add(1)
-		// player := externalPlayers[msg.PlayerID]
-		// go messagePlayer(player, msg)
+		go ge.messagePlayer(cnl, "the-player", msg)
+	}
+	responses := []reorganisedHand{}
+	for i := 0; i < len(messages); i++ {
+		resp := <-cnl
+		responses = append(responses, resp)
 	}
 
 	// send slice back
-	return []reorganisedHand{}, nil
+	return responses, nil
 }
 
-func (ge *GameEngine) messagePlayer(player, message messageToPlayer) (reorganisedHand, error) {
-	return reorganisedHand{}, nil
+func (ge *GameEngine) messagePlayer(cnl chan reorganisedHand, player string, message messageToPlayer) {
+	rand.Seed(time.Now().UnixNano())
+	timeout := rand.Intn(5)
+	time.Sleep(time.Duration(100*timeout) * time.Millisecond)
+
+	// pass things down channel
+	cnl <- reorganisedHand{
+		PlayerID:  message.PlayerID,
+		HandCards: message.HandCards,
+		SeenCards: message.SeenCards,
+	}
 }
