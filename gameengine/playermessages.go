@@ -15,7 +15,7 @@ type messageToPlayer struct {
 
 // a response type
 type reorganisedHand struct {
-	PlayerID  int         `json:"player_id"`
+	PlayerID  string      `json:"player_id"`
 	HandCards []deck.Card `json:"hand_cards"`
 	SeenCards []deck.Card `json:"seen_cards"`
 }
