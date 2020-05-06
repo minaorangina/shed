@@ -49,7 +49,12 @@ func TestDeckRemoveCards(t *testing.T) {
 
 	zeroCards := deckToRemoveFrom.Deal(0)
 	if len(zeroCards) != 0 {
-		t.Errorf(utils.FailureMessage(strconv.Itoa(0), strconv.Itoa(len(zeroCards))))
+		t.Errorf(utils.FailureMessage(0, len(zeroCards)))
+	}
+
+	zeroCards = deckToRemoveFrom.Deal(-5)
+	if len(zeroCards) != 0 {
+		t.Errorf(utils.FailureMessage(0, len(zeroCards)))
 	}
 
 	deckTests := []deckTest{
