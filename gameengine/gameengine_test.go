@@ -52,23 +52,21 @@ func TestGameEngine(t *testing.T) {
 	// Game Engine receives from messages to send to players
 	// and returns response
 
-	// TODO: uncomment when testing library is being used
-
 	game := *engine.game
 	game.start() // deal cards
 
-	messages := make([]messageToPlayer, 0, len(*game.players))
-	expected := []reorganisedHand{}
+	messages := make(map[string]messageToPlayer)
+	expected := map[string]reorganisedHand{}
 	for _, p := range *game.players {
 		o := buildOpponents(p.id, *game.players)
 		m := game.buildMessageToPlayer(p, o, "Rearrange your hand")
-		messages = append(messages, m)
+		messages[p.id] = m
 
-		expected = append(expected, reorganisedHand{
+		expected[p.id] = reorganisedHand{
 			PlayerID:  p.id,
 			HandCards: p.hand,
 			SeenCards: p.seen,
-		})
+		}
 	}
 
 	actual, err := engine.messagePlayersAwaitReply(messages)

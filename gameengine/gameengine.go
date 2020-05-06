@@ -78,16 +78,16 @@ func (ge *GameEngine) start() {
 	ge.playState = inProgress
 }
 
-func (ge *GameEngine) messagePlayersAwaitReply(messages []messageToPlayer) ([]reorganisedHand, error) {
+func (ge *GameEngine) messagePlayersAwaitReply(messages map[string]messageToPlayer) (map[string]reorganisedHand, error) {
 	cnl := make(chan reorganisedHand)
 
 	for _, msg := range messages {
 		go ge.messagePlayer(cnl, "the-player", msg)
 	}
-	responses := []reorganisedHand{}
+	responses := map[string]reorganisedHand{}
 	for i := 0; i < len(messages); i++ {
 		resp := <-cnl
-		responses = append(responses, resp)
+		responses[resp.PlayerID] = resp
 	}
 
 	// send slice back

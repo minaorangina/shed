@@ -75,11 +75,11 @@ func (g *Game) dealHand() {
 }
 
 func (g *Game) informPlayersAwaitReply() error {
-	messages := make([]messageToPlayer, 0, len(*g.players))
+	messages := make(map[string]messageToPlayer)
 	for _, p := range *g.players {
 		o := buildOpponents(p.id, *g.players)
 		m := g.buildMessageToPlayer(p, o, "Rearrange your hand")
-		messages = append(messages, m)
+		messages[p.id] = m
 	}
 
 	// send on to game engine
