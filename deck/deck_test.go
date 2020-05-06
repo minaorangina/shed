@@ -10,15 +10,15 @@ import (
 
 var fullDeckCount = 52
 
-func TestDeck(t *testing.T) {
-	// New
+func TestNewDeck(t *testing.T) {
 	deckOfCards := New()
 
 	if len(deckOfCards) != fullDeckCount {
 		t.Errorf(utils.FailureMessage(strconv.Itoa(fullDeckCount), strconv.Itoa(len(deckOfCards))))
 	}
-
-	// Shuffle
+}
+func TestDeckShuffle(t *testing.T) {
+	deckOfCards := New()
 	anotherDeckOfCards := New()
 	anotherDeckOfCards.Shuffle()
 	if reflect.DeepEqual(deckOfCards, anotherDeckOfCards) {
@@ -38,7 +38,8 @@ func TestDeck(t *testing.T) {
 			}
 		}
 	}()
-
+}
+func TestDeckRemoveCards(t *testing.T) {
 	deckToRemoveFrom := New()
 	type deckTest struct {
 		testName             string
@@ -46,7 +47,6 @@ func TestDeck(t *testing.T) {
 		expectedNumRemaining int
 	}
 
-	// Empty list of cards
 	zeroCards := deckToRemoveFrom.Deal(0)
 	if len(zeroCards) != 0 {
 		t.Errorf(utils.FailureMessage(strconv.Itoa(0), strconv.Itoa(len(zeroCards))))

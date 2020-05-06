@@ -8,7 +8,13 @@ import (
 	utils "github.com/minaorangina/shed/internal"
 )
 
-func TestGame(t *testing.T) {
+func gameWithPlayers() *Game {
+	gameEngine, _ := New([]string{"harry-1", "sally-1"})
+	game := NewGame(&gameEngine, []playerInfo{{"Harry-1", "Harry"}, {"Sally-1", "Sally"}})
+	return game
+}
+
+func TestNewGame(t *testing.T) {
 	gameEngine, _ := New([]string{"harry-1", "sally-1"})
 	player1, err := NewPlayer("harry-1", "Harry")
 	if err != nil {
@@ -33,12 +39,11 @@ func TestGame(t *testing.T) {
 	if game.Stage() != expectedStage {
 		t.Errorf(fmt.Sprintf("\nExpected: %+v\nActual: %+v\n", expectedStage, game.Stage()))
 	}
+}
+func TestGameStart(t *testing.T) {
+	game := gameWithPlayers()
 
 	game.start()
-
-	if game.players == nil {
-		t.Fatal("game.player is nil, which was not expected")
-	}
 
 	for _, p := range *game.players {
 		c := p.cards()
@@ -50,10 +55,13 @@ func TestGame(t *testing.T) {
 			t.Errorf("Expected all threes. Actual:\n" + fmt.Sprintf(formatStr, numHand, numSeen, numUnseen))
 		}
 	}
-
-	// buildOpponents
+}
+func TestBuildMessageToPlayer(t *testing.T) {
+	game := gameWithPlayers()
 	player0, _ := NewPlayer("hermy-0", "Hermione")
+	player2, _ := NewPlayer("sally-1", "Sally")
 	someMorePlayers := []Player{player0, player2}
+
 	expectedOpponents := []opponent{
 		{ID: player0.id, Name: player0.name, SeenCards: player0.cards().seen},
 		{ID: player2.id, Name: player2.name, SeenCards: player2.cards().seen},
@@ -63,12 +71,11 @@ func TestGame(t *testing.T) {
 		t.Errorf("\nExpected: %+v\nActual: %+v\n", expectedOpponents, opponents)
 	}
 
-	// buildMessageToPlayer
 	playerToContact := (*game.players)[1]
 	message := game.buildMessageToPlayer(playerToContact, opponents, "Let the games begin!")
 	expectedMessage := messageToPlayer{
 		Message:   "Let the games begin!",
-		PlayState: gameEngine.playState,
+		PlayState: game.engine.playState,
 		GameStage: game.stage,
 		PlayerID:  playerToContact.id,
 		HandCards: playerToContact.cards().hand,
