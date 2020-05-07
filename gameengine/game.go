@@ -36,10 +36,7 @@ type Game struct {
 func makePlayers(playerInfo []playerInfo) ([]Player, error) {
 	players := make([]Player, 0, len(playerInfo))
 	for _, info := range playerInfo {
-		p, playerErr := NewPlayer(info.id, info.name)
-		if playerErr != nil {
-			return []Player{}, playerErr
-		}
+		p := NewPlayer(info.id, info.name)
 		players = append(players, p)
 	}
 

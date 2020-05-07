@@ -7,11 +7,7 @@ import (
 
 func TestPlayer(t *testing.T) {
 	name := "my name"
-	p, err := NewPlayer("player-1", name)
-
-	if err != nil {
-		t.Errorf(err.Error())
-	}
+	p := NewPlayer("player-1", name)
 	expectedPlayer := Player{
 		name: name,
 		id:   "player-1",

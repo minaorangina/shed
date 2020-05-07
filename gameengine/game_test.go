@@ -16,14 +16,9 @@ func gameWithPlayers() *Game {
 
 func TestNewGame(t *testing.T) {
 	gameEngine, _ := New([]string{"harry-1", "sally-1"})
-	player1, err := NewPlayer("harry-1", "Harry")
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-	player2, err := NewPlayer("sally-1", "Sally")
-	if err != nil {
-		t.Errorf(err.Error())
-	}
+	player1 := NewPlayer("harry-1", "Harry")
+	player2 := NewPlayer("sally-1", "Sally")
+
 	somePlayers := []Player{player1, player2}
 	_ = somePlayers
 
@@ -58,8 +53,8 @@ func TestGameStart(t *testing.T) {
 }
 func TestBuildMessageToPlayer(t *testing.T) {
 	game := gameWithPlayers()
-	player0, _ := NewPlayer("hermy-0", "Hermione")
-	player2, _ := NewPlayer("sally-1", "Sally")
+	player0 := NewPlayer("hermy-0", "Hermione")
+	player2 := NewPlayer("sally-1", "Sally")
 	someMorePlayers := []Player{player0, player2}
 
 	expectedOpponents := []opponent{

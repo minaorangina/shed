@@ -23,8 +23,8 @@ type playerInfo struct {
 }
 
 // NewPlayer constructs a new player
-func NewPlayer(id, name string) (Player, error) {
-	return Player{id: id, name: name}, nil
+func NewPlayer(id, name string) Player {
+	return Player{id: id, name: name}
 }
 
 func (p Player) cards() playerCards {
