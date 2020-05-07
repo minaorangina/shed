@@ -38,19 +38,32 @@ func TestGameEngine(t *testing.T) {
 
 	// Construct a GameEngine
 	playerNames := []string{"Ada", "Katherine"}
+	_, err := New(playerNames)
+	if err != nil {
+		t.Fail()
+	}
+}
+
+func TestGameEngineInit(t *testing.T) {
+	playerNames := []string{"Ada", "Katherine"}
 	engine, err := New(playerNames)
 	if err != nil {
 		t.Fail()
 	}
-
 	// Init works
 	engine.Init()
 	if engine.game == nil {
 		t.Errorf("engine.game was nil")
 	}
+}
 
+func TestGameEngineMsgFromGame(t *testing.T) {
 	// Game Engine receives from messages to send to players
 	// and returns response
+	playerNames := []string{"Ada", "Katherine"}
+	engine, err := New(playerNames)
+	// Init works
+	engine.Init()
 
 	game := *engine.game
 	game.start() // deal cards
