@@ -4,7 +4,6 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/minaorangina/shed/player"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -39,7 +38,7 @@ type playerInfo struct {
 // GameEngine represents the engine of the game
 type GameEngine struct {
 	playState       playState
-	externalPlayers []player.ExternalPlayer
+	externalPlayers []ExternalPlayer
 	game            *Game
 }
 
@@ -65,9 +64,9 @@ func (ge *GameEngine) Init(playerNames []string) error {
 	}
 
 	// make external players
-	external := []player.ExternalPlayer{}
+	external := []ExternalPlayer{}
 	for _, i := range info {
-		external = append(external, player.NewExternalPlayer(i.id, i.name))
+		external = append(external, NewExternalPlayer(i.id, i.name))
 	}
 
 	ge.externalPlayers = external

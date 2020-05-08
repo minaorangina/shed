@@ -1,4 +1,4 @@
-package player
+package gameengine
 
 import "os"
 
