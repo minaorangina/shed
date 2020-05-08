@@ -1,28 +1,51 @@
 package gameengine
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	utils "github.com/minaorangina/shed/internal"
 )
 
 func gameWithPlayers() *Game {
-	gameEngine, _ := New([]string{"harry-1", "sally-1"})
-	game := NewGame(&gameEngine, []playerInfo{{"Harry-1", "Harry"}, {"Sally-1", "Sally"}})
+	gameEngine := New()
+	game, _ := NewGame(&gameEngine, []playerInfo{{"Harry-1", "Harry"}, {"Sally-1", "Sally"}})
 	return game
 }
 
 func TestNewGame(t *testing.T) {
-	gameEngine, _ := New([]string{"harry-1", "sally-1"})
-	player1 := NewPlayer("harry-1", "Harry")
-	player2 := NewPlayer("sally-1", "Sally")
+	type gameTest struct {
+		testName string
+		input    []string
+		expected error
+	}
 
-	somePlayers := []Player{player1, player2}
-	_ = somePlayers
+	ge := New()
 
-	game := NewGame(&gameEngine, []playerInfo{{"Harry-1", "Harry"}, {"Sally-1", "Sally"}})
+	testsShouldError := []gameTest{
+		{
+			"too few players",
+			[]string{"Grace"},
+			errors.New("Could not construct Game: minimum of 2 players required (supplied 1)"),
+		},
+		{
+			"too many players",
+			[]string{"Ada", "Katherine", "Grace", "Hedy", "Marlyn"},
+			errors.New("Could not construct Game: maximum of 4 players required (supplied 5)"),
+		},
+	}
+
+	for _, et := range testsShouldError {
+		err := ge.Init(et.input)
+		if err == nil {
+			t.Errorf(utils.TableFailureMessage(et.testName, strings.Join(et.input, ","), et.expected.Error()))
+		}
+	}
+
+	game := gameWithPlayers()
 	if len(game.deck) != 52 {
 		t.Errorf(fmt.Sprintf("\nExpected: %+v\nActual: %+v\n", 52, len(game.deck)))
 	}

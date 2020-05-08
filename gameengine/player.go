@@ -17,11 +17,6 @@ type playerCards struct {
 	unseen []deck.Card
 }
 
-type playerInfo struct {
-	id   string
-	name string
-}
-
 // NewPlayer constructs a new player
 func NewPlayer(id, name string) Player {
 	return Player{id: id, name: name}

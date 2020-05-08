@@ -1,7 +1,6 @@
 package gameengine
 
 import (
-	"fmt"
 	"math/rand"
 	"time"
 
@@ -31,6 +30,11 @@ const (
 	paused
 )
 
+type playerInfo struct {
+	id   string
+	name string
+}
+
 // GameEngine represents the engine of the game
 type GameEngine struct {
 	playState  playState
@@ -39,12 +43,14 @@ type GameEngine struct {
 }
 
 // New constructs a new GameEngine
-func New(playerNames []string) (GameEngine, error) {
-	if len(playerNames) < 2 {
-		return GameEngine{}, fmt.Errorf("Could not construct GameEngine: minimum of 2 players required (supplied %d)", len(playerNames))
-	}
-	if len(playerNames) > 4 {
-		return GameEngine{}, fmt.Errorf("Could not construct GameEngine: maximum of 4 players allowed (supplied %d)", len(playerNames))
+func New() GameEngine {
+	return GameEngine{}
+}
+
+// Init initialises a new game
+func (ge *GameEngine) Init(playerNames []string) error {
+	if ge.playState != idle {
+		return nil
 	}
 
 	info := make([]playerInfo, 0, len(playerNames))
@@ -52,18 +58,15 @@ func New(playerNames []string) (GameEngine, error) {
 		info = append(info, playerInfo{name: name, id: uuid.NewV4().String()})
 	}
 
-	return GameEngine{playerInfo: info}, nil
-}
-
-// Init initialises a new game
-func (ge *GameEngine) Init() error {
-	if ge.playState != idle {
-		return nil
+	shedGame, err := NewGame(ge, info)
+	if err != nil {
+		return err
 	}
 
-	shedGame := NewGame(ge, ge.playerInfo)
+	ge.playerInfo = info
 	ge.game = shedGame
 	ge.playState = inProgress
+
 	ge.game.start()
 
 	return nil

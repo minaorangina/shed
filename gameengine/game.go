@@ -1,6 +1,8 @@
 package gameengine
 
 import (
+	"fmt"
+
 	"github.com/minaorangina/shed/deck"
 )
 
@@ -44,10 +46,16 @@ func makePlayers(playerInfo []playerInfo) ([]Player, error) {
 }
 
 // NewGame instantiates a new game of Shed
-func NewGame(engine *GameEngine, playerInfo []playerInfo) *Game {
+func NewGame(engine *GameEngine, playerInfo []playerInfo) (*Game, error) {
+	if len(playerInfo) < 2 {
+		return nil, fmt.Errorf("Could not construct Game: minimum of 2 players required (supplied %d)", len(playerInfo))
+	}
+	if len(playerInfo) > 4 {
+		return nil, fmt.Errorf("Could not construct Game: maximum of 4 players allowed (supplied %d)", len(playerInfo))
+	}
 	cards := deck.New()
 	players, _ := makePlayers(playerInfo)
-	return &Game{name: "Shed", engine: engine, players: &players, deck: cards}
+	return &Game{name: "Shed", engine: engine, players: &players, deck: cards}, nil
 }
 
 func (g *Game) start() {

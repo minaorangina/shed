@@ -1,59 +1,49 @@
 package gameengine
 
 import (
-	"errors"
 	"reflect"
-	"strings"
 	"testing"
 
 	utils "github.com/minaorangina/shed/internal"
 )
 
-func TestGameEngine(t *testing.T) {
-	type engineTest struct {
-		testName string
-		input    []string
-		expected error
-	}
-
-	testsShouldError := []engineTest{
-		{
-			"too few players",
-			[]string{"Grace"},
-			errors.New("Could not construct GameEngine: minimum of 2 players required (supplied 1)"),
-		},
-		{
-			"too many players",
-			[]string{"Ada", "Katherine", "Grace", "Hedy", "Marlyn"},
-			errors.New("Could not construct GameEngine: maximum of 4 players required (supplied 5)"),
-		},
-	}
-
-	for _, et := range testsShouldError {
-		_, err := New(et.input)
-		if err == nil {
-			t.Errorf(utils.TableFailureMessage(et.testName, strings.Join(et.input, ","), et.expected.Error()))
-		}
-	}
-
-	// Construct a GameEngine
-	playerNames := []string{"Ada", "Katherine"}
-	_, err := New(playerNames)
-	if err != nil {
-		t.Fail()
-	}
-}
-
 func TestGameEngineInit(t *testing.T) {
-	playerNames := []string{"Ada", "Katherine"}
-	engine, err := New(playerNames)
-	if err != nil {
-		t.Fail()
+	type test struct {
+		testName   string
+		gameEngine GameEngine
+		expected   playState
 	}
-	// Init works
-	engine.Init()
-	if engine.game == nil {
-		t.Errorf("engine.game was nil")
+	initTests := []test{
+		{
+			testName:   "`Init` puts game engine into inProgress state",
+			gameEngine: GameEngine{},
+			expected:   inProgress,
+		},
+		{
+			testName: "`Init` does nothing if game in progress",
+			gameEngine: GameEngine{
+				playState: inProgress,
+			},
+			expected: inProgress,
+		},
+		{
+			testName: "`Init` does nothing if game paused",
+			gameEngine: GameEngine{
+				playState: paused,
+			},
+			expected: paused,
+		},
+	}
+
+	for _, test := range initTests {
+		playerNames := []string{"Ada", "Katherine"}
+		err := test.gameEngine.Init(playerNames)
+		if err != nil {
+			t.Fatalf("Failed to intialise game: %s", err.Error())
+		}
+		if test.expected != test.gameEngine.playState {
+			t.Errorf(utils.TableFailureMessage(test.testName, test.expected.String(), test.gameEngine.playState.String()))
+		}
 	}
 }
 
@@ -61,9 +51,11 @@ func TestGameEngineMsgFromGame(t *testing.T) {
 	// Game Engine receives from messages to send to players
 	// and returns response
 	playerNames := []string{"Ada", "Katherine"}
-	engine, err := New(playerNames)
-	// Init works
-	engine.Init()
+	engine := New()
+	err := engine.Init(playerNames)
+	if err != nil {
+		t.Fatalf("Failed to intialise game engine: %s", err.Error())
+	}
 
 	game := *engine.game
 	game.start() // deal cards
