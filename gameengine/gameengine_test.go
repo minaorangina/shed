@@ -7,13 +7,36 @@ import (
 	utils "github.com/minaorangina/shed/internal"
 )
 
+func initialisedGameEngine() GameEngine {
+	playerNames := []string{"Ada", "Katherine"}
+	engine := New()
+	engine.Init(playerNames)
+	return engine
+}
+
 func TestGameEngineInit(t *testing.T) {
-	type test struct {
+	ge := initialisedGameEngine()
+
+	// produces a game
+	if ge.game == nil {
+		t.Fatal("GameEngine.game is nil")
+	}
+
+	// produces ExternalPlayers
+	if ge.externalPlayers == nil {
+		t.Fatal("GameEngine.externalPlayers is nil")
+	}
+	if len(ge.externalPlayers) != 2 {
+		t.Errorf(utils.FailureMessage(2, len(ge.externalPlayers)))
+	}
+
+	// correct playState
+	type playStateTest struct {
 		testName   string
 		gameEngine GameEngine
 		expected   playState
 	}
-	initTests := []test{
+	playStateTests := []playStateTest{
 		{
 			testName:   "`Init` puts game engine into inProgress state",
 			gameEngine: GameEngine{},
@@ -35,7 +58,7 @@ func TestGameEngineInit(t *testing.T) {
 		},
 	}
 
-	for _, test := range initTests {
+	for _, test := range playStateTests {
 		playerNames := []string{"Ada", "Katherine"}
 		err := test.gameEngine.Init(playerNames)
 		if err != nil {
@@ -50,13 +73,7 @@ func TestGameEngineInit(t *testing.T) {
 func TestGameEngineMsgFromGame(t *testing.T) {
 	// Game Engine receives from messages to send to players
 	// and returns response
-	playerNames := []string{"Ada", "Katherine"}
-	engine := New()
-	err := engine.Init(playerNames)
-	if err != nil {
-		t.Fatalf("Failed to intialise game engine: %s", err.Error())
-	}
-
+	engine := initialisedGameEngine()
 	game := *engine.game
 	game.start() // deal cards
 
