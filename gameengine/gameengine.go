@@ -3,8 +3,6 @@ package gameengine
 import (
 	"math/rand"
 	"time"
-
-	uuid "github.com/satori/go.uuid"
 )
 
 // playState represents the state of the current game
@@ -38,7 +36,7 @@ type playerInfo struct {
 // GameEngine represents the engine of the game
 type GameEngine struct {
 	playState       playState
-	externalPlayers []ExternalPlayer
+	externalPlayers map[string]ExternalPlayer
 	game            *Game
 }
 
@@ -55,7 +53,7 @@ func (ge *GameEngine) Init(playerNames []string) error {
 
 	info := make([]playerInfo, 0, len(playerNames))
 	for _, name := range playerNames {
-		info = append(info, playerInfo{name: name, id: uuid.NewV4().String()})
+		info = append(info, playerInfo{name: name, id: NewID()})
 	}
 
 	shedGame, err := NewGame(ge, info)
@@ -64,9 +62,9 @@ func (ge *GameEngine) Init(playerNames []string) error {
 	}
 
 	// make external players
-	external := []ExternalPlayer{}
+	external := map[string]ExternalPlayer{}
 	for _, i := range info {
-		external = append(external, NewExternalPlayer(i.id, i.name))
+		external[i.id] = NewExternalPlayer(i.id, i.name)
 	}
 
 	ge.externalPlayers = external
@@ -87,31 +85,36 @@ func (ge *GameEngine) start() {
 	ge.playState = inProgress
 }
 
-func (ge *GameEngine) messagePlayersAwaitReply(messages map[string]messageToPlayer) (map[string]reorganisedHand, error) {
-	cnl := make(chan reorganisedHand)
+func (ge *GameEngine) messagePlayersAwaitReply(messages map[string]messageToPlayer) (map[string]messageFromPlayer, error) {
+	cnl := make(chan messageFromPlayer)
 
 	for _, msg := range messages {
-		go ge.messagePlayer(cnl, "the-player", msg)
+		go ge.messagePlayer(cnl, ge.externalPlayers[msg.PlayerID], msg)
 	}
-	responses := map[string]reorganisedHand{}
+	responses := map[string]messageFromPlayer{}
 	for i := 0; i < len(messages); i++ {
 		resp := <-cnl
 		responses[resp.PlayerID] = resp
 	}
 
-	// send slice back
 	return responses, nil
 }
 
-func (ge *GameEngine) messagePlayer(cnl chan reorganisedHand, player string, message messageToPlayer) {
+func (ge *GameEngine) messagePlayer(cnl chan messageFromPlayer, externalPlayer ExternalPlayer, msg messageToPlayer) {
 	rand.Seed(time.Now().UnixNano())
 	timeout := rand.Intn(5)
 	time.Sleep(time.Duration(100*timeout) * time.Millisecond)
 
-	// pass things down channel
-	cnl <- reorganisedHand{
-		PlayerID:  message.PlayerID,
-		HandCards: message.HandCards,
-		SeenCards: message.SeenCards,
+	reply, err := externalPlayer.sendMessageAwaitReply(msg)
+	if err != nil {
+		// send default or something
+	}
+	_ = reply
+
+	cnl <- messageFromPlayer{
+		PlayerID:  msg.PlayerID,
+		Command:   msg.Command,
+		HandCards: msg.HandCards,
+		SeenCards: msg.SeenCards,
 	}
 }

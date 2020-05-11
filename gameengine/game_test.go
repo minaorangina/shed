@@ -10,10 +10,13 @@ import (
 	utils "github.com/minaorangina/shed/internal"
 )
 
-func gameWithPlayers() *Game {
+func gameWithPlayers() (*Game, map[string]*Player) {
 	gameEngine := New()
-	game, _ := NewGame(&gameEngine, []playerInfo{{"Harry-1", "Harry"}, {"Sally-1", "Sally"}})
-	return game
+	player1 := NewPlayer(NewID(), "Harry")
+	player2 := NewPlayer(NewID(), "Sally")
+	players := map[string]*Player{player1.id: &player1, player2.id: &player2}
+	game, _ := NewGame(&gameEngine, []playerInfo{{player1.id, player1.name}, {player2.id, player2.name}})
+	return game, players
 }
 
 func TestNewGame(t *testing.T) {
@@ -45,12 +48,12 @@ func TestNewGame(t *testing.T) {
 		}
 	}
 
-	game := gameWithPlayers()
+	game, _ := gameWithPlayers()
 	if len(game.deck) != 52 {
 		t.Errorf(fmt.Sprintf("\nExpected: %+v\nActual: %+v\n", 52, len(game.deck)))
 	}
-	if len(*game.players) != 2 {
-		t.Errorf(fmt.Sprintf("\nExpected: %+v\nActual: %+v\n", 2, len(*game.players)))
+	if len(game.players) != 2 {
+		t.Errorf(fmt.Sprintf("\nExpected: %+v\nActual: %+v\n", 2, len(game.players)))
 	}
 
 	expectedStage := "handOrganisation"
@@ -59,11 +62,11 @@ func TestNewGame(t *testing.T) {
 	}
 }
 func TestGameStart(t *testing.T) {
-	game := gameWithPlayers()
+	game, _ := gameWithPlayers()
 
 	game.start()
 
-	for _, p := range *game.players {
+	for _, p := range game.players {
 		c := p.cards()
 		numHand := len(c.hand)
 		numSeen := len(c.seen)
@@ -74,31 +77,29 @@ func TestGameStart(t *testing.T) {
 		}
 	}
 }
+
 func TestBuildMessageToPlayer(t *testing.T) {
-	game := gameWithPlayers()
-	player0 := NewPlayer("hermy-0", "Hermione")
-	player2 := NewPlayer("sally-1", "Sally")
-	someMorePlayers := []Player{player0, player2}
-
-	expectedOpponents := []opponent{
-		{ID: player0.id, Name: player0.name, SeenCards: player0.cards().seen},
-		{ID: player2.id, Name: player2.name, SeenCards: player2.cards().seen},
-	}
-	opponents := buildOpponents("harry-1", someMorePlayers)
-	if !reflect.DeepEqual(opponents, expectedOpponents) {
-		t.Errorf("\nExpected: %+v\nActual: %+v\n", expectedOpponents, opponents)
+	game, players := gameWithPlayers()
+	var opponents []opponent
+	var id string
+	for key := range players {
+		opponents = buildOpponents(key, players)
+		id = key
+		break
 	}
 
-	playerToContact := (*game.players)[1]
+	playerToContact := game.players[id]
 	message := game.buildMessageToPlayer(playerToContact, opponents, "Let the games begin!")
 	expectedMessage := messageToPlayer{
 		Message:   "Let the games begin!",
 		PlayState: game.engine.playState,
 		GameStage: game.stage,
 		PlayerID:  playerToContact.id,
+		Name:      playerToContact.name,
 		HandCards: playerToContact.cards().hand,
 		SeenCards: playerToContact.cards().seen,
-		Opponents: expectedOpponents,
+		Opponents: opponents,
+		Command:   reorg,
 	}
 	if !reflect.DeepEqual(expectedMessage, message) {
 		t.Errorf(utils.FailureMessage(expectedMessage, message))

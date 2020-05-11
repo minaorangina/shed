@@ -1,6 +1,14 @@
 package gameengine
 
-import "github.com/minaorangina/shed/deck"
+import (
+	"github.com/minaorangina/shed/deck"
+	uuid "github.com/satori/go.uuid"
+)
+
+// NewID constructs a player ID
+func NewID() string {
+	return uuid.NewV4().String()
+}
 
 // Player represents a player in the game
 type Player struct {

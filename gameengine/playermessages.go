@@ -2,15 +2,27 @@ package gameengine
 
 import "github.com/minaorangina/shed/deck"
 
+type cmd int
+
+const reorg cmd = iota
+
 type messageToPlayer struct {
 	PlayState playState   `json:"play_state"`
 	GameStage Stage       `json:"game_stage"`
 	PlayerID  string      `json:"player_id"`
+	Name      string      `json:"name"`
 	Message   string      `json:"message"`
 	HandCards []deck.Card `json:"hand_cards"`
 	SeenCards []deck.Card `json:"seen_cards"`
 	Opponents []opponent  `json:"opponents"`
-	// perhaps something to indicate which changes are allowed by the player
+	Command   cmd         `json:"command"`
+}
+
+type messageFromPlayer struct {
+	PlayerID  string      `json:"player_id"`
+	Command   cmd         `json:"command"`
+	HandCards []deck.Card `json:"hand_cards"`
+	SeenCards []deck.Card `json:"seen_cards"`
 }
 
 // a response type

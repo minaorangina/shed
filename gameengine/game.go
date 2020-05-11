@@ -30,16 +30,16 @@ func (s Stage) String() string {
 type Game struct {
 	name    string
 	engine  *GameEngine
-	players *[]Player
+	players map[string]*Player
 	stage   Stage
 	deck    deck.Deck
 }
 
-func makePlayers(playerInfo []playerInfo) ([]Player, error) {
-	players := make([]Player, 0, len(playerInfo))
+func makePlayers(playerInfo []playerInfo) (map[string]*Player, error) {
+	players := make(map[string]*Player)
 	for _, info := range playerInfo {
 		p := NewPlayer(info.id, info.name)
-		players = append(players, p)
+		players[p.id] = &p
 	}
 
 	return players, nil
@@ -55,45 +55,49 @@ func NewGame(engine *GameEngine, playerInfo []playerInfo) (*Game, error) {
 	}
 	cards := deck.New()
 	players, _ := makePlayers(playerInfo)
-	return &Game{name: "Shed", engine: engine, players: &players, deck: cards}, nil
+	return &Game{name: "Shed", engine: engine, players: players, deck: cards}, nil
 }
 
 func (g *Game) start() {
 	g.deck.Shuffle()
 	g.dealHand()
-	err := g.informPlayersAwaitReply()
+	err := g.messagePlayersAwaitReply()
 	if err != nil {
 		// handle error
 	}
 }
 
 func (g *Game) dealHand() {
-	for i := range *g.players {
+	for _, p := range g.players {
 		dealtHand := g.deck.Deal(3)
 		dealtSeen := g.deck.Deal(3)
 		dealtUnseen := g.deck.Deal(3)
 
-		(*g.players)[i].hand = append((*g.players)[i].hand, dealtHand...)
-		(*g.players)[i].seen = append((*g.players)[i].seen, dealtSeen...)
-		(*g.players)[i].unseen = append((*g.players)[i].unseen, dealtUnseen...)
+		p.hand = dealtHand
+		p.seen = dealtSeen
+		p.unseen = dealtUnseen
 	}
 }
 
-func (g *Game) informPlayersAwaitReply() error {
+func (g *Game) messagePlayersAwaitReply() error {
 	messages := make(map[string]messageToPlayer)
-	for _, p := range *g.players {
-		o := buildOpponents(p.id, *g.players)
+	for _, p := range g.players {
+		o := buildOpponents(p.id, g.players)
 		m := g.buildMessageToPlayer(p, o, "Rearrange your hand")
 		messages[p.id] = m
 	}
 
 	// send on to game engine
-	reorganised, err := g.engine.messagePlayersAwaitReply(messages)
+	reply, err := g.engine.messagePlayersAwaitReply(messages)
 	if err != nil {
 		return err
 	}
-	_ = reorganised
-	// wait for all responses to come back
+	reorganised := mapMessagesToHand(reply)
+	for id, p := range g.players {
+		p.hand = reorganised[id].HandCards
+		p.seen = reorganised[id].SeenCards
+	}
+
 	return nil
 }
 
@@ -103,11 +107,12 @@ func (g *Game) Stage() string {
 }
 
 // to test (easier when state hydration exists)
-func (g *Game) buildMessageToPlayer(player Player, opponents []opponent, message string) messageToPlayer {
+func (g *Game) buildMessageToPlayer(player *Player, opponents []opponent, message string) messageToPlayer {
 	return messageToPlayer{
 		PlayState: g.engine.playState,
 		GameStage: g.stage,
 		PlayerID:  player.id,
+		Name:      player.name,
 		Message:   message,
 		HandCards: player.cards().hand,
 		SeenCards: player.cards().seen,
@@ -115,10 +120,10 @@ func (g *Game) buildMessageToPlayer(player Player, opponents []opponent, message
 	}
 }
 
-func buildOpponents(playerID string, players []Player) []opponent {
+func buildOpponents(playerID string, players map[string]*Player) []opponent {
 	opponents := []opponent{}
-	for _, p := range players {
-		if p.id == playerID {
+	for id, p := range players {
+		if id == playerID {
 			continue
 		}
 		opponents = append(opponents, opponent{
@@ -126,4 +131,17 @@ func buildOpponents(playerID string, players []Player) []opponent {
 		})
 	}
 	return opponents
+}
+
+func mapMessagesToHand(messages map[string]messageFromPlayer) map[string]reorganisedHand {
+	reorganised := map[string]reorganisedHand{}
+
+	for id, msg := range messages {
+		reorganised[id] = reorganisedHand{
+			SeenCards: msg.SeenCards,
+			HandCards: msg.HandCards,
+		}
+	}
+
+	return reorganised
 }
