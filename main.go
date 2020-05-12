@@ -1,7 +1,10 @@
 package main
 
-import "fmt"
+import (
+	"github.com/minaorangina/shed/gameengine"
+)
 
 func main() {
-	fmt.Println("This will eventually be a game")
+	ge := gameengine.New()
+	ge.Init([]string{"Harry", "Sally"})
 }
