@@ -8,7 +8,7 @@ const reorg cmd = iota
 
 type messageToPlayer struct {
 	PlayState playState   `json:"play_state"`
-	GameStage Stage       `json:"game_stage"`
+	GameStage Stage       `json:"game_stage"` // necessary?
 	PlayerID  string      `json:"player_id"`
 	Name      string      `json:"name"`
 	Message   string      `json:"message"`

@@ -2,6 +2,7 @@ package gameengine
 
 import (
 	"math/rand"
+	"os"
 	"time"
 )
 
@@ -64,7 +65,7 @@ func (ge *GameEngine) Init(playerNames []string) error {
 	// make external players
 	external := map[string]ExternalPlayer{}
 	for _, i := range info {
-		external[i.id] = NewExternalPlayer(i.id, i.name)
+		external[i.id] = NewExternalPlayer(i.id, i.name, os.Stdin, os.Stdout)
 	}
 
 	ge.externalPlayers = external
