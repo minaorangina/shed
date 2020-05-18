@@ -56,7 +56,7 @@ func TestNewGame(t *testing.T) {
 		t.Errorf(fmt.Sprintf("\nExpected: %+v\nActual: %+v\n", 2, len(game.players)))
 	}
 
-	expectedStage := "handOrganisation"
+	expectedStage := "cardOrganisation"
 	if game.Stage() != expectedStage {
 		t.Errorf(fmt.Sprintf("\nExpected: %+v\nActual: %+v\n", expectedStage, game.Stage()))
 	}
@@ -96,8 +96,8 @@ func TestBuildMessageToPlayer(t *testing.T) {
 		GameStage: game.stage,
 		PlayerID:  playerToContact.id,
 		Name:      playerToContact.name,
-		HandCards: playerToContact.cards().hand,
-		SeenCards: playerToContact.cards().seen,
+		Hand:      playerToContact.cards().hand,
+		Seen:      playerToContact.cards().seen,
 		Opponents: opponents,
 		Command:   reorg,
 	}

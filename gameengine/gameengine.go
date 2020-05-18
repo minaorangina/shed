@@ -113,9 +113,9 @@ func (ge *GameEngine) messagePlayer(cnl chan messageFromPlayer, externalPlayer E
 	_ = reply
 
 	cnl <- messageFromPlayer{
-		PlayerID:  msg.PlayerID,
-		Command:   msg.Command,
-		HandCards: msg.HandCards,
-		SeenCards: msg.SeenCards,
+		PlayerID: msg.PlayerID,
+		Command:  msg.Command,
+		Hand:     msg.Hand,
+		Seen:     msg.Seen,
 	}
 }

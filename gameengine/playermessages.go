@@ -12,8 +12,8 @@ type messageToPlayer struct {
 	PlayerID  string      `json:"player_id"`
 	Name      string      `json:"name"`
 	Message   string      `json:"message"`
-	HandCards []deck.Card `json:"hand_cards"`
-	SeenCards []deck.Card `json:"seen_cards"`
+	Hand []deck.Card `json:"hand"`
+	Seen []deck.Card `json:"seen"`
 	Opponents []opponent  `json:"opponents"`
 	Command   cmd         `json:"command"`
 }
@@ -21,20 +21,20 @@ type messageToPlayer struct {
 type messageFromPlayer struct {
 	PlayerID  string      `json:"player_id"`
 	Command   cmd         `json:"command"`
-	HandCards []deck.Card `json:"hand_cards"`
-	SeenCards []deck.Card `json:"seen_cards"`
+	Hand []deck.Card `json:"hand"`
+	Seen []deck.Card `json:"seen"`
 }
 
 // a response type
-type reorganisedHand struct {
+type initialCards struct {
 	PlayerID  string      `json:"player_id"`
-	HandCards []deck.Card `json:"hand_cards"`
-	SeenCards []deck.Card `json:"seen_cards"`
+	Hand []deck.Card `json:"hand"`
+	Seen []deck.Card `json:"seen"`
 }
 
 // opponent is a representation of an opponent player
 type opponent struct {
 	ID        string      `json:"id"`
 	Name      string      `json:"name"`
-	SeenCards []deck.Card `json:"opponent_seen_cards"`
+	Seen []deck.Card `json:"opponent_seen"`
 }

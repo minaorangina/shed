@@ -81,13 +81,13 @@ func TestGameEngineMsgFromGame(t *testing.T) {
 	expected := map[string]messageFromPlayer{}
 	for _, p := range game.players {
 		o := buildOpponents(p.id, game.players)
-		m := game.buildMessageToPlayer(p, o, "Rearrange your hand")
+		m := game.buildMessageToPlayer(p, o, "Rearrange your initial cards")
 		messages[p.id] = m
 
 		expected[p.id] = messageFromPlayer{
 			PlayerID:  p.id,
-			HandCards: p.hand,
-			SeenCards: p.seen,
+			Hand: p.hand,
+			Seen: p.seen,
 		}
 	}
 

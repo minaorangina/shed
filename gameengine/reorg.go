@@ -20,10 +20,10 @@ var (
 
 func (ep ExternalPlayer) handleReorg(msg messageToPlayer) (messageFromPlayer, error) {
 	response := messageFromPlayer{
-		PlayerID:  msg.PlayerID,
-		Command:   msg.Command,
-		HandCards: msg.HandCards,
-		SeenCards: msg.SeenCards,
+		PlayerID: msg.PlayerID,
+		Command:  msg.Command,
+		Hand:     msg.Hand,
+		Seen:     msg.Seen,
 	}
 
 	fmt.Println(buildCardDisplayText(msg))
@@ -83,17 +83,17 @@ func offerCardSwitch(conn *conn) bool {
 
 func reorganiseCards(conn *conn, msg messageToPlayer) messageFromPlayer {
 	defaultResponse := messageFromPlayer{
-		PlayerID:  msg.PlayerID,
-		Command:   msg.Command,
-		HandCards: msg.HandCards,
-		SeenCards: msg.SeenCards,
+		PlayerID: msg.PlayerID,
+		Command:  msg.Command,
+		Hand:     msg.Hand,
+		Seen:     msg.Seen,
 	}
 
 	allVisibleCards := []deck.Card{}
-	for _, c := range msg.HandCards {
+	for _, c := range msg.Hand {
 		allVisibleCards = append(allVisibleCards, c)
 	}
-	for _, c := range msg.SeenCards {
+	for _, c := range msg.Seen {
 		allVisibleCards = append(allVisibleCards, c)
 	}
 
@@ -105,13 +105,13 @@ func reorganiseCards(conn *conn, msg messageToPlayer) messageFromPlayer {
 	select {
 	case choices := <-ch:
 		if len(choices) == 3 {
-			newHandCards, newSeenCards := choicesToCards(allVisibleCards, choices)
+			newHand, newSeen := choicesToCards(allVisibleCards, choices)
 
 			return messageFromPlayer{
-				PlayerID:  msg.PlayerID,
-				Command:   msg.Command,
-				HandCards: newHandCards,
-				SeenCards: newSeenCards,
+				PlayerID: msg.PlayerID,
+				Command:  msg.Command,
+				Hand:     newHand,
+				Seen:     newSeen,
 			}
 		}
 		return defaultResponse
@@ -181,18 +181,18 @@ func charsToSortedCardIndex(chars string) []int {
 }
 
 func choicesToCards(allCards []deck.Card, choices []int) ([]deck.Card, []deck.Card) {
-	newHandCards := []deck.Card{}
-	newSeenCards := []deck.Card{}
+	newHand := []deck.Card{}
+	newSeen := []deck.Card{}
 
 	for i, choiceIdx := 0, 0; i < len(allCards); i++ {
 		if choiceIdx < len(choices) && i == choices[choiceIdx] {
-			newHandCards = append(newHandCards, allCards[i])
+			newHand = append(newHand, allCards[i])
 			choiceIdx++
 		} else {
-			newSeenCards = append(newSeenCards, allCards[i])
+			newSeen = append(newSeen, allCards[i])
 		}
 	}
-	return newHandCards, newSeenCards
+	return newHand, newSeen
 }
 
 func charsUnique(s string) bool {

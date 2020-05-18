@@ -10,18 +10,18 @@ import (
 type Stage int
 
 const (
-	handOrganisation Stage = iota
+	cardOrganisation Stage = iota
 	clearDeck
-	clearHand
+	clearCards
 )
 
 func (s Stage) String() string {
 	if s == 0 {
-		return "handOrganisation"
+		return "cardOrganisation"
 	} else if s == 1 {
 		return "clearDeck"
 	} else if s == 2 {
-		return "clearHand"
+		return "clearCards"
 	}
 	return ""
 }
@@ -60,14 +60,14 @@ func NewGame(engine *GameEngine, playerInfo []playerInfo) (*Game, error) {
 
 func (g *Game) start() {
 	g.deck.Shuffle()
-	g.dealHand()
-	err := g.messagePlayersAwaitReply()
+	g.dealInitialCards()
+	err := g.messagePlayersAwaitReply() // mock?
 	if err != nil {
 		// handle error
 	}
 }
 
-func (g *Game) dealHand() {
+func (g *Game) dealInitialCards() {
 	for _, p := range g.players {
 		dealtHand := g.deck.Deal(3)
 		dealtSeen := g.deck.Deal(3)
@@ -92,10 +92,10 @@ func (g *Game) messagePlayersAwaitReply() error {
 	if err != nil {
 		return err
 	}
-	reorganised := mapMessagesToHand(reply)
+	reorganised := messagesToInitialCards(reply)
 	for id, p := range g.players {
-		p.hand = reorganised[id].HandCards
-		p.seen = reorganised[id].SeenCards
+		p.hand = reorganised[id].Hand
+		p.seen = reorganised[id].Seen
 	}
 
 	return nil
@@ -114,8 +114,8 @@ func (g *Game) buildMessageToPlayer(player *Player, opponents []opponent, messag
 		PlayerID:  player.id,
 		Name:      player.name,
 		Message:   message,
-		HandCards: player.cards().hand,
-		SeenCards: player.cards().seen,
+		Hand:      player.cards().hand,
+		Seen:      player.cards().seen,
 		Opponents: opponents,
 	}
 }
@@ -127,19 +127,19 @@ func buildOpponents(playerID string, players map[string]*Player) []opponent {
 			continue
 		}
 		opponents = append(opponents, opponent{
-			ID: p.id, SeenCards: p.cards().seen, Name: p.name,
+			ID: p.id, Seen: p.cards().seen, Name: p.name,
 		})
 	}
 	return opponents
 }
 
-func mapMessagesToHand(messages map[string]messageFromPlayer) map[string]reorganisedHand {
-	reorganised := map[string]reorganisedHand{}
+func messagesToInitialCards(messages map[string]messageFromPlayer) map[string]initialCards {
+	reorganised := map[string]initialCards{}
 
 	for id, msg := range messages {
-		reorganised[id] = reorganisedHand{
-			SeenCards: msg.SeenCards,
-			HandCards: msg.HandCards,
+		reorganised[id] = initialCards{
+			Seen: msg.Seen,
+			Hand: msg.Hand,
 		}
 	}
 
