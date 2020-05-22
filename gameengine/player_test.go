@@ -1,18 +1,14 @@
 package gameengine
 
 import (
-	"reflect"
+	"os"
 	"testing"
 )
 
 func TestPlayer(t *testing.T) {
 	name := "my name"
-	p := NewPlayer("player-1", name)
-	expectedPlayer := Player{
-		name: name,
-		id:   "player-1",
-	}
-	if !reflect.DeepEqual(expectedPlayer, p) {
+	p := NewPlayer("player-1", name, os.Stdin, os.Stdout)
+	if p.Conn == nil {
 		t.Fail()
 	}
 }

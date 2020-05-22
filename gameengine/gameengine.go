@@ -1,9 +1,9 @@
 package gameengine
 
 import (
-	"math/rand"
-	"os"
-	"time"
+	"fmt"
+
+	"github.com/minaorangina/shed/deck"
 )
 
 // playState represents the state of the current game
@@ -36,86 +36,63 @@ type playerInfo struct {
 
 // GameEngine represents the engine of the game
 type GameEngine struct {
-	playState       playState
-	externalPlayers map[string]ExternalPlayer
-	game            *Game
+	playState playState
+	players   AllPlayers
+	stage     Stage
+	deck      deck.Deck
 }
 
 // New constructs a new GameEngine
-func New() GameEngine {
-	return GameEngine{}
+func New(players AllPlayers) (*GameEngine, error) {
+	if len(players) < 2 {
+		return nil, fmt.Errorf("Could not construct Game: minimum of 2 players required (supplied %d)", len(players))
+	}
+	if len(players) > 4 {
+		return nil, fmt.Errorf("Could not construct Game: maximum of 4 players allowed (supplied %d)", len(players))
+	}
+
+	engine := GameEngine{
+		players: players,
+		deck:    deck.New(),
+	}
+
+	return &engine, nil
 }
 
-// Init initialises a new game
-func (ge *GameEngine) Init(playerNames []string) error {
+// Start starts a game
+func (ge *GameEngine) Start() error {
 	if ge.playState != idle {
 		return nil
 	}
 
-	info := make([]playerInfo, 0, len(playerNames))
-	for _, name := range playerNames {
-		info = append(info, playerInfo{name: name, id: NewID()})
-	}
+	ge.playState = inProgress
 
-	shedGame, err := NewGame(ge, info)
+	err := ge.handleInitialCards() // mock?
 	if err != nil {
 		return err
 	}
 
-	// make external players
-	external := map[string]ExternalPlayer{}
-	for _, i := range info {
-		external[i.id] = NewExternalPlayer(i.id, i.name, os.Stdin, os.Stdout)
-	}
-
-	ge.externalPlayers = external
-	ge.game = shedGame
-	ge.playState = inProgress
-
-	ge.game.start()
-
+	// play actual game
 	return nil
 }
 
-// PlayState returns the current gameplay status
-func (ge *GameEngine) PlayState() string {
-	return ge.playState.String()
-}
-
-func (ge *GameEngine) start() {
-	ge.playState = inProgress
-}
-
-func (ge *GameEngine) messagePlayersAwaitReply(messages map[string]messageToPlayer) (map[string]messageFromPlayer, error) {
-	cnl := make(chan messageFromPlayer)
-
-	for _, msg := range messages {
-		go ge.messagePlayer(cnl, ge.externalPlayers[msg.PlayerID], msg)
+func (ge *GameEngine) messagePlayersAwaitReply(
+	messages OutboundMessages,
+) (
+	InboundMessages,
+	error,
+) {
+	ch := make(chan messageFromPlayer)
+	for _, p := range ge.players {
+		go p.sendMessageAwaitReply(ch, messages[p.ID])
+		break // debug
 	}
-	responses := map[string]messageFromPlayer{}
+
+	responses := InboundMessages{}
 	for i := 0; i < len(messages); i++ {
-		resp := <-cnl
-		responses[resp.PlayerID] = resp
+		resp := <-ch
+		responses.Add(resp.PlayerID, resp)
 	}
 
 	return responses, nil
-}
-
-func (ge *GameEngine) messagePlayer(cnl chan messageFromPlayer, externalPlayer ExternalPlayer, msg messageToPlayer) {
-	rand.Seed(time.Now().UnixNano())
-	timeout := rand.Intn(5)
-	time.Sleep(time.Duration(100*timeout) * time.Millisecond)
-
-	reply, err := externalPlayer.sendMessageAwaitReply(msg)
-	if err != nil {
-		// send default or something
-	}
-	_ = reply
-
-	cnl <- messageFromPlayer{
-		PlayerID: msg.PlayerID,
-		Command:  msg.Command,
-		Hand:     msg.Hand,
-		Seen:     msg.Seen,
-	}
 }

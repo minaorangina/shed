@@ -12,35 +12,19 @@ import (
 )
 
 var (
-	upperCaseA = 65
-	upperCaseD = 65
-	upperCaseF = 70
-	retries    = 3
+	upperCaseA   = 65
+	upperCaseD   = 65
+	upperCaseF   = 70
+	retries      = 3
+	offerTimeout = 30 * time.Second
+	reorgTimeout = 1 * time.Minute
 )
-
-func (ep ExternalPlayer) handleReorg(msg messageToPlayer) (messageFromPlayer, error) {
-	response := messageFromPlayer{
-		PlayerID: msg.PlayerID,
-		Command:  msg.Command,
-		Hand:     msg.Hand,
-		Seen:     msg.Seen,
-	}
-
-	fmt.Println(buildCardDisplayText(msg))
-
-	if shouldReorganise := offerCardSwitch(ep.Conn); shouldReorganise {
-		response = reorganiseCards(ep.Conn, msg)
-	}
-
-	return response, nil
-}
 
 func offerCardSwitch(conn *conn) bool {
 	input := make(chan bool)
 	go func(ch chan bool) {
 		reader := bufio.NewReader(conn.In)
 		var validResponse, response bool
-
 		for !validResponse {
 			fmt.Printf("You may reorganise any of your visible cards.\nWould you like to reorganise your cards? [y/n] ")
 
@@ -55,9 +39,11 @@ func offerCardSwitch(conn *conn) bool {
 
 			switch char {
 			case "Y":
+				fallthrough
 			case "y":
 				response, validResponse = true, true
 			case "N":
+				fallthrough
 			case "n":
 				validResponse = true
 			default:
@@ -75,7 +61,7 @@ func offerCardSwitch(conn *conn) bool {
 		fmt.Println("Ok, I will leave your cards as they are.")
 		return false
 
-	case <-time.After(3 * time.Second):
+	case <-time.After(offerTimeout):
 		fmt.Println("\nTimed out: I will leave your cards as they are.")
 		return false
 	}
@@ -106,6 +92,13 @@ func reorganiseCards(conn *conn, msg messageToPlayer) messageFromPlayer {
 	case choices := <-ch:
 		if len(choices) == 3 {
 			newHand, newSeen := choicesToCards(allVisibleCards, choices)
+			playerCards := playerCards{
+				seen: newSeen,
+				hand: newHand,
+			}
+			fmt.Printf("\nThanks, %s. Here is what your cards look like now:\n\n", msg.Name)
+			fmt.Printf(buildCardDisplayText(playerCards))
+			fmt.Println("\nLet's start the game!")
 
 			return messageFromPlayer{
 				PlayerID: msg.PlayerID,
@@ -114,9 +107,11 @@ func reorganiseCards(conn *conn, msg messageToPlayer) messageFromPlayer {
 				Seen:     newSeen,
 			}
 		}
+
+		fmt.Println("Ok, I'll leave your cards as they are")
 		return defaultResponse
 
-	case <-time.After(1 * time.Minute):
+	case <-time.After(reorgTimeout):
 		fmt.Println("Ok, I'll leave your cards as they are")
 		return defaultResponse
 	}
@@ -162,15 +157,6 @@ func getCardChoices(ch chan []int, conn *conn) {
 	ch <- response
 }
 
-func charsInRange(chars string, lower, upper int) bool {
-	for _, char := range chars {
-		if int(char) < lower || int(char) > upper {
-			return false
-		}
-	}
-	return true
-}
-
 func charsToSortedCardIndex(chars string) []int {
 	indices := []int{}
 	for _, char := range chars {
@@ -193,15 +179,4 @@ func choicesToCards(allCards []deck.Card, choices []int) ([]deck.Card, []deck.Ca
 		}
 	}
 	return newHand, newSeen
-}
-
-func charsUnique(s string) bool {
-	seen := map[string]bool{}
-	for _, c := range s {
-		if _, ok := seen[string(c)]; ok {
-			return false
-		}
-		seen[string(c)] = true
-	}
-	return true
 }
