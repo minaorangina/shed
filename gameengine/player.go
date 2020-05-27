@@ -2,6 +2,7 @@ package gameengine
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/minaorangina/shed/deck"
@@ -15,8 +16,8 @@ func NewID() string {
 
 // Conn represents a connection to a player in the real world
 type conn struct {
-	In  *os.File
-	Out *os.File
+	In  io.Reader
+	Out io.Writer
 }
 
 // Player represents a player in the game
