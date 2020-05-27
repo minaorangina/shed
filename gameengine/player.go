@@ -1,7 +1,6 @@
 package gameengine
 
 import (
-	"fmt"
 	"io"
 	"os"
 
@@ -69,8 +68,8 @@ func (p Player) handleReorg(msg messageToPlayer) messageFromPlayer {
 		seen: msg.Seen,
 		hand: msg.Hand,
 	}
-	fmt.Printf("%s, here are your cards:\n\n", msg.Name)
-	fmt.Println(buildCardDisplayText(playerCards))
+	SendText(p.Conn.Out, "%s, here are your cards:\n\n", msg.Name)
+	SendText(p.Conn.Out, buildCardDisplayText(playerCards))
 
 	if shouldReorganise := offerCardSwitch(p.Conn); shouldReorganise {
 		response = reorganiseCards(p.Conn, msg)

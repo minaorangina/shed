@@ -26,10 +26,11 @@ func offerCardSwitch(conn *conn) bool {
 		reader := bufio.NewReader(conn.In)
 		var validResponse, response bool
 		for !validResponse {
-			fmt.Printf("You may reorganise any of your visible cards.\nWould you like to reorganise your cards? [y/n] ")
+			SendText(conn.Out, "You may reorganise any of your visible cards.\nWould you like to reorganise your cards? [y/n] ")
 
 			char, err := reader.ReadString('\n')
 			if err != nil && err != io.EOF {
+				// should go to a logger eventually
 				fmt.Println(err.Error())
 				fmt.Printf("Error: %s\n", err.Error())
 				ch <- false
@@ -47,7 +48,7 @@ func offerCardSwitch(conn *conn) bool {
 			case "n":
 				validResponse = true
 			default:
-				fmt.Printf("Invalid choice %s. Please enter \"y\" for \"yes\" or \"n\" for \"no\"\n", char)
+				SendText(conn.Out, "Invalid choice %s. Please enter \"y\" for \"yes\" or \"n\" for \"no\"\n", char)
 			}
 		}
 		ch <- response
@@ -58,11 +59,11 @@ func offerCardSwitch(conn *conn) bool {
 		if choice {
 			return true
 		}
-		fmt.Println("Ok, I will leave your cards as they are.")
+		SendText(conn.Out, "Ok, I will leave your cards as they are.")
 		return false
 
 	case <-time.After(offerTimeout):
-		fmt.Println("\nTimed out: I will leave your cards as they are.")
+		SendText(conn.Out, "\nTimed out: I will leave your cards as they are.")
 		return false
 	}
 }
@@ -83,7 +84,7 @@ func reorganiseCards(conn *conn, msg messageToPlayer) messageFromPlayer {
 		allVisibleCards = append(allVisibleCards, c)
 	}
 
-	fmt.Printf(buildReorgDisplayText(msg, allVisibleCards))
+	SendText(conn.Out, buildReorgDisplayText(msg, allVisibleCards))
 
 	ch := make(chan []int)
 	go getCardChoices(ch, conn)
@@ -96,9 +97,9 @@ func reorganiseCards(conn *conn, msg messageToPlayer) messageFromPlayer {
 				seen: newSeen,
 				hand: newHand,
 			}
-			fmt.Printf("\nThanks, %s. Here is what your cards look like now:\n\n", msg.Name)
-			fmt.Printf(buildCardDisplayText(playerCards))
-			fmt.Println("\nLet's start the game!")
+			SendText(conn.Out, "\nThanks, %s. Here is what your cards look like now:\n\n", msg.Name)
+			SendText(conn.Out, buildCardDisplayText(playerCards))
+			SendText(conn.Out, "\nLet's start the game!")
 
 			return messageFromPlayer{
 				PlayerID: msg.PlayerID,
@@ -108,11 +109,11 @@ func reorganiseCards(conn *conn, msg messageToPlayer) messageFromPlayer {
 			}
 		}
 
-		fmt.Println("Ok, I'll leave your cards as they are")
+		SendText(conn.Out, "Ok, I'll leave your cards as they are")
 		return defaultResponse
 
 	case <-time.After(reorgTimeout):
-		fmt.Println("Ok, I'll leave your cards as they are")
+		SendText(conn.Out, "Ok, I'll leave your cards as they are")
 		return defaultResponse
 	}
 }
@@ -124,7 +125,7 @@ func getCardChoices(ch chan []int, conn *conn) {
 	retriesLeft := retries
 
 	for retriesLeft > 0 && !validResponse {
-		fmt.Printf(reorgPrompt())
+		SendText(conn.Out, reorgPrompt())
 
 		entryBytes, _, err := reader.ReadLine()
 		if err != nil {
@@ -134,12 +135,12 @@ func getCardChoices(ch chan []int, conn *conn) {
 		entry := strings.Replace(string(entryBytes), " ", "", -1)
 
 		if len(entry) != 3 {
-			fmt.Println("You need to choose 3 cards")
+			SendText(conn.Out, "You need to choose 3 cards")
 			retriesLeft--
 			continue
 		}
 		if !charsUnique(entry) {
-			fmt.Println("Please select 3 unique cards")
+			SendText(conn.Out, "Please select 3 unique cards")
 			retriesLeft--
 			continue
 		}

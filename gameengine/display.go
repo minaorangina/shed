@@ -2,9 +2,14 @@ package gameengine
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/minaorangina/shed/deck"
 )
+
+func SendText(w io.Writer, text string, a ...interface{}) {
+	fmt.Fprintf(w, text, a...)
+}
 
 func buildCardDisplayText(cards playerCards) string {
 	var displayText string
