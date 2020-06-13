@@ -1,11 +1,14 @@
 package gameengine
 
-import "os"
+import (
+	"os"
+	"testing"
+)
 
-func buildOpponents(playerID string, players AllPlayers) []opponent {
+func buildOpponents(playerID string, players Players) []opponent {
 	opponents := []opponent{}
-	for id, p := range players {
-		if id == playerID {
+	for _, p := range players {
+		if p.ID == playerID {
 			continue
 		}
 		opponents = append(opponents, opponent{
@@ -15,11 +18,11 @@ func buildOpponents(playerID string, players AllPlayers) []opponent {
 	return opponents
 }
 
-func messagesToInitialCards(messages InboundMessages) map[string]initialCards {
+func messagesToInitialCards(messages []InboundMessage) map[string]initialCards {
 	reorganised := map[string]initialCards{}
 
-	for id, msg := range messages {
-		reorganised[id] = initialCards{
+	for _, msg := range messages {
+		reorganised[msg.PlayerID] = initialCards{
 			seen: msg.Seen,
 			hand: msg.Hand,
 		}
@@ -28,16 +31,17 @@ func messagesToInitialCards(messages InboundMessages) map[string]initialCards {
 	return reorganised
 }
 
-func namesToAllPlayers(names []string) AllPlayers {
-	players := []Player{}
+func namesToPlayers(names []string) Players {
+	players := []*Player{}
 	for _, n := range names {
-		players = append(players, NewPlayer(NewID(), n, os.Stdin, os.Stdout))
+		player := NewPlayer(NewID(), n, os.Stdin, os.Stdout)
+		players = append(players, player)
 	}
 
-	return NewAllPlayers(players...)
+	return Players(players)
 }
 
-func allPlayersToNames(players AllPlayers) []string {
+func playersToNames(players Players) []string {
 	names := []string{}
 	for _, p := range players {
 		names = append(names, p.Name)
@@ -46,13 +50,13 @@ func allPlayersToNames(players AllPlayers) []string {
 	return names
 }
 
-func playerInfoToAllPlayers(playerInfo []playerInfo) AllPlayers {
-	players := []Player{}
+func playerInfoToPlayers(playerInfo []playerInfo) Players {
+	players := []*Player{}
 	for _, info := range playerInfo {
 		players = append(players, NewPlayer(info.id, info.name, os.Stdin, os.Stdout))
 	}
 
-	return NewAllPlayers(players...)
+	return Players(players)
 }
 
 func charsUnique(s string) bool {
@@ -73,4 +77,11 @@ func charsInRange(chars string, lower, upper int) bool {
 		}
 	}
 	return true
+}
+
+func assertStringEquality(t *testing.T, got, want string) {
+	t.Helper()
+	if want != got {
+		t.Errorf("got %s, want %s", got, want)
+	}
 }

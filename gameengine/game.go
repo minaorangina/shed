@@ -35,9 +35,9 @@ func (ge *GameEngine) handleInitialCards() error {
 	}
 
 	// assign cards
-	for id, p := range ge.players {
-		p.hand = confirmed[id].hand
-		p.seen = confirmed[id].seen
+	for _, p := range ge.players {
+		p.hand = confirmed[p.ID].hand
+		p.seen = confirmed[p.ID].seen
 	}
 
 	return nil
@@ -66,11 +66,11 @@ func (ge *GameEngine) dealInitialCards() map[string]initialCards {
 }
 
 func (ge *GameEngine) confirmInitialCards(ic map[string]initialCards) (map[string]initialCards, error) {
-	messages := OutboundMessages{}
+	messages := []OutboundMessage{}
 	for _, p := range ge.players {
 		o := buildOpponents(p.ID, ge.players)
 		m := ge.buildReorgMessage(p, o, ic[p.ID], "Rearrange your hand")
-		messages.Add(p.ID, m)
+		messages = append(messages, m)
 	}
 
 	// this will block
@@ -88,9 +88,9 @@ func (ge *GameEngine) buildReorgMessage(
 	opponents []opponent,
 	initialCards initialCards,
 	message string,
-) messageToPlayer {
+) OutboundMessage {
 
-	return messageToPlayer{
+	return OutboundMessage{
 		PlayState: ge.playState,
 		GameStage: ge.stage,
 		PlayerID:  player.ID,

@@ -98,19 +98,19 @@ func TestGameEngineMsgFromGame(t *testing.T) {
 	ge, _ := gameEngineWithPlayers()
 	ge.Start() // mock required
 
-	messages := OutboundMessages{}
-	expected := InboundMessages{}
+	messages := []OutboundMessage{}
+	expected := []InboundMessage{}
 	initialCards := initialCards{}
 	for _, p := range ge.players {
 		o := buildOpponents(p.ID, ge.players)
 		m := ge.buildReorgMessage(p, o, initialCards, "Rearrange your initial cards")
-		messages.Add(p.ID, m)
+		messages = append(messages, m)
 
-		expected[p.ID] = messageFromPlayer{
+		expected = append(expected, InboundMessage{ // TODO: fix
 			PlayerID: p.ID,
 			Hand:     p.hand,
 			Seen:     p.seen,
-		}
+		})
 	}
 
 	actual, err := ge.messagePlayersAwaitReply(messages)
@@ -118,7 +118,7 @@ func TestGameEngineMsgFromGame(t *testing.T) {
 		t.Fail()
 	}
 
-	if !reflect.DeepEqual(expected, actual) {
+	if !reflect.DeepEqual(expected, actual) { // TODO: fix slice ordering
 		t.Errorf(utils.FailureMessage(expected, actual))
 	}
 }

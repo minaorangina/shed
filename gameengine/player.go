@@ -19,6 +19,18 @@ type conn struct {
 	Out io.Writer
 }
 
+// Players represents all players in the game
+type Players []*Player
+
+func (ps Players) Individual(id string) *Player {
+	for _, p := range ps {
+		if p.ID == id {
+			return p
+		}
+	}
+	return nil
+}
+
 // Player represents a player in the game
 type Player struct {
 	hand   []deck.Card
@@ -36,9 +48,9 @@ type playerCards struct {
 }
 
 // NewPlayer constructs a new player
-func NewPlayer(id, name string, in, out *os.File) Player {
+func NewPlayer(id, name string, in, out *os.File) *Player {
 	conn := &conn{in, out}
-	return Player{ID: id, Name: name, Conn: conn}
+	return &Player{ID: id, Name: name, Conn: conn}
 }
 
 func (p Player) cards() playerCards {
@@ -49,15 +61,15 @@ func (p Player) cards() playerCards {
 	}
 }
 
-func (p Player) sendMessageAwaitReply(ch chan messageFromPlayer, msg messageToPlayer) {
+func (p Player) sendMessageAwaitReply(ch chan InboundMessage, msg OutboundMessage) {
 	switch msg.Command {
 	case reorg:
 		ch <- p.handleReorg(msg)
 	}
 }
 
-func (p Player) handleReorg(msg messageToPlayer) messageFromPlayer {
-	response := messageFromPlayer{
+func (p Player) handleReorg(msg OutboundMessage) InboundMessage {
+	response := InboundMessage{
 		PlayerID: msg.PlayerID,
 		Command:  msg.Command,
 		Hand:     msg.Hand,
@@ -76,33 +88,4 @@ func (p Player) handleReorg(msg messageToPlayer) messageFromPlayer {
 	}
 
 	return response
-}
-
-// Players represents all players in the game
-type AllPlayers map[string]*Player
-
-// NewAllPlayers constructs a Players object
-func NewAllPlayers(players ...Player) AllPlayers {
-	all := map[string]*Player{}
-	for i := range players {
-		all[players[i].ID] = &players[i]
-	}
-
-	return AllPlayers(all)
-}
-
-// OutboundMessages represents messages destined for players
-type OutboundMessages map[string]messageToPlayer
-
-// Add adds a message
-func (om OutboundMessages) Add(id string, msg messageToPlayer) {
-	om[id] = msg
-}
-
-// InboundMessages represents messages from players
-type InboundMessages map[string]messageFromPlayer
-
-// Add adds a message
-func (im InboundMessages) Add(id string, msg messageFromPlayer) {
-	im[id] = msg
 }

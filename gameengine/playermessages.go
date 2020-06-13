@@ -6,7 +6,7 @@ type cmd int
 
 const reorg cmd = iota
 
-type messageToPlayer struct {
+type OutboundMessage struct {
 	PlayState playState   `json:"play_state"`
 	GameStage Stage       `json:"game_stage"` // necessary?
 	PlayerID  string      `json:"player_id"`
@@ -18,7 +18,7 @@ type messageToPlayer struct {
 	Command   cmd         `json:"command"`
 }
 
-type messageFromPlayer struct {
+type InboundMessage struct {
 	PlayerID string      `json:"player_id"`
 	Command  cmd         `json:"command"`
 	Hand     []deck.Card `json:"hand"`

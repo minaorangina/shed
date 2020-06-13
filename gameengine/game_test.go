@@ -11,10 +11,10 @@ import (
 	utils "github.com/minaorangina/shed/internal"
 )
 
-func gameEngineWithPlayers() (*GameEngine, AllPlayers) {
+func gameEngineWithPlayers() (*GameEngine, Players) {
 	player1 := NewPlayer(NewID(), "Harry", os.Stdin, os.Stdout)
 	player2 := NewPlayer(NewID(), "Sally", os.Stdin, os.Stdout)
-	players := NewAllPlayers(player1, player2)
+	players := Players([]*Player{player1, player2})
 
 	ge, _ := New(players)
 	return ge, players
@@ -25,19 +25,19 @@ func TestNewGameEngine(t *testing.T) {
 	t.Skip("do not run TestNewGameEngine")
 	type gameTest struct {
 		testName string
-		input    AllPlayers
+		input    Players
 		expected error
 	}
 
 	testsShouldError := []gameTest{
 		{
 			"too few players",
-			namesToAllPlayers([]string{"Grace"}),
+			namesToPlayers([]string{"Grace"}),
 			errors.New("Could not construct Game: minimum of 2 players required (supplied 1)"),
 		},
 		{
 			"too many players",
-			namesToAllPlayers([]string{"Ada", "Katherine", "Grace", "Hedy", "Marlyn"}),
+			namesToPlayers([]string{"Ada", "Katherine", "Grace", "Hedy", "Marlyn"}),
 			errors.New("Could not construct Game: maximum of 4 players required (supplied 5)"),
 		},
 	}
@@ -45,7 +45,11 @@ func TestNewGameEngine(t *testing.T) {
 	for _, et := range testsShouldError {
 		_, err := New(et.input)
 		if err == nil {
-			t.Errorf(utils.TableFailureMessage(et.testName, strings.Join(allPlayersToNames(et.input), ","), et.expected.Error()))
+			t.Errorf(utils.TableFailureMessage(
+				et.testName,
+				strings.Join(playersToNames(et.input), ","),
+				et.expected.Error()),
+			)
 		}
 	}
 
@@ -87,15 +91,15 @@ func TestBuildMessageToPlayer(t *testing.T) {
 	ge, players := gameEngineWithPlayers()
 	var opponents []opponent
 	var id string
-	for key := range players {
-		opponents = buildOpponents(key, players)
-		id = key
+	for _, p := range players {
+		id = p.ID
+		opponents = buildOpponents(id, players)
 		break
 	}
 
-	playerToContact := ge.players[id]
+	playerToContact := ge.players.Individual(id) // TODO: fix (now a slice)
 	message := ge.buildReorgMessage(playerToContact, opponents, initialCards{}, "Let the games begin!")
-	expectedMessage := messageToPlayer{
+	expectedMessage := OutboundMessage{
 		Message:   "Let the games begin!",
 		PlayState: ge.playState,
 		GameStage: ge.stage,

@@ -13,9 +13,7 @@ func TestSendText(t *testing.T) {
 
 		got := buffer.String()
 
-		if want != got {
-			t.Errorf("want %s, got %s", want, got)
-		}
+		assertStringEquality(t, got, want)
 	})
 
 	t.Run("send formatted text", func(t *testing.T) {
@@ -26,8 +24,6 @@ func TestSendText(t *testing.T) {
 
 		got := buffer.String()
 
-		if want != got {
-			t.Errorf("got %s, want %s", got, want)
-		}
+		assertStringEquality(t, got, want)
 	})
 }

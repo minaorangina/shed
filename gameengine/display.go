@@ -25,7 +25,7 @@ func buildCardDisplayText(cards playerCards) string {
 	return displayText + handText + "\n" + seenText + "\n" + unseenText
 }
 
-func buildReorgDisplayText(msg messageToPlayer, visibleCards []deck.Card) string {
+func buildReorgDisplayText(msg OutboundMessage, visibleCards []deck.Card) string {
 	displayText := "\nOk, choose the cards you wish to have in your hand\nExample: if you want cards A, C and F, type ACF (the order of the letters does not matter).\n\n"
 	cardsText := ""
 
@@ -36,6 +36,6 @@ func buildReorgDisplayText(msg messageToPlayer, visibleCards []deck.Card) string
 	return displayText + cardsText
 }
 
-func reorgPrompt() string {
+func reorgPromptText() string {
 	return "\nEnter the three cards you want in your hand: "
 }

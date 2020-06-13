@@ -37,13 +37,13 @@ type playerInfo struct {
 // GameEngine represents the engine of the game
 type GameEngine struct {
 	playState playState
-	players   AllPlayers
+	players   Players
 	stage     Stage
 	deck      deck.Deck
 }
 
 // New constructs a new GameEngine
-func New(players AllPlayers) (*GameEngine, error) {
+func New(players []*Player) (*GameEngine, error) {
 	if len(players) < 2 {
 		return nil, fmt.Errorf("Could not construct Game: minimum of 2 players required (supplied %d)", len(players))
 	}
@@ -52,7 +52,7 @@ func New(players AllPlayers) (*GameEngine, error) {
 	}
 
 	engine := GameEngine{
-		players: players,
+		players: Players(players),
 		deck:    deck.New(),
 	}
 
@@ -77,21 +77,26 @@ func (ge *GameEngine) Start() error {
 }
 
 func (ge *GameEngine) messagePlayersAwaitReply(
-	messages OutboundMessages,
+	messages []OutboundMessage,
 ) (
-	InboundMessages,
+	[]InboundMessage,
 	error,
 ) {
-	ch := make(chan messageFromPlayer)
-	for _, p := range ge.players {
-		go p.sendMessageAwaitReply(ch, messages[p.ID])
-		break // debug
+	ch := make(chan InboundMessage)
+	// TODO: make less rubbish
+	for _, m := range messages {
+		for _, p := range ge.players {
+			if p.ID == m.PlayerID {
+				go p.sendMessageAwaitReply(ch, m)
+				break // debug
+			}
+		}
 	}
 
-	responses := InboundMessages{}
+	responses := []InboundMessage{}
 	for i := 0; i < len(messages); i++ {
 		resp := <-ch
-		responses.Add(resp.PlayerID, resp)
+		responses = append(responses, resp)
 	}
 
 	return responses, nil

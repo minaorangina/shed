@@ -68,8 +68,8 @@ func offerCardSwitch(conn *conn) bool {
 	}
 }
 
-func reorganiseCards(conn *conn, msg messageToPlayer) messageFromPlayer {
-	defaultResponse := messageFromPlayer{
+func reorganiseCards(conn *conn, msg OutboundMessage) InboundMessage {
+	defaultResponse := InboundMessage{
 		PlayerID: msg.PlayerID,
 		Command:  msg.Command,
 		Hand:     msg.Hand,
@@ -101,7 +101,7 @@ func reorganiseCards(conn *conn, msg messageToPlayer) messageFromPlayer {
 			SendText(conn.Out, buildCardDisplayText(playerCards))
 			SendText(conn.Out, "\nLet's start the game!")
 
-			return messageFromPlayer{
+			return InboundMessage{
 				PlayerID: msg.PlayerID,
 				Command:  msg.Command,
 				Hand:     newHand,
@@ -125,7 +125,7 @@ func getCardChoices(ch chan []int, conn *conn) {
 	retriesLeft := retries
 
 	for retriesLeft > 0 && !validResponse {
-		SendText(conn.Out, reorgPrompt())
+		SendText(conn.Out, reorgPromptText())
 
 		entryBytes, _, err := reader.ReadLine()
 		if err != nil {
