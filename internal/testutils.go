@@ -1,19 +1,22 @@
 package internal
 
-import "fmt"
+import (
+	"fmt"
+	"testing"
+)
 
 // FailureMessage returns a failure message for a failed test
-func FailureMessage(expected, actual interface{}) string {
+func FailureMessage(t *testing.T, expected, actual interface{}) {
 	expectedString := TypeToString(expected)
 	actualString := TypeToString(actual)
-	return fmt.Sprintf("\nExpected: %s\nActual: %s", expectedString, actualString)
+	t.Errorf("\nExpected: %s\nActual: %s", expectedString, actualString)
 }
 
 // TableFailureMessage returns a failure message for a failed test, including the name of the test
-func TableFailureMessage(testName, expected, actual string) string {
+func TableFailureMessage(t *testing.T, testName, expected, actual interface{}) {
 	expectedString := TypeToString(expected)
 	actualString := TypeToString(actual)
-	return fmt.Sprintf("%s\nExpected: %s\nActual: %s", testName, expectedString, actualString)
+	t.Errorf("%s\nExpected: %s\nActual: %s", testName, expectedString, actualString)
 }
 
 // TypeToString returns the string representation of a non-string type

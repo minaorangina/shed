@@ -2,7 +2,6 @@ package deck
 
 import (
 	"reflect"
-	"strconv"
 	"testing"
 
 	utils "github.com/minaorangina/shed/internal"
@@ -14,7 +13,7 @@ func TestNewDeck(t *testing.T) {
 	deckOfCards := New()
 
 	if len(deckOfCards) != fullDeckCount {
-		t.Errorf(utils.FailureMessage(strconv.Itoa(fullDeckCount), strconv.Itoa(len(deckOfCards))))
+		utils.FailureMessage(t, fullDeckCount, len(deckOfCards))
 	}
 }
 func TestDeckShuffle(t *testing.T) {
@@ -25,7 +24,7 @@ func TestDeckShuffle(t *testing.T) {
 		t.Errorf("Deck was not shuffled")
 	}
 	if len(deckOfCards) != len(anotherDeckOfCards) {
-		t.Errorf(utils.FailureMessage(strconv.Itoa(len(deckOfCards)), strconv.Itoa(len(anotherDeckOfCards))))
+		utils.FailureMessage(t, len(deckOfCards), len(anotherDeckOfCards))
 	}
 	func() {
 		seenCards := map[string]bool{}
@@ -33,8 +32,7 @@ func TestDeckShuffle(t *testing.T) {
 			if _, val := seenCards[card.String()]; !val {
 				seenCards[card.String()] = true
 			} else {
-				t.Errorf("Duplicate card found at index %d: %s", i, card.String())
-				break
+				t.Fatalf("Duplicate card found at index %d: %s", i, card.String())
 			}
 		}
 	}()
@@ -49,12 +47,12 @@ func TestDeckRemoveCards(t *testing.T) {
 
 	zeroCards := deckToRemoveFrom.Deal(0)
 	if len(zeroCards) != 0 {
-		t.Errorf(utils.FailureMessage(0, len(zeroCards)))
+		utils.FailureMessage(t, 0, len(zeroCards))
 	}
 
 	zeroCards = deckToRemoveFrom.Deal(-5)
 	if len(zeroCards) != 0 {
-		t.Errorf(utils.FailureMessage(0, len(zeroCards)))
+		utils.FailureMessage(t, 0, len(zeroCards))
 	}
 
 	deckTests := []deckTest{
@@ -69,13 +67,13 @@ func TestDeckRemoveCards(t *testing.T) {
 		expectedCardName := deckToRemoveFrom[len(deckToRemoveFrom)-1].String()
 		removedCards := deckToRemoveFrom.Deal(dt.numCardsToRemove)
 		if len(removedCards) != dt.numCardsToRemove {
-			t.Errorf(utils.TableFailureMessage(dt.testName, strconv.Itoa(dt.numCardsToRemove), strconv.Itoa(len(removedCards))))
+			utils.TableFailureMessage(t, dt.testName, dt.numCardsToRemove, len(removedCards))
 		}
 		if removedCards[dt.numCardsToRemove-1].String() != expectedCardName {
-			t.Errorf(utils.TableFailureMessage(dt.testName, expectedCardName, removedCards[dt.numCardsToRemove-1].String()))
+			utils.TableFailureMessage(t, dt.testName, expectedCardName, removedCards[dt.numCardsToRemove-1].String())
 		}
 		if len(deckToRemoveFrom) != dt.expectedNumRemaining {
-			t.Errorf(utils.TableFailureMessage(dt.testName, strconv.Itoa(dt.expectedNumRemaining), strconv.Itoa(len(deckToRemoveFrom))))
+			utils.TableFailureMessage(t, dt.testName, dt.expectedNumRemaining, len(deckToRemoveFrom))
 		}
 	}
 }

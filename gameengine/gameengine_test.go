@@ -9,16 +9,14 @@ import (
 	"github.com/minaorangina/shed/players"
 )
 
-// HANGS
 func TestGameEngineStart(t *testing.T) {
 	t.Run("produces players", func(t *testing.T) {
 		ge, _ := gameEngineWithPlayers()
-		// produces Players
 		if ge.players == nil {
 			t.Fatal("GameEngine.players is nil")
 		}
 		if len(ge.players) != 2 {
-			t.Errorf(utils.FailureMessage(2, len(ge.players)))
+			utils.FailureMessage(t, 2, len(ge.players))
 		}
 	})
 
@@ -51,7 +49,6 @@ func TestGameEngineStart(t *testing.T) {
 	})
 
 	t.Run("correct playState", func(t *testing.T) {
-		// correct playState
 		type playStateTest struct {
 			testName   string
 			gameEngine GameEngine
@@ -85,13 +82,12 @@ func TestGameEngineStart(t *testing.T) {
 				t.Fatalf("Failed to intialise game: %s", err.Error())
 			}
 			if test.expected != test.gameEngine.playState {
-				t.Errorf(utils.TableFailureMessage(test.testName, test.expected.String(), test.gameEngine.playState.String()))
+				utils.TableFailureMessage(t, test.testName, test.expected.String(), test.gameEngine.playState.String())
 			}
 		}
 	})
 }
 
-// DO NOT RUN
 func TestGameEngineMsgFromGame(t *testing.T) {
 	// Game Engine receives from messages to send to players
 	// and returns response
@@ -107,7 +103,7 @@ func TestGameEngineMsgFromGame(t *testing.T) {
 		m := ge.buildReorgMessage(p, o, initialCards, "Rearrange your initial cards")
 		messages = append(messages, m)
 
-		expected = append(expected, players.InboundMessage{ // TODO: fix
+		expected = append(expected, players.InboundMessage{
 			PlayerID: p.ID,
 			Hand:     p.Hand,
 			Seen:     p.Seen,
@@ -120,6 +116,6 @@ func TestGameEngineMsgFromGame(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(expected, actual) { // TODO: fix slice ordering
-		t.Errorf(utils.FailureMessage(expected, actual))
+		utils.FailureMessage(t, expected, actual)
 	}
 }
