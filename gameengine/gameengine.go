@@ -83,13 +83,10 @@ func (ge *GameEngine) messagePlayersAwaitReply(
 	error,
 ) {
 	ch := make(chan InboundMessage)
-	// TODO: make less rubbish
 	for _, m := range messages {
-		for _, p := range ge.players {
-			if p.ID == m.PlayerID {
-				go p.sendMessageAwaitReply(ch, m)
-				break // debug
-			}
+		if p, ok := ge.players.Individual(m.PlayerID); ok {
+			go p.sendMessageAwaitReply(ch, m)
+			break // debug
 		}
 	}
 
