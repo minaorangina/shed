@@ -1,4 +1,4 @@
-package gameengine
+package players
 
 import (
 	"bufio"
@@ -93,9 +93,9 @@ func reorganiseCards(conn *conn, msg OutboundMessage) InboundMessage {
 	case choices := <-ch:
 		if len(choices) == 3 {
 			newHand, newSeen := choicesToCards(allVisibleCards, choices)
-			playerCards := playerCards{
-				seen: newSeen,
-				hand: newHand,
+			playerCards := PlayerCards{
+				Seen: newSeen,
+				Hand: newHand,
 			}
 			SendText(conn.Out, "\nThanks, %s. Here is what your cards look like now:\n\n", msg.Name)
 			SendText(conn.Out, buildCardDisplayText(playerCards))

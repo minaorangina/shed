@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/minaorangina/shed/deck"
+	"github.com/minaorangina/shed/players"
 )
 
 // playState represents the state of the current game
@@ -37,13 +38,13 @@ type playerInfo struct {
 // GameEngine represents the engine of the game
 type GameEngine struct {
 	playState playState
-	players   Players
+	players   players.Players
 	stage     Stage
 	deck      deck.Deck
 }
 
 // New constructs a new GameEngine
-func New(players []*Player) (*GameEngine, error) {
+func New(players []*players.Player) (*GameEngine, error) {
 	if len(players) < 2 {
 		return nil, fmt.Errorf("Could not construct Game: minimum of 2 players required (supplied %d)", len(players))
 	}
@@ -52,7 +53,7 @@ func New(players []*Player) (*GameEngine, error) {
 	}
 
 	engine := GameEngine{
-		players: Players(players),
+		players: players,
 		deck:    deck.New(),
 	}
 
@@ -77,20 +78,20 @@ func (ge *GameEngine) Start() error {
 }
 
 func (ge *GameEngine) messagePlayersAwaitReply(
-	messages []OutboundMessage,
+	messages []players.OutboundMessage,
 ) (
-	[]InboundMessage,
+	[]players.InboundMessage,
 	error,
 ) {
-	ch := make(chan InboundMessage)
+	ch := make(chan players.InboundMessage)
 	for _, m := range messages {
 		if p, ok := ge.players.Individual(m.PlayerID); ok {
-			go p.sendMessageAwaitReply(ch, m)
+			go p.SendMessageAwaitReply(ch, m)
 			break // debug
 		}
 	}
 
-	responses := []InboundMessage{}
+	responses := []players.InboundMessage{}
 	for i := 0; i < len(messages); i++ {
 		resp := <-ch
 		responses = append(responses, resp)

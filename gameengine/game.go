@@ -1,5 +1,7 @@
 package gameengine
 
+import "github.com/minaorangina/shed/players"
+
 // Stage represents the main stages in the game
 type Stage int
 
@@ -36,8 +38,8 @@ func (ge *GameEngine) handleInitialCards() error {
 
 	// assign cards
 	for _, p := range ge.players {
-		p.hand = confirmed[p.ID].hand
-		p.seen = confirmed[p.ID].seen
+		p.Hand = confirmed[p.ID].Hand
+		p.Seen = confirmed[p.ID].Seen
 	}
 
 	return nil
@@ -45,19 +47,19 @@ func (ge *GameEngine) handleInitialCards() error {
 
 func (ge *GameEngine) dealUnseenCards() {
 	for _, p := range ge.players {
-		p.unseen = ge.deck.Deal(3)
+		p.Unseen = ge.deck.Deal(3)
 	}
 }
 
-func (ge *GameEngine) dealInitialCards() map[string]initialCards {
-	cards := map[string]initialCards{}
+func (ge *GameEngine) dealInitialCards() map[string]players.InitialCards {
+	cards := map[string]players.InitialCards{}
 	for _, p := range ge.players {
 		dealtHand := ge.deck.Deal(3)
 		dealtSeen := ge.deck.Deal(3)
 
-		ic := initialCards{
-			hand: dealtHand,
-			seen: dealtSeen,
+		ic := players.InitialCards{
+			Hand: dealtHand,
+			Seen: dealtSeen,
 		}
 		cards[p.ID] = ic
 	}
@@ -65,8 +67,8 @@ func (ge *GameEngine) dealInitialCards() map[string]initialCards {
 	return cards
 }
 
-func (ge *GameEngine) confirmInitialCards(ic map[string]initialCards) (map[string]initialCards, error) {
-	messages := []OutboundMessage{}
+func (ge *GameEngine) confirmInitialCards(ic map[string]players.InitialCards) (map[string]players.InitialCards, error) {
+	messages := []players.OutboundMessage{}
 	for _, p := range ge.players {
 		o := buildOpponents(p.ID, ge.players)
 		m := ge.buildReorgMessage(p, o, ic[p.ID], "Rearrange your hand")
@@ -84,20 +86,18 @@ func (ge *GameEngine) confirmInitialCards(ic map[string]initialCards) (map[strin
 
 // to test (easier when state hydration exists)
 func (ge *GameEngine) buildReorgMessage(
-	player *Player,
-	opponents []opponent,
-	initialCards initialCards,
+	player *players.Player,
+	opponents []players.Opponent,
+	initialCards players.InitialCards,
 	message string,
-) OutboundMessage {
+) players.OutboundMessage {
 
-	return OutboundMessage{
-		PlayState: ge.playState,
-		GameStage: ge.stage,
+	return players.OutboundMessage{
 		PlayerID:  player.ID,
 		Name:      player.Name,
 		Message:   message,
-		Hand:      initialCards.hand,
-		Seen:      initialCards.seen,
+		Hand:      initialCards.Hand,
+		Seen:      initialCards.Seen,
 		Opponents: opponents,
 	}
 }

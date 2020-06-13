@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	utils "github.com/minaorangina/shed/internal"
+	"github.com/minaorangina/shed/players"
 )
 
 // HANGS
@@ -38,10 +39,10 @@ func TestGameEngineStart(t *testing.T) {
 			t.Fatal("Unexpected error ", err.Error())
 		}
 		for _, p := range ge.players {
-			c := p.cards()
-			numHand := len(c.hand)
-			numSeen := len(c.seen)
-			numUnseen := len(c.unseen)
+			c := p.Cards()
+			numHand := len(c.Hand)
+			numSeen := len(c.Seen)
+			numUnseen := len(c.Unseen)
 			if numHand != 3 {
 				formatStr := "hand - %d\nseen - %d\nunseen - %d\n"
 				t.Errorf("Expected all threes. Actual:\n" + fmt.Sprintf(formatStr, numHand, numSeen, numUnseen))
@@ -98,18 +99,18 @@ func TestGameEngineMsgFromGame(t *testing.T) {
 	ge, _ := gameEngineWithPlayers()
 	ge.Start() // mock required
 
-	messages := []OutboundMessage{}
-	expected := []InboundMessage{}
-	initialCards := initialCards{}
+	messages := []players.OutboundMessage{}
+	expected := []players.InboundMessage{}
+	initialCards := players.InitialCards{}
 	for _, p := range ge.players {
 		o := buildOpponents(p.ID, ge.players)
 		m := ge.buildReorgMessage(p, o, initialCards, "Rearrange your initial cards")
 		messages = append(messages, m)
 
-		expected = append(expected, InboundMessage{ // TODO: fix
+		expected = append(expected, players.InboundMessage{ // TODO: fix
 			PlayerID: p.ID,
-			Hand:     p.hand,
-			Seen:     p.seen,
+			Hand:     p.Hand,
+			Seen:     p.Seen,
 		})
 	}
 

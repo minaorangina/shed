@@ -1,10 +1,11 @@
-package gameengine
+package players
 
 import (
 	"io"
 	"os"
 
 	"github.com/minaorangina/shed/deck"
+	"github.com/minaorangina/shed/protocol"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -34,18 +35,18 @@ func (ps Players) Individual(id string) (*Player, bool) {
 
 // Player represents a player in the game
 type Player struct {
-	hand   []deck.Card
-	seen   []deck.Card
-	unseen []deck.Card
+	Hand   []deck.Card
+	Seen   []deck.Card
+	Unseen []deck.Card
 	ID     string
 	Name   string
 	Conn   *conn // tcp or command line
 }
 
-type playerCards struct {
-	hand   []deck.Card
-	seen   []deck.Card
-	unseen []deck.Card
+type PlayerCards struct {
+	Hand   []deck.Card
+	Seen   []deck.Card
+	Unseen []deck.Card
 }
 
 // NewPlayer constructs a new player
@@ -54,17 +55,18 @@ func NewPlayer(id, name string, in, out *os.File) *Player {
 	return &Player{ID: id, Name: name, Conn: conn}
 }
 
-func (p Player) cards() playerCards {
-	return playerCards{
-		hand:   p.hand,
-		seen:   p.seen,
-		unseen: p.unseen,
+// Cards returns all of a player's cards
+func (p Player) Cards() PlayerCards {
+	return PlayerCards{
+		Hand:   p.Hand,
+		Seen:   p.Seen,
+		Unseen: p.Unseen,
 	}
 }
 
-func (p Player) sendMessageAwaitReply(ch chan InboundMessage, msg OutboundMessage) {
+func (p Player) SendMessageAwaitReply(ch chan InboundMessage, msg OutboundMessage) {
 	switch msg.Command {
-	case reorg:
+	case protocol.Reorg:
 		ch <- p.handleReorg(msg)
 	}
 }
@@ -77,9 +79,9 @@ func (p Player) handleReorg(msg OutboundMessage) InboundMessage {
 		Seen:     msg.Seen,
 	}
 
-	playerCards := playerCards{
-		seen: msg.Seen,
-		hand: msg.Hand,
+	playerCards := PlayerCards{
+		Seen: msg.Seen,
+		Hand: msg.Hand,
 	}
 	SendText(p.Conn.Out, "%s, here are your cards:\n\n", msg.Name)
 	SendText(p.Conn.Out, buildCardDisplayText(playerCards))

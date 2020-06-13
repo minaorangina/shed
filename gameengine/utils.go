@@ -3,45 +3,47 @@ package gameengine
 import (
 	"os"
 	"testing"
+
+	"github.com/minaorangina/shed/players"
 )
 
-func buildOpponents(playerID string, players Players) []opponent {
-	opponents := []opponent{}
-	for _, p := range players {
+func buildOpponents(playerID string, ps players.Players) []players.Opponent {
+	opponents := []players.Opponent{}
+	for _, p := range ps {
 		if p.ID == playerID {
 			continue
 		}
-		opponents = append(opponents, opponent{
-			ID: p.ID, Seen: p.cards().seen, Name: p.Name,
+		opponents = append(opponents, players.Opponent{
+			ID: p.ID, Seen: p.Cards().Seen, Name: p.Name,
 		})
 	}
 	return opponents
 }
 
-func messagesToInitialCards(messages []InboundMessage) map[string]initialCards {
-	reorganised := map[string]initialCards{}
+func messagesToInitialCards(messages []players.InboundMessage) map[string]players.InitialCards {
+	reorganised := map[string]players.InitialCards{}
 
 	for _, msg := range messages {
-		reorganised[msg.PlayerID] = initialCards{
-			seen: msg.Seen,
-			hand: msg.Hand,
+		reorganised[msg.PlayerID] = players.InitialCards{
+			Seen: msg.Seen,
+			Hand: msg.Hand,
 		}
 	}
 
 	return reorganised
 }
 
-func namesToPlayers(names []string) Players {
-	players := []*Player{}
+func namesToPlayers(names []string) players.Players {
+	ps := []*players.Player{}
 	for _, n := range names {
-		player := NewPlayer(NewID(), n, os.Stdin, os.Stdout)
-		players = append(players, player)
+		player := players.NewPlayer(players.NewID(), n, os.Stdin, os.Stdout)
+		ps = append(ps, player)
 	}
 
-	return Players(players)
+	return players.Players(ps)
 }
 
-func playersToNames(players Players) []string {
+func playersToNames(players players.Players) []string {
 	names := []string{}
 	for _, p := range players {
 		names = append(names, p.Name)
@@ -50,13 +52,13 @@ func playersToNames(players Players) []string {
 	return names
 }
 
-func playerInfoToPlayers(playerInfo []playerInfo) Players {
-	players := []*Player{}
+func playerInfoToPlayers(playerInfo []playerInfo) players.Players {
+	ps := []*players.Player{}
 	for _, info := range playerInfo {
-		players = append(players, NewPlayer(info.id, info.name, os.Stdin, os.Stdout))
+		ps = append(ps, players.NewPlayer(info.id, info.name, os.Stdin, os.Stdout))
 	}
 
-	return Players(players)
+	return players.Players(ps)
 }
 
 func charsUnique(s string) bool {

@@ -9,12 +9,14 @@ import (
 	"testing"
 
 	utils "github.com/minaorangina/shed/internal"
+	"github.com/minaorangina/shed/players"
+	"github.com/minaorangina/shed/protocol"
 )
 
-func gameEngineWithPlayers() (*GameEngine, Players) {
-	player1 := NewPlayer(NewID(), "Harry", os.Stdin, os.Stdout)
-	player2 := NewPlayer(NewID(), "Sally", os.Stdin, os.Stdout)
-	players := Players([]*Player{player1, player2})
+func gameEngineWithPlayers() (*GameEngine, players.Players) {
+	player1 := players.NewPlayer(players.NewID(), "Harry", os.Stdin, os.Stdout)
+	player2 := players.NewPlayer(players.NewID(), "Sally", os.Stdin, os.Stdout)
+	players := players.Players([]*players.Player{player1, player2})
 
 	ge, _ := New(players)
 	return ge, players
@@ -25,7 +27,7 @@ func TestNewGameEngine(t *testing.T) {
 	t.Skip("do not run TestNewGameEngine")
 	type gameTest struct {
 		testName string
-		input    Players
+		input    players.Players
 		expected error
 	}
 
@@ -76,10 +78,10 @@ func TestGameStart(t *testing.T) {
 	}
 
 	for _, p := range players {
-		c := p.cards()
-		numHand := len(c.hand)
-		numSeen := len(c.seen)
-		numUnseen := len(c.unseen)
+		c := p.Cards()
+		numHand := len(c.Hand)
+		numSeen := len(c.Seen)
+		numUnseen := len(c.Unseen)
 		if numHand != 3 {
 			formatStr := "hand - %d\nseen - %d\nunseen - %d\n"
 			t.Errorf("Expected all threes. Actual:\n" + fmt.Sprintf(formatStr, numHand, numSeen, numUnseen))
@@ -88,27 +90,25 @@ func TestGameStart(t *testing.T) {
 }
 
 func TestBuildMessageToPlayer(t *testing.T) {
-	ge, players := gameEngineWithPlayers()
-	var opponents []opponent
+	ge, ps := gameEngineWithPlayers()
+	var opponents []players.Opponent
 	var id string
-	for _, p := range players {
+	for _, p := range ps {
 		id = p.ID
-		opponents = buildOpponents(id, players)
+		opponents = buildOpponents(id, ps)
 		break
 	}
 
 	playerToContact, _ := ge.players.Individual(id)
-	message := ge.buildReorgMessage(playerToContact, opponents, initialCards{}, "Let the games begin!")
-	expectedMessage := OutboundMessage{
+	message := ge.buildReorgMessage(playerToContact, opponents, players.InitialCards{}, "Let the games begin!")
+	expectedMessage := players.OutboundMessage{
 		Message:   "Let the games begin!",
-		PlayState: ge.playState,
-		GameStage: ge.stage,
 		PlayerID:  playerToContact.ID,
 		Name:      playerToContact.Name,
-		Hand:      playerToContact.cards().hand,
-		Seen:      playerToContact.cards().seen,
+		Hand:      playerToContact.Cards().Hand,
+		Seen:      playerToContact.Cards().Seen,
 		Opponents: opponents,
-		Command:   reorg,
+		Command:   protocol.Reorg,
 	}
 	if !reflect.DeepEqual(expectedMessage, message) {
 		t.Errorf(utils.FailureMessage(expectedMessage, message))

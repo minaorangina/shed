@@ -1,4 +1,4 @@
-package gameengine
+package players
 
 import (
 	"fmt"
@@ -11,15 +11,15 @@ func SendText(w io.Writer, text string, a ...interface{}) {
 	fmt.Fprintf(w, text, a...)
 }
 
-func buildCardDisplayText(cards playerCards) string {
+func buildCardDisplayText(cards PlayerCards) string {
 	var displayText string
 	handText := fmt.Sprintf("In your hand, you have three cards 🤲\n")
 	seenText := fmt.Sprintf("On the table, there are three more cards \n")
 	unseenText := "Underneath those cards, there are three cards you can't see 🙈\n- ?\n- ?\n- ?\n"
-	for _, card := range cards.seen {
+	for _, card := range cards.Seen {
 		seenText += "- " + card.String() + "\n"
 	}
-	for _, card := range cards.hand {
+	for _, card := range cards.Hand {
 		handText += "- " + card.String() + "\n"
 	}
 	return displayText + handText + "\n" + seenText + "\n" + unseenText
