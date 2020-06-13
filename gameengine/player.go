@@ -22,13 +22,14 @@ type conn struct {
 // Players represents all players in the game
 type Players []*Player
 
-func (ps Players) Individual(id string) *Player {
+// Individual finds a player by id
+func (ps Players) Individual(id string) (*Player, bool) {
 	for _, p := range ps {
 		if p.ID == id {
-			return p
+			return p, true
 		}
 	}
-	return nil
+	return nil, false
 }
 
 // Player represents a player in the game

@@ -97,7 +97,7 @@ func TestBuildMessageToPlayer(t *testing.T) {
 		break
 	}
 
-	playerToContact := ge.players.Individual(id) // TODO: fix (now a slice)
+	playerToContact, _ := ge.players.Individual(id)
 	message := ge.buildReorgMessage(playerToContact, opponents, initialCards{}, "Let the games begin!")
 	expectedMessage := OutboundMessage{
 		Message:   "Let the games begin!",
