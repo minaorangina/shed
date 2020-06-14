@@ -41,10 +41,11 @@ type GameEngine struct {
 	players   players.Players
 	stage     Stage
 	deck      deck.Deck
+	setupFn   func(*GameEngine) error
 }
 
 // New constructs a new GameEngine
-func New(players []*players.Player) (*GameEngine, error) {
+func New(players []*players.Player, setupFn func(*GameEngine) error) (*GameEngine, error) {
 	if len(players) < 2 {
 		return nil, fmt.Errorf("Could not construct Game: minimum of 2 players required (supplied %d)", len(players))
 	}
@@ -55,12 +56,23 @@ func New(players []*players.Player) (*GameEngine, error) {
 	engine := GameEngine{
 		players: players,
 		deck:    deck.New(),
+		setupFn: setupFn,
 	}
 
 	return &engine, nil
 }
 
+// Setup does any pre-game setup required
+func (ge *GameEngine) Setup() error {
+	var err error
+	if ge.setupFn != nil {
+		err = ge.setupFn(ge)
+	}
+	return err
+}
+
 // Start starts a game
+// Might be renamed `next`
 func (ge *GameEngine) Start() error {
 	if ge.playState != idle {
 		return nil
@@ -68,12 +80,12 @@ func (ge *GameEngine) Start() error {
 
 	ge.playState = inProgress
 
-	err := ge.handleInitialCards() // mock?
-	if err != nil {
-		return err
-	}
+	// err := ge.handleInitialCards() // mock?
+	// if err != nil {
+	// 	return err
+	// }
 
-	// play actual game
+	// next tick?
 	return nil
 }
 

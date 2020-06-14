@@ -23,3 +23,10 @@ func TableFailureMessage(t *testing.T, testName, expected, actual interface{}) {
 func TypeToString(obj interface{}) string {
 	return fmt.Sprintf("%+v", obj)
 }
+
+// AssertsNoError checks for the non-existence of an error
+func AssertNoError(t *testing.T, err error) {
+	if err != nil {
+		t.Fatalf("Unexpected error: %s", err.Error())
+	}
+}
