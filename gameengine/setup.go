@@ -1,19 +1,24 @@
 package gameengine
 
-import "github.com/minaorangina/shed/players"
+import (
+	"github.com/minaorangina/shed/deck"
+	"github.com/minaorangina/shed/players"
+)
 
 // HandleInitialCards is the setup function for Shed
 func HandleInitialCards(ge GameEngine) error {
-	// shuffle
 	deck := ge.Deck()
+	ps := ge.Players()
+
+	// shuffle
 	deck.Shuffle()
 
 	// deal
-	dealUnseenCards(ge)
-	initial := dealInitialCards(ge)
+	dealUnseenCards(deck, ps)
+	initialCards := dealInitialCards(deck, ps)
 
 	// confirm with player
-	confirmed, err := confirmInitialCards(ge, initial)
+	confirmed, err := confirmInitialCards(ps, initialCards, ge.MessagePlayers)
 	if err != nil {
 		return err
 	}
@@ -27,17 +32,15 @@ func HandleInitialCards(ge GameEngine) error {
 	return nil
 }
 
-func dealUnseenCards(ge GameEngine) {
-	deck := ge.Deck()
-	for _, p := range ge.Players() {
+func dealUnseenCards(deck deck.Deck, ps players.Players) {
+	for _, p := range ps {
 		p.Unseen = deck.Deal(3)
 	}
 }
 
-func dealInitialCards(ge GameEngine) map[string]players.InitialCards {
+func dealInitialCards(deck deck.Deck, ps players.Players) map[string]players.InitialCards {
 	cards := map[string]players.InitialCards{}
-	deck := ge.Deck()
-	for _, p := range ge.Players() {
+	for _, p := range ps {
 		dealtHand := deck.Deal(3)
 		dealtSeen := deck.Deal(3)
 
@@ -51,16 +54,20 @@ func dealInitialCards(ge GameEngine) map[string]players.InitialCards {
 	return cards
 }
 
-func confirmInitialCards(ge GameEngine, ic map[string]players.InitialCards) (map[string]players.InitialCards, error) {
+func confirmInitialCards(
+	ps players.Players,
+	ic map[string]players.InitialCards,
+	messageFn func([]players.OutboundMessage) ([]players.InboundMessage, error),
+) (map[string]players.InitialCards, error) {
 	messages := []players.OutboundMessage{}
-	for _, p := range ge.Players() {
-		o := buildOpponents(p.ID, ge.Players())
+	for _, p := range ps {
+		o := buildOpponents(p.ID, ps)
 		m := buildReorgMessage(p, o, ic[p.ID], "Rearrange your hand")
 		messages = append(messages, m)
 	}
 
 	// this will block
-	reply, err := ge.MessagePlayers(messages)
+	reply, err := messageFn(messages)
 	if err != nil {
 		return nil, err
 	}

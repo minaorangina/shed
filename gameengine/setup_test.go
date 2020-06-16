@@ -1,31 +1,39 @@
 package gameengine
 
 import (
-	"fmt"
 	"testing"
+
+	"github.com/minaorangina/shed/deck"
 )
 
-func TestSetupFn(t *testing.T) {
-	t.Run("all cards dealt", func(t *testing.T) {
-		t.Skip("do not run TestGameEngineStart/all_cards_dealt")
-		ge, _ := gameEngineWithPlayers()
-		err := ge.Start() // mock required
-		if err != nil {
-			t.Fatal("Unexpected error ", err.Error())
-		}
-		for _, p := range ge.Players() {
-			c := p.Cards()
-			numHand := len(c.Hand)
-			numSeen := len(c.Seen)
-			numUnseen := len(c.Unseen)
-			if numHand != 3 {
-				formatStr := "hand - %d\nseen - %d\nunseen - %d\n"
-				t.Errorf("Expected all threes. Actual:\n" + fmt.Sprintf(formatStr, numHand, numSeen, numUnseen))
+func TestHandleInitialCards(t *testing.T) {
+	// test a well-formed inbound message
+	// test a malformed inbound message
+
+	t.Run("dealUnseenCards", func(t *testing.T) {
+		cards := deck.New()
+		ps := somePlayers()
+		dealUnseenCards(cards, ps)
+
+		for _, p := range ps {
+			if len(p.Unseen) != 3 {
+				t.Fatalf("Wanted 3, got %d", len(p.Unseen))
 			}
 		}
 	})
 
-	t.Run("correct playState", func(t *testing.T) {
-		t.Skip("skip testing playstates")
+	t.Run("dealInitialCards", func(t *testing.T) {
+		cards := deck.New()
+		ps := somePlayers()
+		got := dealInitialCards(cards, ps)
+
+		for _, p := range got {
+			if len(p.Seen) != 3 || len(p.Hand) != 3 {
+				t.Errorf("dealInitialCards not working as expected, got %+v", got)
+			}
+		}
+	})
+
+	t.Run("confirmInitialCards", func(t *testing.T) {
 	})
 }
