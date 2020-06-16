@@ -4,17 +4,14 @@ package gameengine
 type Stage int
 
 const (
-	cardOrganisation Stage = iota
-	clearDeck
+	clearDeck Stage = iota
 	clearCards
 )
 
-func (s Stage) String() string {
+func (s Stage) String() string { // TODO: test
 	if s == 0 {
-		return "cardOrganisation"
-	} else if s == 1 {
 		return "clearDeck"
-	} else if s == 2 {
+	} else if s == 1 {
 		return "clearCards"
 	}
 	return ""
