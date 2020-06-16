@@ -26,7 +26,7 @@ func offerCardSwitch(conn *conn) bool {
 		reader := bufio.NewReader(conn.In)
 		var validResponse, response bool
 		for !validResponse {
-			SendText(conn.Out, "You may reorganise any of your visible cards.\nWould you like to reorganise your cards? [y/n] ")
+			SendText(conn.Out, reorgInviteText)
 
 			char, err := reader.ReadString('\n')
 			if err != nil && err != io.EOF {
@@ -48,7 +48,7 @@ func offerCardSwitch(conn *conn) bool {
 			case "n":
 				validResponse = true
 			default:
-				SendText(conn.Out, "Invalid choice %s. Please enter \"y\" for \"yes\" or \"n\" for \"no\"\n", char)
+				SendText(conn.Out, retryYesNoText, char)
 			}
 		}
 		ch <- response
@@ -59,11 +59,11 @@ func offerCardSwitch(conn *conn) bool {
 		if choice {
 			return true
 		}
-		SendText(conn.Out, "Ok, I will leave your cards as they are.")
+		SendText(conn.Out, noChangeText)
 		return false
 
 	case <-time.After(offerTimeout):
-		SendText(conn.Out, "\nTimed out: I will leave your cards as they are.")
+		SendText(conn.Out, timeoutText)
 		return false
 	}
 }
@@ -97,9 +97,9 @@ func reorganiseCards(conn *conn, msg OutboundMessage) InboundMessage {
 				Seen: newSeen,
 				Hand: newHand,
 			}
-			SendText(conn.Out, "\nThanks, %s. Here is what your cards look like now:\n\n", msg.Name)
+			SendText(conn.Out, stateOfCardsText, msg.Name)
 			SendText(conn.Out, buildCardDisplayText(playerCards))
-			SendText(conn.Out, "\nLet's start the game!")
+			SendText(conn.Out, startGameText)
 
 			return InboundMessage{
 				PlayerID: msg.PlayerID,
@@ -109,11 +109,11 @@ func reorganiseCards(conn *conn, msg OutboundMessage) InboundMessage {
 			}
 		}
 
-		SendText(conn.Out, "Ok, I'll leave your cards as they are")
+		SendText(conn.Out, noChangeText)
 		return defaultResponse
 
 	case <-time.After(reorgTimeout):
-		SendText(conn.Out, "Ok, I'll leave your cards as they are")
+		SendText(conn.Out, noChangeText)
 		return defaultResponse
 	}
 }
@@ -135,18 +135,18 @@ func getCardChoices(ch chan []int, conn *conn) {
 		entry := strings.Replace(string(entryBytes), " ", "", -1)
 
 		if len(entry) != 3 {
-			SendText(conn.Out, "You need to choose 3 cards")
+			SendText(conn.Out, retryThreeCardsText)
 			retriesLeft--
 			continue
 		}
 		if !charsUnique(entry) {
-			SendText(conn.Out, "Please select 3 unique cards")
+			SendText(conn.Out, retryUniqueCardsText)
 			retriesLeft--
 			continue
 		}
 		entry = strings.ToUpper(entry)
 		if !charsInRange(entry, upperCaseA, upperCaseF) {
-			fmt.Println("Invalid entry. Please use the letter codes (A-F) to select your cards")
+			SendText(conn.Out, retryRangeAFText)
 			retriesLeft--
 			continue
 		}

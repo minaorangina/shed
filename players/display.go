@@ -7,6 +7,18 @@ import (
 	"github.com/minaorangina/shed/deck"
 )
 
+const (
+	reorgInviteText      = "You may reorganise any of your visible cards.\nWould you like to reorganise your cards? [y/n] "
+	retryYesNoText       = "Invalid choice %s. Please enter \"y\" for \"yes\" or \"n\" for \"no\"\n"
+	noChangeText         = "Ok, I will leave your cards as they are."
+	timeoutText          = "\nTimed out: I will leave your cards as they are."
+	stateOfCardsText     = "\nThanks, %s. Here is what your cards look like now:\n\n"
+	startGameText        = "\nLet's start the game!"
+	retryUniqueCardsText = "Please select 3 unique cards"
+	retryThreeCardsText  = "You need to choose 3 cards"
+	retryRangeAFText     = "Invalid entry. Please use the letter codes (A-F) to select your cards"
+)
+
 func SendText(w io.Writer, text string, a ...interface{}) {
 	fmt.Fprintf(w, text, a...)
 }
