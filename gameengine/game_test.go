@@ -20,7 +20,7 @@ func somePlayers() players.Players {
 	return players
 }
 
-func gameEngineWithPlayers() (*GameEngine, players.Players) {
+func gameEngineWithPlayers() (GameEngine, players.Players) {
 	ps := somePlayers()
 	ge, _ := New(ps, nil)
 	return ge, ps
@@ -61,13 +61,8 @@ func TestNewGameEngine(t *testing.T) {
 
 	t.Run("constructs with correct number of cards", func(t *testing.T) {
 		ge, _ := gameEngineWithPlayers()
-		if len(ge.deck) != 52 {
-			t.Errorf(fmt.Sprintf("\nExpected: %+v\nActual: %+v\n", 52, len(ge.deck)))
-		}
-
-		expectedStage := "cardOrganisation"
-		if ge.stage.String() != expectedStage {
-			t.Errorf(fmt.Sprintf("\nExpected: %+v\nActual: %+v\n", expectedStage, ge.stage.String()))
+		if len(ge.Deck()) != 52 {
+			t.Errorf(fmt.Sprintf("\nExpected: %+v\nActual: %+v\n", 52, len(ge.Deck())))
 		}
 	})
 
@@ -103,8 +98,8 @@ func TestBuildMessageToPlayer(t *testing.T) {
 		break
 	}
 
-	playerToContact, _ := ge.players.Individual(id)
-	message := ge.buildReorgMessage(playerToContact, opponents, players.InitialCards{}, "Let the games begin!")
+	playerToContact, _ := ge.Players().Individual(id)
+	message := buildReorgMessage(playerToContact, opponents, players.InitialCards{}, "Let the games begin!")
 	expectedMessage := players.OutboundMessage{
 		Message:   "Let the games begin!",
 		PlayerID:  playerToContact.ID,

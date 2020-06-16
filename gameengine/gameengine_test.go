@@ -13,7 +13,7 @@ type spySetup struct {
 	called bool
 }
 
-func (s *spySetup) setup(ge *GameEngine) error {
+func (s *spySetup) setup(ge GameEngine) error {
 	s.called = true
 	return nil
 }
@@ -41,7 +41,7 @@ func TestGameEngineSetupFn(t *testing.T) {
 	})
 
 	t.Run("propagates setup fn error", func(t *testing.T) {
-		erroringSetupFn := func(ge *GameEngine) error {
+		erroringSetupFn := func(ge GameEngine) error {
 			return errors.New("Whoops")
 		}
 		engine, err := New(somePlayers(), erroringSetupFn)
@@ -64,9 +64,9 @@ func TestGameEngineMsgFromGame(t *testing.T) {
 	messages := []players.OutboundMessage{}
 	expected := []players.InboundMessage{}
 	initialCards := players.InitialCards{}
-	for _, p := range ge.players {
-		o := buildOpponents(p.ID, ge.players)
-		m := ge.buildReorgMessage(p, o, initialCards, "Rearrange your initial cards")
+	for _, p := range ge.Players() {
+		o := buildOpponents(p.ID, ge.Players())
+		m := buildReorgMessage(p, o, initialCards, "Rearrange your initial cards")
 		messages = append(messages, m)
 
 		expected = append(expected, players.InboundMessage{
@@ -76,7 +76,7 @@ func TestGameEngineMsgFromGame(t *testing.T) {
 		})
 	}
 
-	actual, err := ge.messagePlayersAwaitReply(messages)
+	actual, err := ge.MessagePlayers(messages)
 	if err != nil {
 		t.Fail()
 	}

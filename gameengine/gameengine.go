@@ -36,16 +36,24 @@ type playerInfo struct {
 }
 
 // GameEngine represents the engine of the game
-type GameEngine struct {
+type GameEngine interface {
+	Setup() error
+	Start() error
+	MessagePlayers([]players.OutboundMessage) ([]players.InboundMessage, error)
+	Deck() deck.Deck
+	Players() players.Players
+}
+
+type gameEngine struct {
 	playState playState
 	players   players.Players
 	stage     Stage
 	deck      deck.Deck
-	setupFn   func(*GameEngine) error
+	setupFn   func(GameEngine) error
 }
 
 // New constructs a new GameEngine
-func New(players []*players.Player, setupFn func(*GameEngine) error) (*GameEngine, error) {
+func New(players []*players.Player, setupFn func(GameEngine) error) (GameEngine, error) {
 	if len(players) < 2 {
 		return nil, fmt.Errorf("Could not construct Game: minimum of 2 players required (supplied %d)", len(players))
 	}
@@ -53,7 +61,7 @@ func New(players []*players.Player, setupFn func(*GameEngine) error) (*GameEngin
 		return nil, fmt.Errorf("Could not construct Game: maximum of 4 players allowed (supplied %d)", len(players))
 	}
 
-	engine := GameEngine{
+	engine := gameEngine{
 		players: players,
 		deck:    deck.New(),
 		setupFn: setupFn,
@@ -63,7 +71,7 @@ func New(players []*players.Player, setupFn func(*GameEngine) error) (*GameEngin
 }
 
 // Setup does any pre-game setup required
-func (ge *GameEngine) Setup() error {
+func (ge *gameEngine) Setup() error {
 	var err error
 	if ge.setupFn != nil {
 		err = ge.setupFn(ge)
@@ -73,23 +81,30 @@ func (ge *GameEngine) Setup() error {
 
 // Start starts a game
 // Might be renamed `next`
-func (ge *GameEngine) Start() error {
+func (ge *gameEngine) Start() error {
 	if ge.playState != idle {
 		return nil
 	}
 
 	ge.playState = inProgress
-
-	// err := ge.handleInitialCards() // mock?
-	// if err != nil {
-	// 	return err
-	// }
-
 	// next tick?
 	return nil
 }
 
-func (ge *GameEngine) messagePlayersAwaitReply(
+func (ge *gameEngine) MessagePlayers(messages []players.OutboundMessage) ([]players.InboundMessage, error) {
+	return messagePlayersAwaitReply(ge.Players(), messages)
+}
+
+func (ge *gameEngine) Deck() deck.Deck {
+	return ge.deck
+}
+
+func (ge *gameEngine) Players() players.Players {
+	return ge.players
+}
+
+func messagePlayersAwaitReply(
+	ps players.Players,
 	messages []players.OutboundMessage,
 ) (
 	[]players.InboundMessage,
@@ -97,7 +112,7 @@ func (ge *GameEngine) messagePlayersAwaitReply(
 ) {
 	ch := make(chan players.InboundMessage)
 	for _, m := range messages {
-		if p, ok := ge.players.Individual(m.PlayerID); ok {
+		if p, ok := ps.Individual(m.PlayerID); ok {
 			go p.SendMessageAwaitReply(ch, m)
 			break // debug
 		}
