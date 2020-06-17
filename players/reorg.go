@@ -20,7 +20,7 @@ var (
 	reorgTimeout = 1 * time.Minute
 )
 
-func offerCardSwitch(conn *conn) bool {
+func offerCardSwitch(conn *conn, timeout time.Duration) bool {
 	input := make(chan bool)
 	go func(ch chan bool) {
 		reader := bufio.NewReader(conn.In)
@@ -42,13 +42,25 @@ func offerCardSwitch(conn *conn) bool {
 			case "Y":
 				fallthrough
 			case "y":
+				fallthrough
+			case "YES":
+				fallthrough
+			case "yes":
+				fallthrough
+			case "Yes":
 				response, validResponse = true, true
 			case "N":
 				fallthrough
 			case "n":
+				fallthrough
+			case "no":
+				fallthrough
+			case "No":
+				fallthrough
+			case "NO":
 				validResponse = true
 			default:
-				SendText(conn.Out, retryYesNoText, char)
+				SendText(conn.Out, retryYesNoText)
 			}
 		}
 		ch <- response
@@ -62,7 +74,7 @@ func offerCardSwitch(conn *conn) bool {
 		SendText(conn.Out, noChangeText)
 		return false
 
-	case <-time.After(offerTimeout):
+	case <-time.After(timeout):
 		SendText(conn.Out, timeoutText)
 		return false
 	}

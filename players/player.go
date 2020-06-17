@@ -86,7 +86,7 @@ func (p Player) handleReorg(msg OutboundMessage) InboundMessage {
 	SendText(p.Conn.Out, "%s, here are your cards:\n\n", msg.Name)
 	SendText(p.Conn.Out, buildCardDisplayText(playerCards))
 
-	if shouldReorganise := offerCardSwitch(p.Conn); shouldReorganise {
+	if shouldReorganise := offerCardSwitch(p.Conn, offerTimeout); shouldReorganise {
 		response = reorganiseCards(p.Conn, msg)
 	}
 

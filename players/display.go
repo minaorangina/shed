@@ -9,9 +9,10 @@ import (
 
 const (
 	reorgInviteText      = "You may reorganise any of your visible cards.\nWould you like to reorganise your cards? [y/n] "
-	retryYesNoText       = "Invalid choice %s. Please enter \"y\" for \"yes\" or \"n\" for \"no\"\n"
+	retryYesNoText       = "Invalid choice. Please enter \"y\" for \"yes\" or \"n\" for \"no\"\n"
 	noChangeText         = "Ok, I will leave your cards as they are."
 	timeoutText          = "\nTimed out: I will leave your cards as they are."
+	maxRetriesText       = "\nMax retries exceeded: I will leave your cards as they are."
 	stateOfCardsText     = "\nThanks, %s. Here is what your cards look like now:\n\n"
 	startGameText        = "\nLet's start the game!"
 	retryUniqueCardsText = "Please select 3 unique cards"
