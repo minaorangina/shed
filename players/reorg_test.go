@@ -2,6 +2,7 @@ package players
 
 import (
 	"bytes"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -26,7 +27,7 @@ func TestOfferCardSwitch(t *testing.T) {
 			stdin := bytes.NewReader([]byte(c.input))
 			stdout := &bytes.Buffer{}
 			testConn := &conn{stdin, stdout}
-			got := offerCardSwitch(testConn, time.Duration(1*time.Millisecond))
+			got := offerCardSwitch(testConn, time.Duration(10*time.Millisecond))
 
 			utils.AssertEqual(t, c.want, got)
 		}
@@ -48,7 +49,7 @@ func TestOfferCardSwitch(t *testing.T) {
 			stdin := bytes.NewReader([]byte(c.input))
 			stdout := &bytes.Buffer{}
 			testConn := &conn{stdin, stdout}
-			got := offerCardSwitch(testConn, time.Duration(1*time.Millisecond))
+			got := offerCardSwitch(testConn, time.Duration(10*time.Millisecond))
 
 			utils.AssertEqual(t, c.want, got)
 			if !strings.Contains(stdout.String(), noChangeText) {
@@ -102,4 +103,42 @@ func TestOfferCardSwitch(t *testing.T) {
 			t.Errorf("Got:\n%s\nShould contain:\n%s", stdout.String(), timeoutText)
 		}
 	})
+}
+
+func TestGetCardChoices(t *testing.T) {
+	cases := []struct {
+		input string
+		want  []int
+	}{
+		{"ABC", []int{0, 1, 2}},
+		{"abc", []int{0, 1, 2}},
+		{"DEF", []int{3, 4, 5}},
+		{"def", []int{3, 4, 5}},
+		{"bed", []int{1, 3, 4}},
+		{"DEF\nppp", []int{3, 4, 5}},
+		{"nnn\nABC", []int{0, 1, 2}},
+		{"\n\nfab", []int{0, 1, 5}},
+		{"nnn", []int{}},
+		{"\n\nneidn", []int{}},
+		{"\n\n\n", []int{}},
+	}
+
+	for _, c := range cases {
+		stdin := strings.NewReader(c.input)
+		stdout := &bytes.Buffer{}
+		testConn := &conn{stdin, stdout}
+		testChan := make(chan []int)
+
+		go getCardChoices(testChan, testConn)
+
+		select {
+		case got := <-testChan:
+			if !reflect.DeepEqual(got, c.want) {
+				utils.FailureMessage(t, c.want, got)
+			}
+
+		case <-time.After(1 * time.Second):
+			t.Error("Test timed out")
+		}
+	}
 }

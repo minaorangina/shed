@@ -132,31 +132,34 @@ func reorganiseCards(conn *conn, msg OutboundMessage) InboundMessage {
 
 func getCardChoices(ch chan []int, conn *conn) {
 	var validResponse bool
-	var response []int
-	reader := bufio.NewReader(conn.In)
+	response := []int{}
 	retriesLeft := retries
 
+	reader := bufio.NewReader(conn.In)
 	for retriesLeft > 0 && !validResponse {
 		SendText(conn.Out, reorgPromptText())
 
 		entryBytes, _, err := reader.ReadLine()
-		if err != nil {
-			fmt.Println(err)
+		if err != nil && err != io.EOF {
+			fmt.Println("ERROR", err)
 			break
 		}
-		entry := strings.Replace(string(entryBytes), " ", "", -1)
 
+		entry := strings.Replace(string(entryBytes), " ", "", -1)
 		if len(entry) != 3 {
 			SendText(conn.Out, retryThreeCardsText)
 			retriesLeft--
 			continue
 		}
+
 		if !charsUnique(entry) {
 			SendText(conn.Out, retryUniqueCardsText)
 			retriesLeft--
 			continue
 		}
+
 		entry = strings.ToUpper(entry)
+
 		if !charsInRange(entry, upperCaseA, upperCaseF) {
 			SendText(conn.Out, retryRangeAFText)
 			retriesLeft--
@@ -168,6 +171,7 @@ func getCardChoices(ch chan []int, conn *conn) {
 	}
 
 	ch <- response
+	close(ch) // necessary?
 }
 
 func charsToSortedCardIndex(chars string) []int {
