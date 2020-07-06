@@ -7,6 +7,7 @@ import (
 
 // FailureMessage returns a failure message for a failed test
 func FailureMessage(t *testing.T, want, got interface{}) {
+	t.Helper()
 	expectedString := TypeToString(want)
 	actualString := TypeToString(got)
 	t.Errorf("\nWant: %s\nGot: %s", expectedString, actualString)
@@ -14,6 +15,7 @@ func FailureMessage(t *testing.T, want, got interface{}) {
 
 // TableFailureMessage returns a failure message for a failed test, including the name of the test
 func TableFailureMessage(t *testing.T, testName, want, got interface{}) {
+	t.Helper()
 	expectedString := TypeToString(want)
 	actualString := TypeToString(got)
 	t.Errorf("%s\nWant: %s\nGot: %s", testName, expectedString, actualString)
@@ -26,6 +28,7 @@ func TypeToString(obj interface{}) string {
 
 // AssertNoError checks for the non-existence of an error
 func AssertNoError(t *testing.T, err error) {
+	t.Helper()
 	if err != nil {
 		t.Fatalf("Unexpected error: %s", err.Error())
 	}
@@ -33,6 +36,7 @@ func AssertNoError(t *testing.T, err error) {
 
 // AssertEqual checks that the values are equal
 func AssertEqual(t *testing.T, want, got interface{}) {
+	t.Helper()
 	if want != got {
 		FailureMessage(t, want, got)
 	}
