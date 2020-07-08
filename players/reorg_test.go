@@ -121,24 +121,18 @@ func TestGetCardChoices(t *testing.T) {
 		{"nnn", []int{}},
 		{"\n\nneidn", []int{}},
 		{"\n\n\n", []int{}},
+		{"\r\n\r\n\r\n", []int{}},
 	}
 
 	for _, c := range cases {
 		stdin := strings.NewReader(c.input)
 		stdout := &bytes.Buffer{}
 		testConn := &conn{stdin, stdout}
-		testChan := make(chan []int)
 
-		go getCardChoices(testChan, testConn)
+		got := getCardChoices(testConn, 10*time.Millisecond)
 
-		select {
-		case got := <-testChan:
-			if !reflect.DeepEqual(got, c.want) {
-				utils.FailureMessage(t, c.want, got)
-			}
-
-		case <-time.After(1 * time.Second):
-			t.Error("Test timed out")
+		if !reflect.DeepEqual(got, c.want) {
+			utils.FailureMessage(t, c.want, got)
 		}
 	}
 }

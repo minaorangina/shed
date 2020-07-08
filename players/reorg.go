@@ -98,80 +98,82 @@ func reorganiseCards(conn *conn, msg OutboundMessage) InboundMessage {
 
 	SendText(conn.Out, buildReorgDisplayText(msg, allVisibleCards))
 
-	ch := make(chan []int)
-	go getCardChoices(ch, conn)
-
-	select {
-	case choices := <-ch:
-		if len(choices) == 3 {
-			newHand, newSeen := choicesToCards(allVisibleCards, choices)
-			playerCards := PlayerCards{
-				Seen: newSeen,
-				Hand: newHand,
-			}
-			SendText(conn.Out, stateOfCardsText, msg.Name)
-			SendText(conn.Out, buildCardDisplayText(playerCards))
-			SendText(conn.Out, startGameText)
-
-			return InboundMessage{
-				PlayerID: msg.PlayerID,
-				Command:  msg.Command,
-				Hand:     newHand,
-				Seen:     newSeen,
-			}
+	choices := getCardChoices(conn, reorgTimeout)
+	if len(choices) == 3 {
+		newHand, newSeen := choicesToCards(allVisibleCards, choices)
+		playerCards := PlayerCards{
+			Seen: newSeen,
+			Hand: newHand,
 		}
+		SendText(conn.Out, stateOfCardsText, msg.Name)
+		SendText(conn.Out, buildCardDisplayText(playerCards))
+		SendText(conn.Out, startGameText)
 
-		SendText(conn.Out, noChangeText)
-		return defaultResponse
-
-	case <-time.After(reorgTimeout):
-		SendText(conn.Out, noChangeText)
-		return defaultResponse
+		return InboundMessage{
+			PlayerID: msg.PlayerID,
+			Command:  msg.Command,
+			Hand:     newHand,
+			Seen:     newSeen,
+		}
 	}
+
+	SendText(conn.Out, noChangeText)
+	return defaultResponse
 }
 
-func getCardChoices(ch chan []int, conn *conn) {
-	var validResponse bool
-	response := []int{}
-	retriesLeft := retries
+func getCardChoices(conn *conn, timeout time.Duration) []int {
+	input := make(chan []int)
 
-	reader := bufio.NewReader(conn.In)
-	for retriesLeft > 0 && !validResponse {
-		SendText(conn.Out, reorgPromptText())
+	go func(ch chan []int) {
+		var validResponse bool
+		response := []int{}
+		retriesLeft := retries
 
-		entryBytes, _, err := reader.ReadLine()
-		if err != nil && err != io.EOF {
-			fmt.Println("ERROR", err)
-			break
+		reader := bufio.NewReader(conn.In)
+		for retriesLeft > 0 && !validResponse {
+			SendText(conn.Out, reorgPromptText())
+
+			entryBytes, _, err := reader.ReadLine()
+			if err != nil && err != io.EOF {
+				fmt.Println("ERROR", err)
+				break
+			}
+
+			entry := strings.Replace(string(entryBytes), " ", "", -1)
+			if len(entry) != 3 {
+				SendText(conn.Out, retryThreeCardsText)
+				retriesLeft--
+				continue
+			}
+
+			if !charsUnique(entry) {
+				SendText(conn.Out, retryUniqueCardsText)
+				retriesLeft--
+				continue
+			}
+
+			entry = strings.ToUpper(entry)
+
+			if !charsInRange(entry, upperCaseA, upperCaseF) {
+				SendText(conn.Out, retryRangeAFText)
+				retriesLeft--
+				continue
+			}
+
+			validResponse = true
+			response = charsToSortedCardIndex(entry)
 		}
 
-		entry := strings.Replace(string(entryBytes), " ", "", -1)
-		if len(entry) != 3 {
-			SendText(conn.Out, retryThreeCardsText)
-			retriesLeft--
-			continue
-		}
+		ch <- response
+		close(ch) // necessary?
+	}(input)
 
-		if !charsUnique(entry) {
-			SendText(conn.Out, retryUniqueCardsText)
-			retriesLeft--
-			continue
-		}
-
-		entry = strings.ToUpper(entry)
-
-		if !charsInRange(entry, upperCaseA, upperCaseF) {
-			SendText(conn.Out, retryRangeAFText)
-			retriesLeft--
-			continue
-		}
-
-		validResponse = true
-		response = charsToSortedCardIndex(entry)
+	select {
+	case choices := <-input:
+		return choices
+	case <-time.After(timeout):
+		return []int{}
 	}
-
-	ch <- response
-	close(ch) // necessary?
 }
 
 func charsToSortedCardIndex(chars string) []int {
