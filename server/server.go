@@ -19,24 +19,23 @@ type NewGameRes struct {
 
 // GameServer is a game server
 type GameServer struct {
-	router *http.ServeMux
+	http.Handler
 }
 
-func (g *GameServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	g.router.ServeHTTP(w, r)
-}
-
-// New Server creates a new GameServer
+// NewServer creates a new GameServer
 func NewServer() *GameServer {
+	s := new(GameServer)
+
 	router := http.NewServeMux()
 
 	router.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
-
 	router.Handle("/new", http.HandlerFunc(HandleNewGame))
 
-	return &GameServer{router}
+	s.Handler = router
+
+	return s
 }
 
 // HandleNewGame handles a request to create a new game
