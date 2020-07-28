@@ -2,10 +2,12 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"os"
 
 	engine "github.com/minaorangina/shed/gameengine"
 	"github.com/minaorangina/shed/players"
+	"github.com/minaorangina/shed/server"
 )
 
 func main() {
@@ -18,4 +20,7 @@ func main() {
 		log.Fatal(err.Error())
 	}
 	ge.Start()
+
+	s := server.NewServer()
+	http.ListenAndServe(":8000", s)
 }
