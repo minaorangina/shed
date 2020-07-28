@@ -3,7 +3,6 @@ package gameengine
 import (
 	"errors"
 	"fmt"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -12,19 +11,6 @@ import (
 	"github.com/minaorangina/shed/players"
 	"github.com/minaorangina/shed/protocol"
 )
-
-func somePlayers() players.Players {
-	player1 := players.NewPlayer(players.NewID(), "Harry", os.Stdin, os.Stdout)
-	player2 := players.NewPlayer(players.NewID(), "Sally", os.Stdin, os.Stdout)
-	players := players.Players([]*players.Player{player1, player2})
-	return players
-}
-
-func gameEngineWithPlayers() (GameEngine, players.Players) {
-	ps := somePlayers()
-	ge, _ := New(ps, nil)
-	return ge, ps
-}
 
 func TestNewGameEngine(t *testing.T) {
 	t.Run("constructed with correct number of players", func(t *testing.T) {

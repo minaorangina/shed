@@ -66,6 +66,7 @@ func TestOfferCardSwitch(t *testing.T) {
 			"&R*$WRiyfguyfuycuiyfyiouyfuyfuyf6fW",
 			"",
 			" ",
+			"\n",
 		}
 
 		for _, c := range badCases {

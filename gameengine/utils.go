@@ -7,6 +7,19 @@ import (
 	"github.com/minaorangina/shed/players"
 )
 
+func somePlayers() players.Players {
+	player1 := players.NewPlayer(players.NewID(), "Harry", os.Stdin, os.Stdout)
+	player2 := players.NewPlayer(players.NewID(), "Sally", os.Stdin, os.Stdout)
+	players := players.Players([]*players.Player{player1, player2})
+	return players
+}
+
+func gameEngineWithPlayers() (GameEngine, players.Players) {
+	ps := somePlayers()
+	ge, _ := New(ps, nil)
+	return ge, ps
+}
+
 func buildOpponents(playerID string, ps players.Players) []players.Opponent {
 	opponents := []players.Opponent{}
 	for _, p := range ps {
