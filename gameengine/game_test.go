@@ -84,7 +84,7 @@ func TestBuildMessageToPlayer(t *testing.T) {
 		break
 	}
 
-	playerToContact, _ := ge.Players().Individual(id)
+	playerToContact, _ := ge.Players().Find(id)
 	message := buildReorgMessage(playerToContact, opponents, players.InitialCards{}, "Let the games begin!")
 	expectedMessage := players.OutboundMessage{
 		Message:   "Let the games begin!",

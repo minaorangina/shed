@@ -112,7 +112,7 @@ func messagePlayersAwaitReply(
 ) {
 	ch := make(chan players.InboundMessage)
 	for _, m := range messages {
-		if p, ok := ps.Individual(m.PlayerID); ok {
+		if p, ok := ps.Find(m.PlayerID); ok {
 			go p.SendMessageAwaitReply(ch, m)
 			break // debug
 		}
