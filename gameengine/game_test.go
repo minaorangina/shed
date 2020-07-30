@@ -96,6 +96,6 @@ func TestBuildMessageToPlayer(t *testing.T) {
 		Command:   protocol.Reorg,
 	}
 	if !reflect.DeepEqual(expectedMessage, message) {
-		utils.FailureMessage(t, expectedMessage, message)
+		utils.FailureMessage(t, message, expectedMessage)
 	}
 }

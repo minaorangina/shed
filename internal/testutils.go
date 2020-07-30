@@ -6,21 +6,21 @@ import (
 )
 
 // FailureMessage returns a failure message for a failed test
-func FailureMessage(t *testing.T, want, got interface{}) {
+func FailureMessage(t *testing.T, got, want interface{}) {
 	t.Helper()
 
-	expectedString := TypeToString(want)
-	actualString := TypeToString(got)
-	t.Errorf("\nWant: %s\nGot: %s", expectedString, actualString)
+	gotString := TypeToString(got)
+	wantString := TypeToString(want)
+	t.Errorf("\nGot: %s\nwant: %s", gotString, wantString)
 }
 
 // TableFailureMessage returns a failure message for a failed test, including the name of the test
-func TableFailureMessage(t *testing.T, testName, want, got interface{}) {
+func TableFailureMessage(t *testing.T, testName, got, want interface{}) {
 	t.Helper()
 
-	expectedString := TypeToString(want)
 	actualString := TypeToString(got)
-	t.Errorf("%s\nWant: %s\nGot: %s", testName, expectedString, actualString)
+	expectedString := TypeToString(want)
+	t.Errorf("%s\nGot: %s\nWant: %s", testName, actualString, expectedString)
 }
 
 // TypeToString returns the string representation of a non-string type
@@ -38,10 +38,10 @@ func AssertNoError(t *testing.T, err error) {
 }
 
 // AssertEqual checks that the values are equal
-func AssertEqual(t *testing.T, want, got interface{}) {
+func AssertEqual(t *testing.T, got, want interface{}) {
 	t.Helper()
 
-	if want != got {
-		FailureMessage(t, want, got)
+	if got != want {
+		FailureMessage(t, got, want)
 	}
 }

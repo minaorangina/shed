@@ -133,7 +133,7 @@ func TestGetCardChoices(t *testing.T) {
 		got := getCardChoices(testConn, 10*time.Millisecond)
 
 		if !reflect.DeepEqual(got, c.want) {
-			utils.FailureMessage(t, c.want, got)
+			utils.FailureMessage(t, got, c.want)
 		}
 	}
 }

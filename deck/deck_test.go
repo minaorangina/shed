@@ -13,7 +13,7 @@ func TestNewDeck(t *testing.T) {
 	deckOfCards := New()
 
 	if len(deckOfCards) != fullDeckCount {
-		utils.FailureMessage(t, fullDeckCount, len(deckOfCards))
+		utils.FailureMessage(t, len(deckOfCards), fullDeckCount)
 	}
 }
 func TestDeckShuffle(t *testing.T) {
@@ -47,12 +47,12 @@ func TestDeckRemoveCards(t *testing.T) {
 
 	zeroCards := deckToRemoveFrom.Deal(0)
 	if len(zeroCards) != 0 {
-		utils.FailureMessage(t, 0, len(zeroCards))
+		utils.FailureMessage(t, len(zeroCards), 0)
 	}
 
 	zeroCards = deckToRemoveFrom.Deal(-5)
 	if len(zeroCards) != 0 {
-		utils.FailureMessage(t, 0, len(zeroCards))
+		utils.FailureMessage(t, len(zeroCards), 0)
 	}
 
 	deckTests := []deckTest{
@@ -67,13 +67,13 @@ func TestDeckRemoveCards(t *testing.T) {
 		expectedCardName := deckToRemoveFrom[len(deckToRemoveFrom)-1].String()
 		removedCards := deckToRemoveFrom.Deal(dt.numCardsToRemove)
 		if len(removedCards) != dt.numCardsToRemove {
-			utils.TableFailureMessage(t, dt.testName, dt.numCardsToRemove, len(removedCards))
+			utils.TableFailureMessage(t, dt.testName, len(removedCards), dt.numCardsToRemove)
 		}
 		if removedCards[dt.numCardsToRemove-1].String() != expectedCardName {
-			utils.TableFailureMessage(t, dt.testName, expectedCardName, removedCards[dt.numCardsToRemove-1].String())
+			utils.TableFailureMessage(t, dt.testName, removedCards[dt.numCardsToRemove-1].String(), expectedCardName)
 		}
 		if len(deckToRemoveFrom) != dt.expectedNumRemaining {
-			utils.TableFailureMessage(t, dt.testName, dt.expectedNumRemaining, len(deckToRemoveFrom))
+			utils.TableFailureMessage(t, dt.testName, len(deckToRemoveFrom), dt.expectedNumRemaining)
 		}
 	}
 }

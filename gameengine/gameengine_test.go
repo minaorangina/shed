@@ -76,12 +76,12 @@ func TestGameEngineMsgFromGame(t *testing.T) {
 		})
 	}
 
-	actual, err := ge.MessagePlayers(messages)
+	got, err := ge.MessagePlayers(messages)
 	if err != nil {
 		t.Fail()
 	}
 
-	if !reflect.DeepEqual(expected, actual) { // TODO: fix slice ordering
-		utils.FailureMessage(t, expected, actual)
+	if !reflect.DeepEqual(got, want) { // TODO: fix slice ordering
+		utils.FailureMessage(t, got, want)
 	}
 }
