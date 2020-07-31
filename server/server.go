@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 )
 
 type NewGameReq struct {
@@ -19,19 +20,24 @@ type NewGameRes struct {
 
 // GameServer is a game server
 type GameServer struct {
+	store GameStore
 	http.Handler
 }
 
 // NewServer creates a new GameServer
-func NewServer() *GameServer {
+func NewServer(store GameStore) *GameServer {
 	s := new(GameServer)
 
 	router := http.NewServeMux()
 
 	router.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Println("Root endpoint")
 		w.WriteHeader(http.StatusOK)
 	}))
-	router.Handle("/new", http.HandlerFunc(HandleNewGame))
+	router.Handle("/new", http.HandlerFunc(s.HandleNewGame))
+	router.Handle("/game/", http.HandlerFunc(s.HandleGetGame))
+
+	s.store = store
 
 	s.Handler = router
 
@@ -39,7 +45,7 @@ func NewServer() *GameServer {
 }
 
 // HandleNewGame handles a request to create a new game
-func HandleNewGame(w http.ResponseWriter, r *http.Request) {
+func (g *GameServer) HandleNewGame(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -72,4 +78,24 @@ func HandleNewGame(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Add("Content-Type", "application/json")
 	w.Write(bytes)
+}
+
+func (g *GameServer) HandleGetGame(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	gameID := strings.Replace(r.URL.String(), "/game/", "", 1)
+	if gameID == "" {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	if _, ok := g.store.GetGame(gameID); ok {
+		w.Header().Add("Content-Type", "application/json")
+		w.Write([]byte(`{"game_id": "` + gameID + `"}`))
+	} else {
+		w.WriteHeader(http.StatusNotFound)
+	}
 }
