@@ -14,10 +14,9 @@ func somePlayers() players.Players {
 	return players
 }
 
-func gameEngineWithPlayers() (GameEngine, players.Players) {
-	ps := somePlayers()
-	ge, _ := New(ps, nil)
-	return ge, ps
+func gameEngineWithPlayers() GameEngine {
+	ge, _ := New("theid", somePlayers(), nil)
+	return ge
 }
 
 func buildOpponents(playerID string, ps players.Players) []players.Opponent {

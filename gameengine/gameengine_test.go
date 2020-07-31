@@ -2,7 +2,7 @@ package gameengine
 
 import (
 	"errors"
-	"reflect"
+	"fmt"
 	"testing"
 
 	utils "github.com/minaorangina/shed/internal"
@@ -18,10 +18,25 @@ func (s *spySetup) setup(ge GameEngine) error {
 	return nil
 }
 
+func TestGameEngineInit(t *testing.T) {
+	t.Run("constructs with correct number of cards", func(t *testing.T) {
+		ge := gameEngineWithPlayers()
+		if len(ge.Deck()) != 52 {
+			t.Errorf(fmt.Sprintf("\nExpected: %+v\nActual: %+v\n", 52, len(ge.Deck())))
+		}
+	})
+	t.Run("has an ID", func(t *testing.T) {
+		id := "thisistheid"
+		engine, err := New(id, somePlayers(), nil)
+		utils.AssertNoError(t, err)
+
+		utils.AssertEqual(t, engine.ID(), id)
+	})
+}
 func TestGameEngineSetupFn(t *testing.T) {
-	t.Run("starts correctly", func(t *testing.T) {
+	t.Run("sets up correctly", func(t *testing.T) {
 		spy := spySetup{}
-		engine, err := New(somePlayers(), spy.setup)
+		engine, err := New("", somePlayers(), spy.setup)
 		utils.AssertNoError(t, err)
 
 		err = engine.Setup()
@@ -32,8 +47,35 @@ func TestGameEngineSetupFn(t *testing.T) {
 		}
 	})
 
+	t.Run("requires legal number of players", func(t *testing.T) {
+		type gameTest struct {
+			testName string
+			input    players.Players
+			want     error
+		}
+		testsShouldError := []gameTest{
+			{
+				"too few players",
+				namesToPlayers([]string{"Grace"}),
+				ErrTooFewPlayers,
+			},
+			{
+				"too many players",
+				namesToPlayers([]string{"Ada", "Katherine", "Grace", "Hedy", "Marlyn"}),
+				ErrTooManyPlayers,
+			},
+		}
+
+		for _, et := range testsShouldError {
+			ge, err := New("", et.input, nil)
+			utils.AssertNoError(t, err)
+			err = ge.Setup()
+			utils.AssertEqual(t, err.Error(), et.want.Error())
+		}
+	})
+
 	t.Run("does not error if no setup fn defined", func(t *testing.T) {
-		engine, err := New(somePlayers(), nil)
+		engine, err := New("", somePlayers(), nil)
 		utils.AssertNoError(t, err)
 
 		err = engine.Setup()
@@ -44,7 +86,7 @@ func TestGameEngineSetupFn(t *testing.T) {
 		erroringSetupFn := func(ge GameEngine) error {
 			return errors.New("Whoops")
 		}
-		engine, err := New(somePlayers(), erroringSetupFn)
+		engine, err := New("", somePlayers(), erroringSetupFn)
 		utils.AssertNoError(t, err)
 
 		err = engine.Setup()
@@ -54,34 +96,53 @@ func TestGameEngineSetupFn(t *testing.T) {
 	})
 }
 
-func TestGameEngineMsgFromGame(t *testing.T) {
-	// Game Engine receives from messages to send to players
-	// and returns response
-	t.Skip("do not run TestGameEngineMsgFromGame")
-	ge, _ := gameEngineWithPlayers()
-	ge.Start() // mock required
+func TestGameEngineStart(t *testing.T) {
+	t.Run("only starts with legal number of players", func(t *testing.T) {
 
-	messages := []players.OutboundMessage{}
-	expected := []players.InboundMessage{}
-	initialCards := players.InitialCards{}
-	for _, p := range ge.Players() {
-		o := buildOpponents(p.ID, ge.Players())
-		m := buildReorgMessage(p, o, initialCards, "Rearrange your initial cards")
-		messages = append(messages, m)
+		type gameTest struct {
+			testName string
+			input    players.Players
+			want     error
+		}
+		testsShouldError := []gameTest{
+			{
+				"too few players",
+				namesToPlayers([]string{"Grace"}),
+				ErrTooFewPlayers,
+			},
+			{
+				"too many players",
+				namesToPlayers([]string{"Ada", "Katherine", "Grace", "Hedy", "Marlyn"}),
+				ErrTooManyPlayers,
+			},
+		}
 
-		expected = append(expected, players.InboundMessage{
-			PlayerID: p.ID,
-			Hand:     p.Hand,
-			Seen:     p.Seen,
-		})
-	}
+		for _, et := range testsShouldError {
+			ge, err := New("", et.input, nil)
+			utils.AssertNoError(t, err)
+			err = ge.Start()
+			utils.AssertEqual(t, err.Error(), et.want.Error())
+		}
+	})
 
-	got, err := ge.MessagePlayers(messages)
-	if err != nil {
-		t.Fail()
-	}
+	t.Run("unnamed for now", func(t *testing.T) {
+		t.Skip("do not run TestGameStart")
+		ge := gameEngineWithPlayers()
 
-	if !reflect.DeepEqual(got, want) { // TODO: fix slice ordering
-		utils.FailureMessage(t, got, want)
-	}
+		err := ge.Start() // mock required
+		if err != nil {
+			t.Fatalf("Could not start game")
+		}
+
+		for _, p := range ge.Players() {
+			c := p.Cards()
+			numHand := len(c.Hand)
+			numSeen := len(c.Seen)
+			numUnseen := len(c.Unseen)
+			if numHand != 3 {
+				formatStr := "hand - %d\nseen - %d\nunseen - %d\n"
+				t.Errorf("Expected all threes. Actual:\n" + fmt.Sprintf(formatStr, numHand, numSeen, numUnseen))
+			}
+		}
+	})
 }

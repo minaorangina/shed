@@ -1,7 +1,7 @@
 package gameengine
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/minaorangina/shed/deck"
 	"github.com/minaorangina/shed/players"
@@ -42,9 +42,11 @@ type GameEngine interface {
 	MessagePlayers([]players.OutboundMessage) ([]players.InboundMessage, error)
 	Deck() deck.Deck
 	Players() players.Players
+	ID() string
 }
 
 type gameEngine struct {
+	id        string
 	playState playState
 	players   players.Players
 	stage     Stage
@@ -52,16 +54,15 @@ type gameEngine struct {
 	setupFn   func(GameEngine) error
 }
 
-// New constructs a new GameEngine
-func New(players []*players.Player, setupFn func(GameEngine) error) (GameEngine, error) {
-	if len(players) < 2 {
-		return nil, fmt.Errorf("Could not construct Game: minimum of 2 players required (supplied %d)", len(players))
-	}
-	if len(players) > 4 {
-		return nil, fmt.Errorf("Could not construct Game: maximum of 4 players allowed (supplied %d)", len(players))
-	}
+var (
+	ErrTooFewPlayers  = errors.New("minimum of 2 players required")
+	ErrTooManyPlayers = errors.New("maximum of 4 players allowed")
+)
 
+// New constructs a new GameEngine
+func New(id string, players []*players.Player, setupFn func(GameEngine) error) (GameEngine, error) {
 	engine := gameEngine{
+		id:      id,
 		players: players,
 		deck:    deck.New(),
 		setupFn: setupFn,
@@ -70,8 +71,18 @@ func New(players []*players.Player, setupFn func(GameEngine) error) (GameEngine,
 	return &engine, nil
 }
 
+func (ge *gameEngine) ID() string {
+	return ge.id
+}
+
 // Setup does any pre-game setup required
 func (ge *gameEngine) Setup() error {
+	if len(ge.players) < 2 {
+		return ErrTooFewPlayers
+	}
+	if len(ge.players) > 4 {
+		return ErrTooManyPlayers
+	}
 	var err error
 	if ge.setupFn != nil {
 		err = ge.setupFn(ge)
@@ -82,6 +93,13 @@ func (ge *gameEngine) Setup() error {
 // Start starts a game
 // Might be renamed `next`
 func (ge *gameEngine) Start() error {
+	if len(ge.players) < 2 {
+		return ErrTooFewPlayers
+	}
+	if len(ge.players) > 4 {
+		return ErrTooManyPlayers
+	}
+
 	if ge.playState != idle {
 		return nil
 	}
