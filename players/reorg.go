@@ -2,8 +2,6 @@ package players
 
 import (
 	"bufio"
-	"fmt"
-	"io"
 	"sort"
 	"strings"
 	"time"
@@ -23,20 +21,13 @@ var (
 func offerCardSwitch(conn *conn, timeout time.Duration) bool {
 	input := make(chan bool)
 	go func(ch chan bool) {
-		reader := bufio.NewReader(conn.In)
+		reader := bufio.NewScanner(conn.In)
+
 		var validResponse, response bool
 		for !validResponse {
 			SendText(conn.Out, reorgInviteText)
-
-			char, err := reader.ReadString('\n')
-			if err != nil && err != io.EOF {
-				// should go to a logger eventually
-				fmt.Println(err.Error())
-				fmt.Printf("Error: %s\n", err.Error())
-				ch <- false
-				break
-			}
-			char = strings.TrimSpace(char)
+			reader.Scan()
+			char := strings.TrimSpace(reader.Text())
 
 			switch char {
 			case "Y":
@@ -129,17 +120,13 @@ func getCardChoices(conn *conn, timeout time.Duration) []int {
 		response := []int{}
 		retriesLeft := retries
 
-		reader := bufio.NewReader(conn.In)
+		reader := bufio.NewScanner(conn.In)
+
 		for retriesLeft > 0 && !validResponse {
 			SendText(conn.Out, reorgPromptText())
+			reader.Scan()
 
-			entryBytes, _, err := reader.ReadLine()
-			if err != nil && err != io.EOF {
-				fmt.Println("ERROR", err)
-				break
-			}
-
-			entry := strings.Replace(string(entryBytes), " ", "", -1)
+			entry := strings.Replace(reader.Text(), " ", "", -1)
 			if len(entry) != 3 {
 				SendText(conn.Out, retryThreeCardsText)
 				retriesLeft--
