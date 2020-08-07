@@ -24,7 +24,7 @@ func TestOfferCardSwitch(t *testing.T) {
 		}
 
 		for _, c := range yesCases {
-			stdin := bytes.NewReader([]byte(c.input))
+			stdin := strings.NewReader(c.input)
 			stdout := &bytes.Buffer{}
 			testConn := &conn{stdin, stdout}
 			got := offerCardSwitch(testConn, time.Duration(10*time.Millisecond))
@@ -46,7 +46,7 @@ func TestOfferCardSwitch(t *testing.T) {
 		}
 
 		for _, c := range noCases {
-			stdin := bytes.NewReader([]byte(c.input))
+			stdin := strings.NewReader(c.input)
 			stdout := &bytes.Buffer{}
 			testConn := &conn{stdin, stdout}
 			got := offerCardSwitch(testConn, time.Duration(10*time.Millisecond))
@@ -70,7 +70,7 @@ func TestOfferCardSwitch(t *testing.T) {
 		}
 
 		for _, c := range badCases {
-			stdin := bytes.NewReader([]byte(c))
+			stdin := strings.NewReader(c)
 			stdout := &bytes.Buffer{}
 			testConn := &conn{stdin, stdout}
 			got := offerCardSwitch(testConn, time.Duration(50*time.Millisecond))
@@ -84,7 +84,7 @@ func TestOfferCardSwitch(t *testing.T) {
 
 	t.Run("defaults to 'no' after max retries", func(t *testing.T) {
 		t.Skip()
-		stdin := bytes.NewReader([]byte{'%', '$', '£'})
+		stdin := strings.NewReader("%$£")
 		stdout := &bytes.Buffer{}
 		testConn := &conn{stdin, stdout}
 		got := offerCardSwitch(testConn, time.Duration(50*time.Millisecond))
@@ -95,7 +95,7 @@ func TestOfferCardSwitch(t *testing.T) {
 	})
 
 	t.Run("defaults to 'no' after timeout", func(t *testing.T) {
-		stdin := bytes.NewReader([]byte{})
+		stdin := strings.NewReader("\n")
 		stdout := &bytes.Buffer{}
 		testConn := &conn{stdin, stdout}
 		got := offerCardSwitch(testConn, time.Duration(1*time.Millisecond))
