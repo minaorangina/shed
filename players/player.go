@@ -2,7 +2,6 @@ package players
 
 import (
 	"io"
-	"os"
 
 	"github.com/minaorangina/shed/deck"
 	"github.com/minaorangina/shed/protocol"
@@ -55,7 +54,7 @@ type PlayerCards struct {
 }
 
 // NewPlayer constructs a new player
-func NewPlayer(id, name string, in, out *os.File) *Player {
+func NewPlayer(id, name string, in io.Reader, out io.Writer) *Player {
 	conn := &conn{in, out}
 	return &Player{ID: id, Name: name, Conn: conn}
 }
