@@ -1,4 +1,4 @@
-package gameengine
+package shed
 
 import "testing"
 

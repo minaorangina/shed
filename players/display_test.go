@@ -3,6 +3,8 @@ package players
 import (
 	"bytes"
 	"testing"
+
+	utils "github.com/minaorangina/shed/internal"
 )
 
 func TestSendText(t *testing.T) {
@@ -13,7 +15,7 @@ func TestSendText(t *testing.T) {
 
 		got := buffer.String()
 
-		assertStringEquality(t, got, want)
+		utils.AssertStringEquality(t, got, want)
 	})
 
 	t.Run("send formatted text", func(t *testing.T) {
@@ -24,6 +26,6 @@ func TestSendText(t *testing.T) {
 
 		got := buffer.String()
 
-		assertStringEquality(t, got, want)
+		utils.AssertStringEquality(t, got, want)
 	})
 }

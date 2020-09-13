@@ -23,6 +23,11 @@ type conn struct {
 // Players represents all players in the game
 type Players []*Player
 
+// NewPlayers returns a set of Players
+func NewPlayers(p ...*Player) Players {
+	return Players(p)
+}
+
 // Find finds a player by id
 func (ps Players) Find(id string) (*Player, bool) {
 	for _, p := range ps {

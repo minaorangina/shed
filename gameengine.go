@@ -1,4 +1,4 @@
-package gameengine
+package shed
 
 import (
 	"errors"
@@ -77,12 +77,10 @@ func (ge *gameEngine) ID() string {
 
 // Setup does any pre-game setup required
 func (ge *gameEngine) Setup() error {
-	if len(ge.players) < 2 {
-		return ErrTooFewPlayers
+	if err := ge.CheckNumPlayers(); err != nil {
+		return err
 	}
-	if len(ge.players) > 4 {
-		return ErrTooManyPlayers
-	}
+
 	var err error
 	if ge.setupFn != nil {
 		err = ge.setupFn(ge)
@@ -93,11 +91,8 @@ func (ge *gameEngine) Setup() error {
 // Start starts a game
 // Might be renamed `next`
 func (ge *gameEngine) Start() error {
-	if len(ge.players) < 2 {
-		return ErrTooFewPlayers
-	}
-	if len(ge.players) > 4 {
-		return ErrTooManyPlayers
+	if err := ge.CheckNumPlayers(); err != nil {
+		return err
 	}
 
 	if ge.playState != idle {
@@ -106,6 +101,17 @@ func (ge *gameEngine) Start() error {
 
 	ge.playState = inProgress
 	// next tick?
+	return nil
+}
+
+func (ge *gameEngine) CheckNumPlayers() error {
+	if len(ge.players) < 2 {
+		return ErrTooFewPlayers
+	}
+	if len(ge.players) > 4 {
+		return ErrTooManyPlayers
+	}
+
 	return nil
 }
 

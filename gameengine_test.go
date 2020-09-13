@@ -1,4 +1,4 @@
-package gameengine
+package shed
 
 import (
 	"errors"
@@ -27,7 +27,7 @@ func TestGameEngineInit(t *testing.T) {
 	})
 	t.Run("has an ID", func(t *testing.T) {
 		id := "thisistheid"
-		engine, err := New(id, somePlayers(), nil)
+		engine, err := New(id, SomePlayers(), nil)
 		utils.AssertNoError(t, err)
 
 		utils.AssertEqual(t, engine.ID(), id)
@@ -36,7 +36,7 @@ func TestGameEngineInit(t *testing.T) {
 func TestGameEngineSetupFn(t *testing.T) {
 	t.Run("sets up correctly", func(t *testing.T) {
 		spy := spySetup{}
-		engine, err := New("", somePlayers(), spy.setup)
+		engine, err := New("", SomePlayers(), spy.setup)
 		utils.AssertNoError(t, err)
 
 		err = engine.Setup()
@@ -75,7 +75,7 @@ func TestGameEngineSetupFn(t *testing.T) {
 	})
 
 	t.Run("does not error if no setup fn defined", func(t *testing.T) {
-		engine, err := New("", somePlayers(), nil)
+		engine, err := New("", SomePlayers(), nil)
 		utils.AssertNoError(t, err)
 
 		err = engine.Setup()
@@ -86,7 +86,7 @@ func TestGameEngineSetupFn(t *testing.T) {
 		erroringSetupFn := func(ge GameEngine) error {
 			return errors.New("Whoops")
 		}
-		engine, err := New("", somePlayers(), erroringSetupFn)
+		engine, err := New("", SomePlayers(), erroringSetupFn)
 		utils.AssertNoError(t, err)
 
 		err = engine.Setup()

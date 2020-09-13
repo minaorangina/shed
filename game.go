@@ -1,4 +1,4 @@
-package gameengine
+package shed
 
 // Stage represents the main stages in the game
 type Stage int

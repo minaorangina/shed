@@ -12,3 +12,7 @@ func TestPlayer(t *testing.T) {
 		t.Fail()
 	}
 }
+
+// func TestNewPlayer(t *testing.T) {
+// 	SomePlayers()
+// }

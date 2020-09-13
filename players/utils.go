@@ -1,14 +1,5 @@
 package players
 
-import "testing"
-
-func assertStringEquality(t *testing.T, got, want string) {
-	t.Helper()
-	if want != got {
-		t.Errorf("got %s, want %s", got, want)
-	}
-}
-
 func charsUnique(s string) bool {
 	seen := map[string]bool{}
 	for _, c := range s {

@@ -54,6 +54,7 @@ func (g *GameServer) HandleNewGame(w http.ResponseWriter, r *http.Request) {
 	var data NewGameReq
 	err := json.NewDecoder(r.Body).Decode(&data)
 	defer r.Body.Close() // why?
+
 	if err == io.EOF {
 		log.Println(err.Error())
 		w.Header().Add("Content-Type", "text/plain")

@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	ge "github.com/minaorangina/shed/gameengine"
+	"github.com/minaorangina/shed"
 	testutils "github.com/minaorangina/shed/internal"
 	"github.com/minaorangina/shed/players"
 )
@@ -90,17 +90,17 @@ func TestServerGETGame(t *testing.T) {
 	})
 }
 
-func newTestGame(t *testing.T, id string, ps []*players.Player, setupFn func(ge.GameEngine) error) ge.GameEngine {
-	game, err := ge.New(id, ps, setupFn)
+func newTestGame(t *testing.T, id string, ps []*players.Player, setupFn func(shed.GameEngine) error) shed.GameEngine {
+	game, err := shed.New(id, ps, setupFn)
 	testutils.AssertNoError(t, err)
 
 	return game
 }
 
-func newServerWithGame(game ge.GameEngine) *GameServer {
+func newServerWithGame(game shed.GameEngine) *GameServer {
 	id := game.ID()
 	store := &inMemoryGameStore{
-		games: map[string]ge.GameEngine{
+		games: map[string]shed.GameEngine{
 			id: game,
 		},
 	}

@@ -1,4 +1,4 @@
-package gameengine
+package shed
 
 import (
 	"testing"
@@ -12,7 +12,7 @@ func TestHandleInitialCards(t *testing.T) {
 
 	t.Run("dealUnseenCards", func(t *testing.T) {
 		cards := deck.New()
-		ps := somePlayers()
+		ps := SomePlayers()
 		dealUnseenCards(cards, ps)
 
 		for _, p := range ps {
@@ -24,7 +24,7 @@ func TestHandleInitialCards(t *testing.T) {
 
 	t.Run("dealInitialCards", func(t *testing.T) {
 		cards := deck.New()
-		ps := somePlayers()
+		ps := SomePlayers()
 		got := dealInitialCards(cards, ps)
 
 		for _, p := range got {

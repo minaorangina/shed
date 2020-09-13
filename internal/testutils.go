@@ -45,3 +45,10 @@ func AssertEqual(t *testing.T, got, want interface{}) {
 		FailureMessage(t, got, want)
 	}
 }
+
+func AssertStringEquality(t *testing.T, got, want string) {
+	t.Helper()
+	if want != got {
+		t.Errorf("got %s, want %s", got, want)
+	}
+}
