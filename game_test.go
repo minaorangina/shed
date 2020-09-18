@@ -11,15 +11,16 @@ import (
 
 func TestBuildMessageToPlayer(t *testing.T) {
 	ge := gameEngineWithPlayers()
+	ps := ge.Players()
 	var opponents []players.Opponent
 	var id string
-	for _, p := range ge.Players() {
+	for _, p := range ps {
 		id = p.ID
-		opponents = buildOpponents(id, ge.Players())
+		opponents = buildOpponents(id, ps)
 		break
 	}
 
-	playerToContact, _ := ge.Players().Find(id)
+	playerToContact, _ := ps.Find(id)
 	message := buildReorgMessage(playerToContact, opponents, players.InitialCards{}, "Let the games begin!")
 	expectedMessage := players.OutboundMessage{
 		Message:   "Let the games begin!",

@@ -27,9 +27,17 @@ func NewPlayers(p ...*Player) Players {
 	return Players(p)
 }
 
+// AddPlayer adds a player to a set of Players
+func AddPlayer(ps *Players, p *Player) Players {
+	if _, ok := ps.Find(p.ID); !ok {
+		return Players(append(*ps, p))
+	}
+	return *ps
+}
+
 // Find finds a player by id
-func (ps Players) Find(id string) (*Player, bool) {
-	for _, p := range ps {
+func (ps *Players) Find(id string) (*Player, bool) {
+	for _, p := range *ps {
 		if p.ID == id {
 			return p, true
 		}

@@ -22,7 +22,7 @@ func TestGameEngineInit(t *testing.T) {
 	t.Run("constructs with correct number of cards", func(t *testing.T) {
 		ge := gameEngineWithPlayers()
 		if len(ge.Deck()) != 52 {
-			t.Errorf(fmt.Sprintf("\nExpected: %+v\nActual: %+v\n", 52, len(ge.Deck())))
+			t.Errorf("\nExpected: %+v\nActual: %+v\n", 52, len(ge.Deck()))
 		}
 	})
 	t.Run("has an ID", func(t *testing.T) {

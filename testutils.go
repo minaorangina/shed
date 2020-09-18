@@ -61,3 +61,12 @@ func AssertTrue(t *testing.T, got bool) {
 		t.Error("Expected to be true, but it wasn't")
 	}
 }
+
+// AssertNotNil checks that the value is not nil
+func AssertNotNil(t *testing.T, got interface{}) {
+	t.Helper()
+
+	if got == nil {
+		t.Error("Value is unexpectedly nil")
+	}
+}

@@ -12,6 +12,7 @@ import (
 
 	"github.com/minaorangina/shed"
 	"github.com/minaorangina/shed/players"
+	uuid "github.com/satori/go.uuid"
 )
 
 type NewGameReq struct {
@@ -19,7 +20,7 @@ type NewGameReq struct {
 }
 
 type NewGameRes struct {
-	GameID   string `json:"game_id`
+	GameID   string `json:"game_id"`
 	PlayerID string `json:"player_id"`
 	Name     string `json:"name"`
 }
@@ -39,6 +40,10 @@ type GameServer struct {
 	http.Handler
 }
 
+func NewID() string {
+	return uuid.NewV4().String()
+}
+
 // NewServer creates a new GameServer
 func NewServer(store shed.GameStore) *GameServer {
 	s := new(GameServer)
@@ -53,7 +58,7 @@ func NewServer(store shed.GameStore) *GameServer {
 		w.WriteHeader(http.StatusOK)
 	}))
 	router.Handle("/new", http.HandlerFunc(s.HandleNewGame))
-	router.Handle("/game/", http.HandlerFunc(s.HandleGetGame))
+	router.Handle("/game/", http.HandlerFunc(s.HandleFindGame))
 	router.Handle("/join", http.HandlerFunc(s.HandleJoinGame))
 
 	s.store = store
@@ -79,9 +84,22 @@ func (g *GameServer) HandleNewGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	payload := NewGameRes{"gameid", "playerid", data.Name}
+	// generate game ID
+	gameID := NewID()
+	playerID := NewID()
+	creator := players.NewPlayer(playerID, data.Name, &bytes.Buffer{}, ioutil.Discard)
+
+	err = g.store.AddPendingGame(gameID, creator)
+	if err != nil {
+		log.Println(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	payload := NewGameRes{gameID, playerID, data.Name}
 	bytes, err := json.Marshal(payload)
 	if err != nil {
+		log.Println(err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -91,7 +109,7 @@ func (g *GameServer) HandleNewGame(w http.ResponseWriter, r *http.Request) {
 	w.Write(bytes)
 }
 
-func (g *GameServer) HandleGetGame(w http.ResponseWriter, r *http.Request) {
+func (g *GameServer) HandleFindGame(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -103,12 +121,25 @@ func (g *GameServer) HandleGetGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, ok := g.store.GetGame(gameID); ok {
-		w.Header().Add("Content-Type", "application/json")
-		w.Write([]byte(`{"game_id": "` + gameID + `"}`))
+	var status string
+
+	_, ok := g.store.FindGame(gameID)
+	if ok {
+		status = "active"
 	} else {
-		w.WriteHeader(http.StatusNotFound)
+		_, ok := g.store.FindPendingPlayers(gameID)
+		if ok {
+			status = "pending"
+		}
 	}
+
+	if status == "" {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	w.Header().Add("Content-Type", "application/json")
+	w.Write([]byte(`{"status": "` + status + `", "game_id": "` + gameID + `"}`))
 }
 
 func (g *GameServer) HandleJoinGame(w http.ResponseWriter, r *http.Request) {
@@ -134,21 +165,28 @@ func (g *GameServer) HandleJoinGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// identify game
-	game, ok := g.store.GetPendingGame(data.GameID)
+	_, ok := g.store.FindPendingPlayers(data.GameID)
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte(fmt.Sprintf("Game matching id '%s' not found", data.GameID)))
 		return
 	}
 
+	// init websocket?
+
 	// make player
-	clientPlayer := players.NewPlayer("id", data.Name, &bytes.Buffer{}, ioutil.Discard)
-	_ = clientPlayer
-	_ = game
+	joiningPlayerID := NewID()
+	joiningPlayer := players.NewPlayer(joiningPlayerID, data.Name, &bytes.Buffer{}, ioutil.Discard)
 
-	// add player
+	err = g.store.AddToPendingPlayers(data.GameID, joiningPlayer)
+	if err != nil {
+		log.Println(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(fmt.Sprintf("Failed to add new player to game: %v", err)))
+		return
+	}
 
-	payload := JoinGameRes{"playerid"}
+	payload := JoinGameRes{joiningPlayerID}
 	bytes, err := json.Marshal(payload)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

@@ -1,10 +1,16 @@
 package shed
 
 import (
+	"bytes"
+	"io/ioutil"
 	"os"
 
 	"github.com/minaorangina/shed/players"
 )
+
+func APlayer(id, name string) *players.Player {
+	return players.NewPlayer(id, name, &bytes.Buffer{}, ioutil.Discard)
+}
 
 func SomePlayers() players.Players {
 	player1 := players.NewPlayer(players.NewID(), "Harry", os.Stdin, os.Stdout)

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"os"
 
-	engine "github.com/minaorangina/shed"
+	"github.com/minaorangina/shed"
 	"github.com/minaorangina/shed/players"
 	"github.com/minaorangina/shed/server"
 )
@@ -17,13 +17,13 @@ func main() {
 
 	ps := players.NewPlayers(player1, player2)
 
-	ge, err := engine.New("", ps, engine.HandleInitialCards)
+	ge, err := shed.New("", ps, shed.HandleInitialCards)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 	ge.Start()
 
-	s := server.NewServer(nil)
-	log.Println("Listening on port 8080...")
+	s := server.NewServer(shed.NewInMemoryGameStore(nil, nil))
+	log.Println("Listening on port 8000...")
 	log.Fatal(http.ListenAndServe(":8000", s))
 }
