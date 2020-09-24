@@ -132,12 +132,14 @@ func TestServerGETGame(t *testing.T) {
 
 		server.ServeHTTP(response, request)
 
-		want := `{"status": "active", "game_id": "` + testID + `"}`
+		want := GetGameRes{Status: "active", GameID: testID}
 
 		bodyBytes, err := ioutil.ReadAll(response.Result().Body)
 		testutils.AssertNoError(t, err)
 
-		got := string(bodyBytes) // DANGEROUS!
+		var got GetGameRes
+		err = json.Unmarshal(bodyBytes, &got)
+		testutils.AssertNoError(t, err)
 
 		assertStatus(t, response.Code, http.StatusOK)
 		testutils.AssertEqual(t, got, want)
@@ -151,12 +153,14 @@ func TestServerGETGame(t *testing.T) {
 
 		server.ServeHTTP(response, request)
 
-		want := `{"status": "pending", "game_id": "` + pendingID + `"}`
+		want := GetGameRes{Status: "pending", GameID: pendingID}
 
 		bodyBytes, err := ioutil.ReadAll(response.Result().Body)
 		testutils.AssertNoError(t, err)
 
-		got := string(bodyBytes) // DANGEROUS!
+		var got GetGameRes
+		err = json.Unmarshal(bodyBytes, &got)
+		testutils.AssertNoError(t, err)
 
 		assertStatus(t, response.Code, http.StatusOK)
 		testutils.AssertEqual(t, got, want)

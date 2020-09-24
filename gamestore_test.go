@@ -9,7 +9,7 @@ import (
 func TestInMemoryGameStore(t *testing.T) {
 	t.Run("Constructor prevents nil struct members", func(t *testing.T) {
 		store := NewInMemoryGameStore(nil, nil)
-		if store.Games() == nil {
+		if store.ActiveGames() == nil {
 			t.Error("gamestore.game was nil")
 		}
 		if store.PendingGames() == nil {
@@ -41,14 +41,14 @@ func TestInMemoryGameStore(t *testing.T) {
 			nil,
 		)
 
-		game, ok := store.FindGame(id)
+		game, ok := store.FindActiveGame(id)
 		AssertTrue(t, ok)
 		AssertNotNil(t, game)
 	})
 
 	t.Run("Handles a non-existent game", func(t *testing.T) {
 		store := NewInMemoryGameStore(nil, nil)
-		_, ok := store.FindGame("fake-id")
+		_, ok := store.FindActiveGame("fake-id")
 
 		AssertEqual(t, ok, false)
 	})

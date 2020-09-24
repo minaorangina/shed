@@ -34,6 +34,11 @@ type JoinGameRes struct {
 	PlayerID string `json:"player_id"`
 }
 
+type GetGameRes struct {
+	Status string `json:"status"`
+	GameID string `json:"game_id"`
+}
+
 // GameServer is a game server
 type GameServer struct {
 	store shed.GameStore
@@ -121,25 +126,37 @@ func (g *GameServer) HandleFindGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var status string
+	var found bool
+	response := GetGameRes{}
 
-	_, ok := g.store.FindGame(gameID)
+	_, ok := g.store.FindActiveGame(gameID)
 	if ok {
-		status = "active"
+		response.Status = "active"
+		response.GameID = gameID
+		found = true
 	} else {
 		_, ok := g.store.FindPendingPlayers(gameID)
 		if ok {
-			status = "pending"
+			response.Status = "pending"
+			response.GameID = gameID
+			found = true
 		}
 	}
 
-	if status == "" {
+	if !found {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
+	responseBytes, err := json.Marshal(response)
+	if err != nil {
+		log.Println(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Add("Content-Type", "application/json")
-	w.Write([]byte(`{"status": "` + status + `", "game_id": "` + gameID + `"}`))
+	w.Write(responseBytes)
 }
 
 func (g *GameServer) HandleJoinGame(w http.ResponseWriter, r *http.Request) {

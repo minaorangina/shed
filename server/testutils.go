@@ -15,7 +15,7 @@ import (
 
 type fakeStore struct{}
 
-func (s fakeStore) Games() map[string]shed.GameEngine {
+func (s fakeStore) ActiveGames() map[string]shed.GameEngine {
 	return map[string]shed.GameEngine{}
 }
 func (s fakeStore) PendingGames() map[string]players.Players {
@@ -24,7 +24,7 @@ func (s fakeStore) PendingGames() map[string]players.Players {
 func (s fakeStore) AddToPendingPlayers(ID string, player *players.Player) error {
 	return errors.New("Well that didn't work...")
 }
-func (s fakeStore) FindGame(ID string) (shed.GameEngine, bool) {
+func (s fakeStore) FindActiveGame(ID string) (shed.GameEngine, bool) {
 	// allows any game
 	return nil, true
 }

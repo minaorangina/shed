@@ -7,9 +7,9 @@ import (
 )
 
 type GameStore interface {
-	Games() map[string]GameEngine
+	ActiveGames() map[string]GameEngine
 	PendingGames() map[string]players.Players
-	FindGame(ID string) (GameEngine, bool)
+	FindActiveGame(ID string) (GameEngine, bool)
 	FindPendingPlayers(ID string) (players.Players, bool)
 	AddPendingGame(ID string, creator *players.Player) error
 	AddToPendingPlayers(ID string, player *players.Player) error
@@ -17,34 +17,34 @@ type GameStore interface {
 
 // InMemoryGameStore maps game id to game engine
 type InMemoryGameStore struct {
-	games   map[string]GameEngine
+	active  map[string]GameEngine
 	pending map[string]players.Players
 }
 
 // NewInMemoryGameStore constructs an InMemoryGameStore
 func NewInMemoryGameStore(
-	games map[string]GameEngine,
+	active map[string]GameEngine,
 	pending map[string]players.Players,
 ) GameStore {
-	if games == nil {
-		games = map[string]GameEngine{}
+	if active == nil {
+		active = map[string]GameEngine{}
 	}
 	if pending == nil {
 		pending = map[string]players.Players{}
 	}
-	return &InMemoryGameStore{games, pending}
+	return &InMemoryGameStore{active, pending}
 }
 
-func (s *InMemoryGameStore) Games() map[string]GameEngine {
-	return s.games
+func (s *InMemoryGameStore) ActiveGames() map[string]GameEngine {
+	return s.active
 }
 func (s *InMemoryGameStore) PendingGames() map[string]players.Players {
 	return s.pending
 }
 
 // does this need a mutex?
-func (s *InMemoryGameStore) FindGame(ID string) (GameEngine, bool) {
-	game, ok := s.games[ID]
+func (s *InMemoryGameStore) FindActiveGame(ID string) (GameEngine, bool) {
+	game, ok := s.active[ID]
 	return game, ok
 }
 
