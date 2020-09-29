@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"io"
 	"io/ioutil"
 	"log"
@@ -14,6 +15,8 @@ import (
 	"github.com/minaorangina/shed/players"
 	uuid "github.com/satori/go.uuid"
 )
+
+var homepage = "static/index.html"
 
 type NewGameReq struct {
 	Name string `json:"name"`
@@ -59,7 +62,17 @@ func NewServer(store shed.GameStore) *GameServer {
 		log.Println("Root endpoint")
 		if r.URL.Path != "/" {
 			w.WriteHeader(http.StatusNotFound)
+			return
 		}
+
+		tmpl, err := template.ParseFiles(homepage)
+
+		if err != nil {
+			http.Error(w, fmt.Sprintf("problem loading template %s", err.Error()), http.StatusInternalServerError)
+			return
+		}
+
+		tmpl.Execute(w, nil)
 		w.WriteHeader(http.StatusOK)
 	}))
 	router.Handle("/new", http.HandlerFunc(s.HandleNewGame))
