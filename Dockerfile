@@ -6,6 +6,8 @@ ADD . /app
 
 WORKDIR /app
 
+EXPOSE 8000
+
 RUN go mod download
 
 RUN ln -s cmd/web/static
