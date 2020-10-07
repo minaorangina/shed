@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	utils "github.com/minaorangina/shed/internal"
@@ -19,6 +20,10 @@ func TestServerPing(t *testing.T) {
 	server.ServeHTTP(response, request)
 
 	assertStatus(t, response.Code, http.StatusOK)
+
+	bodyBytes, err := ioutil.ReadAll(response.Body)
+	utils.AssertNoError(t, err)
+	utils.AssertTrue(t, strings.Contains(string(bodyBytes), "<!DOCTYPE html>"))
 }
 func TestServerPOSTNewGame(t *testing.T) {
 	t.Run("succeeds and returns expected data", func(t *testing.T) {
