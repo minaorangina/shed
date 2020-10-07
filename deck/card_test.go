@@ -19,9 +19,7 @@ func TestCard(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		if c.card.String() != c.expected {
-			utils.FailureMessage(t, c.card.String(), c.expected)
-		}
+		utils.AssertEqual(t, c.card.String(), c.expected)
 	}
 
 	t.Run("Out of range (should panic)", func(t *testing.T) {
@@ -39,15 +37,11 @@ func TestCard(t *testing.T) {
 
 	t.Run("get rank", func(t *testing.T) {
 		six := newCard(5, rand.Intn(4))
-		if six.Rank.String() != "Six" {
-			utils.FailureMessage(t, six.Rank.String(), "Six")
-		}
+		utils.AssertEqual(t, six.Rank.String(), "Six")
 	})
 
 	t.Run("get suit", func(t *testing.T) {
 		spade := newCard(rand.Intn(13), 3)
-		if spade.Suit.String() != "Spades" {
-			utils.FailureMessage(t, spade.Suit.String(), "Spades")
-		}
+		utils.AssertEqual(t, spade.Suit.String(), "Spades")
 	})
 }

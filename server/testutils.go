@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/minaorangina/shed"
-	testutils "github.com/minaorangina/shed/internal"
+	utils "github.com/minaorangina/shed/internal"
 	"github.com/minaorangina/shed/players"
 )
 
@@ -45,7 +45,7 @@ func mustMakeJson(t *testing.T, input interface{}) []byte {
 	t.Helper()
 
 	data, err := json.Marshal(input)
-	shed.AssertNoError(t, err)
+	utils.AssertNoError(t, err)
 
 	return data
 }
@@ -72,7 +72,7 @@ func newJoinGameRequest(data []byte) *http.Request {
 
 func newTestGame(t *testing.T, id string, ps players.Players, setupFn func(shed.GameEngine) error) shed.GameEngine {
 	game, err := shed.New(id, ps, setupFn)
-	testutils.AssertNoError(t, err)
+	utils.AssertNoError(t, err)
 
 	return game
 }
@@ -103,7 +103,7 @@ func assertStatus(t *testing.T, got, want int) {
 func assertJoinGameResponse(t *testing.T, body *bytes.Buffer, ps players.Players) {
 	t.Helper()
 	bodyBytes, err := ioutil.ReadAll(body)
-	shed.AssertNoError(t, err)
+	utils.AssertNoError(t, err)
 
 	var got JoinGameRes
 	err = json.Unmarshal(bodyBytes, &got)
@@ -120,7 +120,7 @@ func assertNewGameResponse(t *testing.T, body *bytes.Buffer, want string) {
 	// probably upgrade to a jwt or something
 	t.Helper()
 	bodyBytes, err := ioutil.ReadAll(body)
-	shed.AssertNoError(t, err)
+	utils.AssertNoError(t, err)
 
 	var got NewGameRes
 	err = json.Unmarshal(bodyBytes, &got)

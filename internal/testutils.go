@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 )
 
@@ -46,9 +47,36 @@ func AssertEqual(t *testing.T, got, want interface{}) {
 	}
 }
 
+// AssertDeepEqual checks that the values are equal
+func AssertDeepEqual(t *testing.T, got, want interface{}) {
+	t.Helper()
+
+	if !reflect.DeepEqual(got, want) {
+		FailureMessage(t, got, want)
+	}
+}
+
 func AssertStringEquality(t *testing.T, got, want string) {
 	t.Helper()
 	if want != got {
 		t.Errorf("got %s, want %s", got, want)
+	}
+}
+
+// AssertTrue checks that the value is true
+func AssertTrue(t *testing.T, got bool) {
+	t.Helper()
+
+	if got != true {
+		t.Error("Expected to be true, but it wasn't")
+	}
+}
+
+// AssertNotNil checks that the value is not nil
+func AssertNotNil(t *testing.T, got interface{}) {
+	t.Helper()
+
+	if got == nil {
+		t.Error("Value is unexpectedly nil")
 	}
 }

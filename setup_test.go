@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/minaorangina/shed/deck"
+	"github.com/minaorangina/shed/players"
 )
 
 func TestHandleInitialCards(t *testing.T) {
@@ -12,7 +13,7 @@ func TestHandleInitialCards(t *testing.T) {
 
 	t.Run("dealUnseenCards", func(t *testing.T) {
 		cards := deck.New()
-		ps := SomePlayers()
+		ps := players.SomePlayers()
 		dealUnseenCards(cards, ps)
 
 		for _, p := range ps {
@@ -24,7 +25,7 @@ func TestHandleInitialCards(t *testing.T) {
 
 	t.Run("dealInitialCards", func(t *testing.T) {
 		cards := deck.New()
-		ps := SomePlayers()
+		ps := players.SomePlayers()
 		got := dealInitialCards(cards, ps)
 
 		for _, p := range got {

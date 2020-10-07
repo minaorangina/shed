@@ -4,10 +4,11 @@ import (
 	"log"
 
 	"github.com/minaorangina/shed"
+	"github.com/minaorangina/shed/players"
 )
 
 func main() {
-	players := shed.SomePlayers()
+	players := players.SomePlayers()
 	game, err := shed.New("some-id", players, nil)
 	if err != nil {
 		log.Fatal("Could not initialise a new game")

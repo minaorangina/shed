@@ -3,6 +3,7 @@ package shed
 import (
 	"testing"
 
+	utils "github.com/minaorangina/shed/internal"
 	"github.com/minaorangina/shed/players"
 )
 
@@ -19,20 +20,20 @@ func TestInMemoryGameStore(t *testing.T) {
 
 	t.Run("Can create a new pending game", func(t *testing.T) {
 		gameID := "some-game-id"
-		creator := APlayer("player-1", "Hermione")
+		creator := players.APlayer("player-1", "Hermione")
 		store := NewInMemoryGameStore(nil, nil)
 		err := store.AddPendingGame(gameID, creator)
-		AssertNoError(t, err)
+		utils.AssertNoError(t, err)
 
 		ps, ok := store.FindPendingPlayers(gameID)
-		AssertTrue(t, ok)
-		AssertEqual(t, ps[0], creator)
+		utils.AssertTrue(t, ok)
+		utils.AssertEqual(t, ps[0], creator)
 	})
 
 	t.Run("Can retrieve existing game", func(t *testing.T) {
 		id := "test-game-id"
 
-		game, _ := New(id, SomePlayers(), nil)
+		game, _ := New(id, players.SomePlayers(), nil)
 
 		store := NewInMemoryGameStore(
 			map[string]GameEngine{
@@ -42,51 +43,51 @@ func TestInMemoryGameStore(t *testing.T) {
 		)
 
 		game, ok := store.FindActiveGame(id)
-		AssertTrue(t, ok)
-		AssertNotNil(t, game)
+		utils.AssertTrue(t, ok)
+		utils.AssertNotNil(t, game)
 	})
 
 	t.Run("Handles a non-existent game", func(t *testing.T) {
 		store := NewInMemoryGameStore(nil, nil)
 		_, ok := store.FindActiveGame("fake-id")
 
-		AssertEqual(t, ok, false)
+		utils.AssertEqual(t, ok, false)
 	})
 
 	t.Run("Can retrieve pending game", func(t *testing.T) {
 		pendingID := "a-pending-game"
 		store := NewInMemoryGameStore(
 			nil,
-			map[string]players.Players{pendingID: SomePlayers()})
+			map[string]players.Players{pendingID: players.SomePlayers()})
 
 		game, ok := store.FindPendingPlayers(pendingID)
 
-		AssertTrue(t, ok)
-		AssertNotNil(t, game)
+		utils.AssertTrue(t, ok)
+		utils.AssertNotNil(t, game)
 	})
 
 	t.Run("Handles a non-existent pending game", func(t *testing.T) {
 		store := NewInMemoryGameStore(nil, nil)
 		_, ok := store.FindPendingPlayers("fake-id")
-		AssertEqual(t, ok, false)
+		utils.AssertEqual(t, ok, false)
 	})
 
 	t.Run("Can add a player to a pending game", func(t *testing.T) {
 		pendingID := "a-pending-game"
 		store := NewInMemoryGameStore(
 			nil,
-			map[string]players.Players{pendingID: SomePlayers()},
+			map[string]players.Players{pendingID: players.SomePlayers()},
 		)
 
-		playerToAdd := APlayer("player-id", "Horatio")
+		playerToAdd := players.APlayer("player-id", "Horatio")
 		err := store.AddToPendingPlayers(pendingID, playerToAdd)
-		AssertNoError(t, err)
+		utils.AssertNoError(t, err)
 
 		pendingPlayers, ok := store.FindPendingPlayers(pendingID)
-		AssertTrue(t, ok)
+		utils.AssertTrue(t, ok)
 
 		got, ok := pendingPlayers.Find(playerToAdd.ID)
-		AssertTrue(t, ok)
-		AssertEqual(t, got, playerToAdd)
+		utils.AssertTrue(t, ok)
+		utils.AssertEqual(t, got, playerToAdd)
 	})
 }

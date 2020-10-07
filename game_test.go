@@ -31,9 +31,7 @@ func TestBuildMessageToPlayer(t *testing.T) {
 		Opponents: opponents,
 		Command:   protocol.Reorg,
 	}
-	if !reflect.DeepEqual(expectedMessage, message) {
-		utils.FailureMessage(t, message, expectedMessage)
-	}
+	utils.AssertDeepEqual(t, message, expectedMessage)
 }
 
 func TestGameEngineMsgFromGame(t *testing.T) {
@@ -66,4 +64,5 @@ func TestGameEngineMsgFromGame(t *testing.T) {
 	if !reflect.DeepEqual(got, want) { // TODO: fix slice ordering
 		utils.FailureMessage(t, got, want)
 	}
+	utils.AssertEqual(t, got, want)
 }

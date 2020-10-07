@@ -1,26 +1,11 @@
 package shed
 
 import (
-	"bytes"
-	"io/ioutil"
-	"os"
-
 	"github.com/minaorangina/shed/players"
 )
 
-func APlayer(id, name string) *players.Player {
-	return players.NewPlayer(id, name, &bytes.Buffer{}, ioutil.Discard)
-}
-
-func SomePlayers() players.Players {
-	player1 := players.NewPlayer(players.NewID(), "Harry", os.Stdin, os.Stdout)
-	player2 := players.NewPlayer(players.NewID(), "Sally", os.Stdin, os.Stdout)
-	players := players.NewPlayers(player1, player2)
-	return players
-}
-
 func gameEngineWithPlayers() GameEngine {
-	ge, _ := New("theid", SomePlayers(), nil)
+	ge, _ := New("theid", players.SomePlayers(), nil)
 	return ge
 }
 

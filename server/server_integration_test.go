@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/minaorangina/shed"
-	testutils "github.com/minaorangina/shed/internal"
+	utils "github.com/minaorangina/shed/internal"
 )
 
 func TestCreateAndJoinNewGame(t *testing.T) {
@@ -25,11 +25,11 @@ func TestCreateAndJoinNewGame(t *testing.T) {
 	assertStatus(t, response.Code, http.StatusCreated)
 
 	bodyBytes, err := ioutil.ReadAll(response.Result().Body)
-	testutils.AssertNoError(t, err)
+	utils.AssertNoError(t, err)
 
 	var payload NewGameRes
 	err = json.Unmarshal(bodyBytes, &payload)
-	testutils.AssertNoError(t, err)
+	utils.AssertNoError(t, err)
 
 	joinerName := "Astrid"
 	data = mustMakeJson(t, JoinGameReq{GameID: payload.GameID, Name: joinerName})
@@ -42,11 +42,11 @@ func TestCreateAndJoinNewGame(t *testing.T) {
 	assertStatus(t, joinResponse.Code, http.StatusOK)
 
 	bodyBytes, err = ioutil.ReadAll(joinResponse.Body)
-	shed.AssertNoError(t, err)
+	utils.AssertNoError(t, err)
 
 	var got JoinGameRes
 	err = json.Unmarshal(bodyBytes, &got)
-	shed.AssertNoError(t, err)
+	utils.AssertNoError(t, err)
 
 	if got.PlayerID == "" {
 		t.Error("Expected a player id")

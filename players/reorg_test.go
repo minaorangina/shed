@@ -1,7 +1,6 @@
 package players
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -131,8 +130,6 @@ func TestGetCardChoices(t *testing.T) {
 
 		got := getCardChoices(testConn, 10*time.Millisecond)
 
-		if !reflect.DeepEqual(got, c.want) {
-			utils.FailureMessage(t, got, c.want)
-		}
+		utils.AssertDeepEqual(t, got, c.want)
 	}
 }

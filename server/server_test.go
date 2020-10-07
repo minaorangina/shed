@@ -7,8 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/minaorangina/shed"
-	testutils "github.com/minaorangina/shed/internal"
+	utils "github.com/minaorangina/shed/internal"
+	"github.com/minaorangina/shed/players"
 )
 
 func TestServerPing(t *testing.T) {
@@ -57,7 +57,7 @@ func TestServerPOSTNewGame(t *testing.T) {
 
 func TestJoinGame(t *testing.T) {
 	t.Run("POST /join returns 200 for existing game", func(t *testing.T) {
-		server, pendingID := newServerWithPendingGame(shed.SomePlayers())
+		server, pendingID := newServerWithPendingGame(players.SomePlayers())
 
 		joiningPlayerName := "Heloise"
 		data := mustMakeJson(t, JoinGameReq{pendingID, joiningPlayerName})
@@ -70,7 +70,7 @@ func TestJoinGame(t *testing.T) {
 		assertStatus(t, response.Code, http.StatusOK)
 
 		bodyBytes, err := ioutil.ReadAll(response.Body)
-		shed.AssertNoError(t, err)
+		utils.AssertNoError(t, err)
 
 		var got JoinGameRes
 		err = json.Unmarshal(bodyBytes, &got)
@@ -87,7 +87,7 @@ func TestJoinGame(t *testing.T) {
 		response := httptest.NewRecorder()
 		request := newJoinGameRequest(nil)
 
-		game := newTestGame(t, "some-game-id", shed.SomePlayers(), nil)
+		game := newTestGame(t, "some-game-id", players.SomePlayers(), nil)
 		server := newServerWithGame(game)
 
 		server.ServeHTTP(response, request)
@@ -96,7 +96,7 @@ func TestJoinGame(t *testing.T) {
 	})
 
 	t.Run("POST /join returns 404 for an unknown game id", func(t *testing.T) {
-		server, _ := newServerWithPendingGame(shed.SomePlayers())
+		server, _ := newServerWithPendingGame(players.SomePlayers())
 
 		data := mustMakeJson(t, JoinGameReq{"some-game-id", "Heloise"})
 
@@ -135,18 +135,18 @@ func TestServerGETGame(t *testing.T) {
 		want := GetGameRes{Status: "active", GameID: testID}
 
 		bodyBytes, err := ioutil.ReadAll(response.Result().Body)
-		testutils.AssertNoError(t, err)
+		utils.AssertNoError(t, err)
 
 		var got GetGameRes
 		err = json.Unmarshal(bodyBytes, &got)
-		testutils.AssertNoError(t, err)
+		utils.AssertNoError(t, err)
 
 		assertStatus(t, response.Code, http.StatusOK)
-		testutils.AssertEqual(t, got, want)
+		utils.AssertEqual(t, got, want)
 	})
 
 	t.Run("returns an existing pending game", func(t *testing.T) {
-		server, pendingID := newServerWithPendingGame(shed.SomePlayers())
+		server, pendingID := newServerWithPendingGame(players.SomePlayers())
 
 		request := newGetGameRequest(pendingID)
 		response := httptest.NewRecorder()
@@ -156,14 +156,14 @@ func TestServerGETGame(t *testing.T) {
 		want := GetGameRes{Status: "pending", GameID: pendingID}
 
 		bodyBytes, err := ioutil.ReadAll(response.Result().Body)
-		testutils.AssertNoError(t, err)
+		utils.AssertNoError(t, err)
 
 		var got GetGameRes
 		err = json.Unmarshal(bodyBytes, &got)
-		testutils.AssertNoError(t, err)
+		utils.AssertNoError(t, err)
 
 		assertStatus(t, response.Code, http.StatusOK)
-		testutils.AssertEqual(t, got, want)
+		utils.AssertEqual(t, got, want)
 	})
 
 	t.Run("returns a 404 if game doesn't exist", func(t *testing.T) {
@@ -176,6 +176,6 @@ func TestServerGETGame(t *testing.T) {
 
 		server.ServeHTTP(response, request)
 
-		testutils.AssertEqual(t, response.Code, http.StatusNotFound)
+		utils.AssertEqual(t, response.Code, http.StatusNotFound)
 	})
 }
