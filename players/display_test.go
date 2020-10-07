@@ -1,7 +1,6 @@
 package players
 
 import (
-	"bytes"
 	"testing"
 
 	utils "github.com/minaorangina/shed/internal"
@@ -9,7 +8,7 @@ import (
 
 func TestSendText(t *testing.T) {
 	t.Run("send simple text", func(t *testing.T) {
-		buffer := &bytes.Buffer{}
+		buffer := NewTestBuffer()
 		want := "Hello"
 		SendText(buffer, want)
 
@@ -19,7 +18,7 @@ func TestSendText(t *testing.T) {
 	})
 
 	t.Run("send formatted text", func(t *testing.T) {
-		buffer := &bytes.Buffer{}
+		buffer := NewTestBuffer()
 		want := "Hello, human"
 		format := "Hello, %s"
 		SendText(buffer, format, "human")

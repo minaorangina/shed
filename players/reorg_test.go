@@ -1,7 +1,6 @@
 package players
 
 import (
-	"bytes"
 	"reflect"
 	"strings"
 	"testing"
@@ -25,7 +24,7 @@ func TestOfferCardSwitch(t *testing.T) {
 
 		for _, c := range yesCases {
 			stdin := strings.NewReader(c.input)
-			stdout := &bytes.Buffer{}
+			stdout := NewTestBuffer()
 			testConn := &conn{stdin, stdout}
 			got := offerCardSwitch(testConn, time.Duration(10*time.Millisecond))
 
@@ -47,7 +46,7 @@ func TestOfferCardSwitch(t *testing.T) {
 
 		for _, c := range noCases {
 			stdin := strings.NewReader(c.input)
-			stdout := &bytes.Buffer{}
+			stdout := NewTestBuffer()
 			testConn := &conn{stdin, stdout}
 			got := offerCardSwitch(testConn, time.Duration(10*time.Millisecond))
 
@@ -71,7 +70,7 @@ func TestOfferCardSwitch(t *testing.T) {
 
 		for _, c := range badCases {
 			stdin := strings.NewReader(c)
-			stdout := &bytes.Buffer{}
+			stdout := NewTestBuffer()
 			testConn := &conn{stdin, stdout}
 			got := offerCardSwitch(testConn, time.Duration(50*time.Millisecond))
 
@@ -85,7 +84,7 @@ func TestOfferCardSwitch(t *testing.T) {
 	t.Run("defaults to 'no' after max retries", func(t *testing.T) {
 		t.Skip()
 		stdin := strings.NewReader("%$£")
-		stdout := &bytes.Buffer{}
+		stdout := NewTestBuffer()
 		testConn := &conn{stdin, stdout}
 		got := offerCardSwitch(testConn, time.Duration(50*time.Millisecond))
 		utils.AssertEqual(t, false, got)
@@ -96,7 +95,7 @@ func TestOfferCardSwitch(t *testing.T) {
 
 	t.Run("defaults to 'no' after timeout", func(t *testing.T) {
 		stdin := strings.NewReader("\n")
-		stdout := &bytes.Buffer{}
+		stdout := NewTestBuffer()
 		testConn := &conn{stdin, stdout}
 		got := offerCardSwitch(testConn, time.Duration(1*time.Millisecond))
 		utils.AssertEqual(t, false, got)
@@ -127,7 +126,7 @@ func TestGetCardChoices(t *testing.T) {
 
 	for _, c := range cases {
 		stdin := strings.NewReader(c.input)
-		stdout := &bytes.Buffer{}
+		stdout := NewTestBuffer()
 		testConn := &conn{stdin, stdout}
 
 		got := getCardChoices(testConn, 10*time.Millisecond)
