@@ -108,6 +108,36 @@ func TestInMemoryGameStore(t *testing.T) {
 
 		utils.AssertErrored(t, err)
 	})
+
+	t.Run("Can activate a pending game", func(t *testing.T) {
+		gameID := "some-game-ID"
+
+		store := NewInMemoryGameStore(
+			nil,
+			newPendingGame(gameID, players.SomePlayers()),
+		)
+
+		err := store.ActivateGame(gameID)
+		utils.AssertNoError(t, err)
+
+		_, ok := store.FindActiveGame(gameID)
+		utils.AssertTrue(t, ok)
+
+		_, ok = store.FindPendingGame(gameID)
+		utils.AssertEqual(t, ok, false)
+	})
+
+	t.Run("Activating an already-active game is a no-op", func(t *testing.T) {
+		gameID := "this-is-a-game-id"
+
+		store := NewInMemoryGameStore(
+			newActiveGame(gameID, nil),
+			nil,
+		)
+
+		err := store.ActivateGame(gameID)
+		utils.AssertNoError(t, err)
+	})
 }
 
 func newActiveGame(gameID string, ps players.Players) map[string]GameEngine {

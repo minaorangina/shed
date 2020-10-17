@@ -37,6 +37,10 @@ func (s fakeStore) AddPendingGame(gameID string, creator *players.Player) error 
 	return nil
 }
 
+func (s fakeStore) ActivateGame(gameID string) error {
+	return nil
+}
+
 func newBasicStore() shed.GameStore {
 	return shed.NewInMemoryGameStore(nil, nil)
 }

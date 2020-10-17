@@ -13,6 +13,7 @@ type GameStore interface {
 	FindPendingGame(ID string) (GameEngine, bool)
 	AddPendingGame(ID string, creator *players.Player) error
 	AddToPendingPlayers(ID string, player *players.Player) error
+	ActivateGame(ID string) error
 }
 
 // InMemoryGameStore maps game id to game engine
@@ -78,4 +79,20 @@ func (s *InMemoryGameStore) AddToPendingPlayers(ID string, player *players.Playe
 	err := pendingGame.AddPlayer(player)
 
 	return err
+}
+func (s *InMemoryGameStore) ActivateGame(ID string) error {
+	if _, ok := s.FindActiveGame(ID); ok {
+		return nil
+	}
+
+	pendingGame, ok := s.FindPendingGame(ID)
+	if !ok {
+		return fmt.Errorf("Pending game with id %s does not exist", ID)
+	}
+
+	// needs mutex
+	s.active[ID] = pendingGame
+	delete(s.pending, ID)
+
+	return nil
 }
