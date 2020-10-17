@@ -18,6 +18,21 @@ func (s *spySetup) setup(ge GameEngine) error {
 	return nil
 }
 
+func TestGameEngineAddPlayer(t *testing.T) {
+	t.Run("can add more players", func(t *testing.T) {
+		playerID := "some-player-id"
+		name := "Héloise"
+		ge := gameEngineWithPlayers()
+
+		err := ge.AddPlayer(players.APlayer(playerID, name))
+		utils.AssertNoError(t, err)
+
+		ps := ge.Players()
+		_, ok := ps.Find(playerID)
+		utils.AssertTrue(t, ok)
+	})
+}
+
 func TestGameEngineInit(t *testing.T) {
 	t.Run("constructs with correct number of cards", func(t *testing.T) {
 		ge := gameEngineWithPlayers()

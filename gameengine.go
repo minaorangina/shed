@@ -43,6 +43,7 @@ type GameEngine interface {
 	Deck() deck.Deck
 	Players() players.Players
 	ID() string
+	AddPlayer(*players.Player) error
 }
 
 type gameEngine struct {
@@ -88,6 +89,13 @@ func (ge *gameEngine) Setup() error {
 	return err
 }
 
+// AddPlayer adds a player to a game
+func (ge *gameEngine) AddPlayer(p *players.Player) error {
+	ps := ge.Players()
+	ge.players = players.AddPlayer(&ps, p)
+	return nil
+}
+
 // Start starts a game
 // Might be renamed `next`
 func (ge *gameEngine) Start() error {
@@ -124,6 +132,7 @@ func (ge *gameEngine) Deck() deck.Deck {
 }
 
 func (ge *gameEngine) Players() players.Players {
+	// mutex?
 	return ge.players
 }
 
