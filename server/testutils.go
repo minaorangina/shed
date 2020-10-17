@@ -18,8 +18,8 @@ type fakeStore struct{}
 func (s fakeStore) ActiveGames() map[string]shed.GameEngine {
 	return map[string]shed.GameEngine{}
 }
-func (s fakeStore) PendingGames() map[string]players.Players {
-	return map[string]players.Players{}
+func (s fakeStore) PendingGames() map[string]shed.GameEngine {
+	return map[string]shed.GameEngine{}
 }
 func (s fakeStore) AddToPendingPlayers(ID string, player *players.Player) error {
 	return errors.New("Well that didn't work...")
@@ -28,7 +28,7 @@ func (s fakeStore) FindActiveGame(ID string) (shed.GameEngine, bool) {
 	// allows any game
 	return nil, true
 }
-func (s fakeStore) FindPendingPlayers(ID string) (players.Players, bool) {
+func (s fakeStore) FindPendingGame(ID string) (shed.GameEngine, bool) {
 	// allows any pending game
 	return nil, true
 }
@@ -89,7 +89,8 @@ func newServerWithGame(game shed.GameEngine) *GameServer {
 
 func newServerWithPendingGame(ps players.Players) (*GameServer, string) {
 	gameID := "some-pending-id"
-	store := shed.NewInMemoryGameStore(nil, map[string]players.Players{gameID: ps})
+	game, _ := shed.New(gameID, ps, nil)
+	store := shed.NewInMemoryGameStore(nil, map[string]shed.GameEngine{gameID: game})
 	return NewServer(store), gameID
 }
 

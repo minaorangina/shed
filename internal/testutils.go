@@ -38,6 +38,15 @@ func AssertNoError(t *testing.T, err error) {
 	}
 }
 
+// AssertErrored checks for the existence of an error
+func AssertErrored(t *testing.T, err error) {
+	t.Helper()
+
+	if err == nil {
+		t.Fatal("Expected an error, but got nil")
+	}
+}
+
 // AssertEqual checks that the values are equal
 func AssertEqual(t *testing.T, got, want interface{}) {
 	t.Helper()

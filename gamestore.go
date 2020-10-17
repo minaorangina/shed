@@ -8,9 +8,9 @@ import (
 
 type GameStore interface {
 	ActiveGames() map[string]GameEngine
-	PendingGames() map[string]players.Players
+	PendingGames() map[string]GameEngine
 	FindActiveGame(ID string) (GameEngine, bool)
-	FindPendingPlayers(ID string) (players.Players, bool)
+	FindPendingGame(ID string) (GameEngine, bool)
 	AddPendingGame(ID string, creator *players.Player) error
 	AddToPendingPlayers(ID string, player *players.Player) error
 }
@@ -18,19 +18,19 @@ type GameStore interface {
 // InMemoryGameStore maps game id to game engine
 type InMemoryGameStore struct {
 	active  map[string]GameEngine
-	pending map[string]players.Players
+	pending map[string]GameEngine
 }
 
 // NewInMemoryGameStore constructs an InMemoryGameStore
 func NewInMemoryGameStore(
 	active map[string]GameEngine,
-	pending map[string]players.Players,
+	pending map[string]GameEngine,
 ) GameStore {
 	if active == nil {
 		active = map[string]GameEngine{}
 	}
 	if pending == nil {
-		pending = map[string]players.Players{}
+		pending = map[string]GameEngine{}
 	}
 	return &InMemoryGameStore{active, pending}
 }
@@ -38,7 +38,7 @@ func NewInMemoryGameStore(
 func (s *InMemoryGameStore) ActiveGames() map[string]GameEngine {
 	return s.active
 }
-func (s *InMemoryGameStore) PendingGames() map[string]players.Players {
+func (s *InMemoryGameStore) PendingGames() map[string]GameEngine {
 	return s.pending
 }
 
@@ -48,9 +48,9 @@ func (s *InMemoryGameStore) FindActiveGame(ID string) (GameEngine, bool) {
 	return game, ok
 }
 
-func (s *InMemoryGameStore) FindPendingPlayers(ID string) (players.Players, bool) {
-	pendingPlayers, ok := s.pending[ID]
-	return pendingPlayers, ok
+func (s *InMemoryGameStore) FindPendingGame(ID string) (GameEngine, bool) {
+	pendingGame, ok := s.pending[ID]
+	return pendingGame, ok
 }
 
 // mutex definitely required
@@ -58,17 +58,24 @@ func (s *InMemoryGameStore) AddPendingGame(gameID string, creator *players.Playe
 	if _, exists := s.pending[gameID]; exists {
 		return fmt.Errorf("Game with id %s already exists", gameID)
 	}
-	s.pending[gameID] = players.NewPlayers(creator)
+	game, err := New(gameID, players.NewPlayers(creator), nil)
+	if err != nil {
+		return err
+	}
+
+	s.pending[gameID] = game
+
 	return nil
 }
 
 func (s *InMemoryGameStore) AddToPendingPlayers(ID string, player *players.Player) error {
-	pendingPlayers, ok := s.pending[ID]
+	pendingGame, ok := s.FindPendingGame(ID)
 	if !ok {
 		return fmt.Errorf("Pending game with id %s does not exist", ID)
 	}
 
-	s.pending[ID] = players.AddPlayer(&pendingPlayers, player)
+	// does this need to be reassigned to the map?
+	err := pendingGame.AddPlayer(player)
 
-	return nil
+	return err
 }

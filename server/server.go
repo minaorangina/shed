@@ -148,7 +148,7 @@ func (g *GameServer) HandleFindGame(w http.ResponseWriter, r *http.Request) {
 		response.GameID = gameID
 		found = true
 	} else {
-		_, ok := g.store.FindPendingPlayers(gameID)
+		_, ok := g.store.FindPendingGame(gameID)
 		if ok {
 			response.Status = "pending"
 			response.GameID = gameID
@@ -195,7 +195,7 @@ func (g *GameServer) HandleJoinGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// identify game
-	_, ok := g.store.FindPendingPlayers(data.GameID)
+	_, ok := g.store.FindPendingGame(data.GameID)
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte(fmt.Sprintf("Game matching id '%s' not found", data.GameID)))
