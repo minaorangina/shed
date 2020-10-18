@@ -60,6 +60,19 @@ func TestServerPOSTNewGame(t *testing.T) {
 	})
 }
 
+func TestGETGameCreated(t *testing.T) {
+	response := httptest.NewRecorder()
+	request, _ := http.NewRequest(http.MethodGet, "/created", nil)
+
+	server := NewServer(newBasicStore())
+	server.ServeHTTP(response, request)
+
+	assertStatus(t, response.Code, http.StatusOK)
+	bodyBytes, err := ioutil.ReadAll(response.Body)
+	utils.AssertNoError(t, err)
+	utils.AssertTrue(t, strings.Contains(string(bodyBytes), "<!DOCTYPE html>"))
+}
+
 func TestJoinGame(t *testing.T) {
 	t.Run("POST /join returns 200 for existing game", func(t *testing.T) {
 		server, pendingID := newServerWithPendingGame(players.SomePlayers())

@@ -16,7 +16,10 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-var homepage = "static/index.html"
+var (
+	homepage        = "static/index.html"
+	gameCreatedPage = "static/game-created.html"
+)
 
 type NewGameReq struct {
 	Name string `json:"name"`
@@ -52,6 +55,17 @@ func NewID() string {
 	return uuid.NewV4().String()
 }
 
+func servePage(w http.ResponseWriter, path string) {
+	tmpl, err := template.ParseFiles(path)
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("problem loading template %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	tmpl.Execute(w, nil)
+}
+
 // NewServer creates a new GameServer
 func NewServer(store shed.GameStore) *GameServer {
 	s := new(GameServer)
@@ -65,19 +79,12 @@ func NewServer(store shed.GameStore) *GameServer {
 			return
 		}
 
-		tmpl, err := template.ParseFiles(homepage)
-
-		if err != nil {
-			http.Error(w, fmt.Sprintf("problem loading template %s", err.Error()), http.StatusInternalServerError)
-			return
-		}
-
-		tmpl.Execute(w, nil)
-		w.WriteHeader(http.StatusOK)
+		servePage(w, homepage)
 	}))
 	router.Handle("/new", http.HandlerFunc(s.HandleNewGame))
 	router.Handle("/game/", http.HandlerFunc(s.HandleFindGame))
 	router.Handle("/join", http.HandlerFunc(s.HandleJoinGame))
+	router.Handle("/created", http.HandlerFunc(s.HandleCreatedGame))
 
 	s.store = store
 
@@ -202,8 +209,6 @@ func (g *GameServer) HandleJoinGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// init websocket?
-
 	// make player
 	joiningPlayerID := NewID()
 	joiningPlayer := players.NewPlayer(joiningPlayerID, data.Name, &bytes.Buffer{}, ioutil.Discard)
@@ -226,6 +231,11 @@ func (g *GameServer) HandleJoinGame(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Add("Content-Type", "application/json")
 	w.Write(bytes)
+}
+
+func (g *GameServer) HandleCreatedGame(w http.ResponseWriter, r *http.Request) {
+	// check if this person should get the file
+	servePage(w, gameCreatedPage)
 }
 
 func writeParseError(err error, w http.ResponseWriter, r *http.Request) {
