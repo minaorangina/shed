@@ -10,7 +10,18 @@
   <p>Game created! Here's the code you need to share with people.</p>
   <script>
     if (window.WebSocket) {
-      const conn = new WebSocket(`ws://${document.location.host}/ws`);
+      const userID = window.sessionStorage.getItem("shed_user_id");
+      const gameID = window.sessionStorage.getItem("shed_game_id");
+
+      const conn = new WebSocket(
+        "ws://" + document.location.host
+        + "/ws?game_id=" + gameID
+        + "&user_id=" + userID
+      );
+
+      conn.onopen = console.info
+
+      conn.onerror = e => console.error("websocket error", e.error);
     }
   </script>
 </body>

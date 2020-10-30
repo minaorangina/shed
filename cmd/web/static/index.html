@@ -7,5 +7,35 @@
 </head>
 <body>
   <h1>Welcome to Shed!</h1>
+
+  <button class="new-game">New game</button>
+
+  <script>
+    const button = document.querySelector(".new-game");
+    button.addEventListener("click", () => {
+      const req = new Request("/new", {
+        method: "POST",
+        headers: new Headers(),
+        body: JSON.stringify({
+          name: "Mina"
+        }),
+      })
+      fetch(req)
+        .then(res => {
+          if (!res.ok) {
+            throw new Error(`Network response was not ok: ${res.status} ${res.statusText}`);
+          }
+          return res.json()
+        })
+        .then(body => {
+          for (let key in body) {
+            window.sessionStorage.setItem(`shed_${key}`, body[key]);
+          }
+
+          window.location.href = "http://" + window.location.host + "/created";
+        })
+        .catch(console.error)
+    });
+  </script>
 </body>
 </html>
