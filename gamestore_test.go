@@ -59,7 +59,7 @@ func TestInMemoryGameStore(t *testing.T) {
 		pendingID := "a-pending-game"
 		store := NewInMemoryGameStore(
 			nil,
-			newPendingGame(pendingID, players.SomePlayers()),
+			NewPendingGame(pendingID, players.SomePlayers()),
 		)
 
 		game, ok := store.FindPendingGame(pendingID)
@@ -78,7 +78,7 @@ func TestInMemoryGameStore(t *testing.T) {
 		pendingID := "a-pending-game"
 		store := NewInMemoryGameStore(
 			nil,
-			newPendingGame(pendingID, players.SomePlayers()),
+			NewPendingGame(pendingID, players.SomePlayers()),
 		)
 
 		playerToAdd := players.APlayer("player-id", "Horatio")
@@ -114,7 +114,7 @@ func TestInMemoryGameStore(t *testing.T) {
 
 		store := NewInMemoryGameStore(
 			nil,
-			newPendingGame(gameID, players.SomePlayers()),
+			NewPendingGame(gameID, players.SomePlayers()),
 		)
 
 		err := store.ActivateGame(gameID)
@@ -145,7 +145,7 @@ func newActiveGame(gameID string, ps players.Players) map[string]GameEngine {
 	return map[string]GameEngine{gameID: game}
 }
 
-func newPendingGame(gameID string, ps players.Players) map[string]GameEngine {
+func NewPendingGame(gameID string, ps players.Players) map[string]GameEngine {
 	game, _ := New(gameID, ps, nil)
 	return map[string]GameEngine{gameID: game}
 }

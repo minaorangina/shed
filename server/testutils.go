@@ -98,6 +98,8 @@ func newServerWithPendingGame(ps players.Players) (*GameServer, string) {
 	return NewServer(store), gameID
 }
 
+// ASSERTIONS
+
 func assertStatus(t *testing.T, got, want int) {
 	t.Helper()
 	if got != want {
