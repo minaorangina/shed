@@ -12,11 +12,11 @@ func gameEngineWithPlayers() GameEngine {
 func buildOpponents(playerID string, ps players.Players) []players.Opponent {
 	opponents := []players.Opponent{}
 	for _, p := range ps {
-		if p.ID == playerID {
+		if p.ID() == playerID {
 			continue
 		}
 		opponents = append(opponents, players.Opponent{
-			ID: p.ID, Seen: p.Cards().Seen, Name: p.Name,
+			ID: p.ID(), Seen: p.Cards().Seen, Name: p.Name(),
 		})
 	}
 	return opponents

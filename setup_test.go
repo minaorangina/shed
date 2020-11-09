@@ -17,8 +17,9 @@ func TestHandleInitialCards(t *testing.T) {
 		dealUnseenCards(cards, ps)
 
 		for _, p := range ps {
-			if len(p.Unseen) != 3 {
-				t.Fatalf("Wanted 3, got %d", len(p.Unseen))
+			cards := p.Cards()
+			if len(cards.Unseen) != 3 {
+				t.Fatalf("Wanted 3, got %d", len(cards.Unseen))
 			}
 		}
 	})

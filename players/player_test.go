@@ -1,17 +1,12 @@
 package players
 
 import (
-	"os"
 	"reflect"
 	"testing"
 )
 
-func TestPlayer(t *testing.T) {
-	name := "my name"
-	p := NewPlayer("player-1", name, os.Stdin, os.Stdout)
-	if p.Conn == nil {
-		t.Fail()
-	}
+func TestWSPlayer(t *testing.T) {
+
 }
 
 func TestPlayers(t *testing.T) {
@@ -38,7 +33,7 @@ func TestPlayers(t *testing.T) {
 		extraPlayerID := "another-player"
 		extraPlayerName := "Human"
 
-		ps = AddPlayer(&ps, APlayer(extraPlayerID, extraPlayerName))
+		ps = AddPlayer(ps, APlayer(extraPlayerID, extraPlayerName))
 
 		_, ok := ps.Find(extraPlayerID)
 
@@ -54,8 +49,8 @@ func TestPlayers(t *testing.T) {
 		extraPlayerName := "Human"
 		extraPlayer := APlayer(extraPlayerID, extraPlayerName)
 
-		ps = AddPlayer(&ps, extraPlayer)
-		ps = AddPlayer(&ps, extraPlayer)
+		ps = AddPlayer(ps, extraPlayer)
+		ps = AddPlayer(ps, extraPlayer)
 
 		_, ok := ps.Find(extraPlayerID)
 
@@ -68,7 +63,3 @@ func TestPlayers(t *testing.T) {
 		}
 	})
 }
-
-// func TestNewPlayer(t *testing.T) {
-// 	SomePlayers()
-// }

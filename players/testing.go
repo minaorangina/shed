@@ -2,19 +2,64 @@ package players
 
 import (
 	"bytes"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"sync"
 )
 
-func APlayer(id, name string) *Player {
+type TestConn struct {
+	In  io.Reader
+	Out io.Writer
+}
+
+type TestPlayer struct {
+	cards    *PlayerCards
+	id       string
+	name     string
+	conn     *TestConn
+	received []byte
+}
+
+func NewTestPlayer(id, name string, in io.Reader, out io.Writer) *TestPlayer {
+	return &TestPlayer{
+		id:    id,
+		name:  name,
+		conn:  &TestConn{in, out},
+		cards: &PlayerCards{},
+	}
+}
+
+func (tp *TestPlayer) ID() string {
+	return tp.id
+}
+
+func (tp *TestPlayer) Name() string {
+	return tp.name
+}
+
+func (tp *TestPlayer) Cards() *PlayerCards {
+	return tp.cards
+}
+
+func (tp *TestPlayer) Send(msg OutboundMessage) error {
+	fmt.Fprintf(tp.conn.Out, ("hello"))
+	return nil
+}
+
+func (tp *TestPlayer) Receive(data []byte) {
+	tp.received = data
+}
+
+func APlayer(id, name string) Player {
 	// does bytes.Buffer need to change to NewTestBuffer?
-	return NewPlayer(id, name, &bytes.Buffer{}, ioutil.Discard)
+	return NewTestPlayer(id, name, &bytes.Buffer{}, ioutil.Discard)
 }
 
 func SomePlayers() Players {
-	player1 := NewPlayer(NewID(), "Harry", os.Stdin, os.Stdout)
-	player2 := NewPlayer(NewID(), "Sally", os.Stdin, os.Stdout)
+	player1 := NewTestPlayer(NewID(), "Harry", os.Stdin, os.Stdout)
+	player2 := NewTestPlayer(NewID(), "Sally", os.Stdin, os.Stdout)
 	players := NewPlayers(player1, player2)
 	return players
 }

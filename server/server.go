@@ -112,7 +112,7 @@ func (g *GameServer) HandleNewGame(w http.ResponseWriter, r *http.Request) {
 	// generate game ID
 	gameID := NewID()
 	playerID := NewID()
-	creator := players.NewPlayer(playerID, data.Name, &bytes.Buffer{}, ioutil.Discard)
+	creator := players.NewWSPlayer(playerID, data.Name, &bytes.Buffer{}, ioutil.Discard)
 
 	err = g.store.AddPendingGame(gameID, creator)
 	if err != nil {
@@ -211,7 +211,7 @@ func (g *GameServer) HandleJoinGame(w http.ResponseWriter, r *http.Request) {
 
 	// make player
 	joiningPlayerID := NewID()
-	joiningPlayer := players.NewPlayer(joiningPlayerID, data.Name, &bytes.Buffer{}, ioutil.Discard)
+	joiningPlayer := players.NewWSPlayer(joiningPlayerID, data.Name, &bytes.Buffer{}, ioutil.Discard)
 
 	err = g.store.AddToPendingPlayers(data.GameID, joiningPlayer)
 	if err != nil {

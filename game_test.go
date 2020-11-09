@@ -1,7 +1,6 @@
 package shed
 
 import (
-	"reflect"
 	"testing"
 
 	utils "github.com/minaorangina/shed/internal"
@@ -15,7 +14,7 @@ func TestBuildMessageToPlayer(t *testing.T) {
 	var opponents []players.Opponent
 	var id string
 	for _, p := range ps {
-		id = p.ID
+		id = p.ID()
 		opponents = buildOpponents(id, ps)
 		break
 	}
@@ -24,8 +23,8 @@ func TestBuildMessageToPlayer(t *testing.T) {
 	message := buildReorgMessage(playerToContact, opponents, players.InitialCards{}, "Let the games begin!")
 	expectedMessage := players.OutboundMessage{
 		Message:   "Let the games begin!",
-		PlayerID:  playerToContact.ID,
-		Name:      playerToContact.Name,
+		PlayerID:  playerToContact.ID(),
+		Name:      playerToContact.Name(),
 		Hand:      playerToContact.Cards().Hand,
 		Seen:      playerToContact.Cards().Seen,
 		Opponents: opponents,
@@ -35,8 +34,8 @@ func TestBuildMessageToPlayer(t *testing.T) {
 }
 
 func TestGameEngineMsgFromGame(t *testing.T) {
-	// Game Engine receives from messages to send to players
-	// and returns response
+	// update when GameEngine forwards messages from players
+
 	t.Skip("do not run TestGameEngineMsgFromGame")
 	ge := gameEngineWithPlayers()
 	ge.Start() // mock required
@@ -45,24 +44,21 @@ func TestGameEngineMsgFromGame(t *testing.T) {
 	want := []players.InboundMessage{}
 	initialCards := players.InitialCards{}
 	for _, p := range ge.Players() {
-		o := buildOpponents(p.ID, ge.Players())
+		o := buildOpponents(p.ID(), ge.Players())
 		m := buildReorgMessage(p, o, initialCards, "Rearrange your initial cards")
 		messages = append(messages, m)
 
+		cards := p.Cards()
+
 		want = append(want, players.InboundMessage{
-			PlayerID: p.ID,
-			Hand:     p.Hand,
-			Seen:     p.Seen,
+			PlayerID: p.ID(),
+			Hand:     cards.Hand,
+			Seen:     cards.Seen,
 		})
 	}
 
-	got, err := ge.MessagePlayers(messages)
+	err := ge.MessagePlayers(messages)
 	if err != nil {
 		t.Fail()
 	}
-
-	if !reflect.DeepEqual(got, want) { // TODO: fix slice ordering
-		utils.FailureMessage(t, got, want)
-	}
-	utils.AssertEqual(t, got, want)
 }

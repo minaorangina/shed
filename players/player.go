@@ -3,6 +3,7 @@ package players
 import (
 	"io"
 
+	"github.com/gorilla/websocket"
 	"github.com/minaorangina/shed/deck"
 	"github.com/minaorangina/shed/protocol"
 	uuid "github.com/satori/go.uuid"
@@ -19,40 +20,8 @@ type conn struct {
 	Out io.Writer
 }
 
-// Players represents all players in the game
-type Players []*Player
-
-// NewPlayers returns a set of Players
-func NewPlayers(p ...*Player) Players {
-	return Players(p)
-}
-
-// AddPlayer adds a player to a set of Players
-func AddPlayer(ps *Players, p *Player) Players {
-	if _, ok := ps.Find(p.ID); !ok {
-		return Players(append(*ps, p))
-	}
-	return *ps
-}
-
-// Find finds a player by id
-func (ps *Players) Find(id string) (*Player, bool) {
-	for _, p := range *ps {
-		if p.ID == id {
-			return p, true
-		}
-	}
-	return nil, false
-}
-
-// Player represents a player in the game
-type Player struct {
-	Hand   []deck.Card
-	Seen   []deck.Card
-	Unseen []deck.Card
-	ID     string
-	Name   string
-	Conn   *conn // tcp or command line
+type wsConn struct {
+	Out *websocket.Conn
 }
 
 type PlayerCards struct {
@@ -61,29 +30,111 @@ type PlayerCards struct {
 	Unseen []deck.Card
 }
 
+// Player represents a player in the game
+type Player interface {
+	ID() string
+	Name() string
+	Cards() *PlayerCards
+	Send(msg OutboundMessage) error
+	Receive(data []byte)
+}
+
+type WSPlayer struct {
+	PlayerCards
+	id   string
+	name string
+	Conn *conn // tcp or command line
+}
+
 // NewPlayer constructs a new player
-func NewPlayer(id, name string, in io.Reader, out io.Writer) *Player {
-	conn := &conn{in, out}
-	return &Player{ID: id, Name: name, Conn: conn}
+func NewWSPlayer(id, name string, in io.Reader, out io.Writer) Player {
+	return &WSPlayer{id: id, name: name, Conn: &conn{in, out}}
+}
+
+func (p *WSPlayer) ID() string {
+	return p.id
+}
+
+func (p *WSPlayer) Name() string {
+	return p.name
 }
 
 // Cards returns all of a player's cards
-func (p Player) Cards() PlayerCards {
-	return PlayerCards{
+func (p *WSPlayer) Cards() *PlayerCards {
+	return &PlayerCards{
 		Hand:   p.Hand,
 		Seen:   p.Seen,
 		Unseen: p.Unseen,
 	}
 }
 
-func (p Player) SendMessageAwaitReply(ch chan InboundMessage, msg OutboundMessage) {
+func (p *WSPlayer) Send(msg OutboundMessage) error {
+	// check command
 	switch msg.Command {
 	case protocol.Reorg:
-		ch <- p.handleReorg(msg)
+
+		// convert to appropriate format
+
+		// call Send on the connection
+
+		return nil
+	}
+	return nil
+}
+
+func (p *WSPlayer) Receive(msg []byte) {
+	// convert to InboundMessage
+
+	// put on the game engine chan
+}
+
+type CLIPlayer struct {
+	PlayerCards
+	id   string
+	name string
+	Conn *conn
+}
+
+func (p CLIPlayer) ID() string {
+	return p.id
+}
+
+func (p CLIPlayer) Name() string {
+	return p.name
+}
+
+// Cards returns all of a player's cards
+func (p CLIPlayer) Cards() *PlayerCards {
+	return &PlayerCards{
+		Hand:   p.Hand,
+		Seen:   p.Seen,
+		Unseen: p.Unseen,
 	}
 }
 
-func (p Player) handleReorg(msg OutboundMessage) InboundMessage {
+func (p CLIPlayer) Send(msg OutboundMessage) error {
+	// check command
+	switch msg.Command {
+	case protocol.Reorg:
+		inbound := p.handleReorg(msg)
+		_ = inbound
+
+		// convert to appropriate format
+
+		// call Send on the connection
+
+		return nil
+	}
+	return nil
+}
+
+func (p CLIPlayer) Receive(msg []byte) {
+	// convert to InboundMessage
+
+	// put on the game engine chan
+}
+
+func (p CLIPlayer) handleReorg(msg OutboundMessage) InboundMessage {
 	response := InboundMessage{
 		PlayerID: msg.PlayerID,
 		Command:  msg.Command,
@@ -98,9 +149,36 @@ func (p Player) handleReorg(msg OutboundMessage) InboundMessage {
 	SendText(p.Conn.Out, "%s, here are your cards:\n\n", msg.Name)
 	SendText(p.Conn.Out, buildCardDisplayText(playerCards))
 
+	// could probably make this one step. user submits or skips - no need to
 	if shouldReorganise := offerCardSwitch(p.Conn, offerTimeout); shouldReorganise {
 		response = reorganiseCards(p.Conn, msg)
 	}
 
 	return response
+}
+
+// Players represents all players in the game
+type Players []Player
+
+// NewPlayers returns a set of Players
+func NewPlayers(p ...Player) Players {
+	return Players(p)
+}
+
+// AddPlayer adds a player to a set of Players
+func AddPlayer(ps Players, p Player) Players {
+	if _, ok := ps.Find(p.ID()); !ok {
+		return Players(append(ps, p))
+	}
+	return ps
+}
+
+// Find finds a player by id
+func (ps Players) Find(id string) (Player, bool) {
+	for _, p := range ps {
+		if got := p.ID(); got == id {
+			return p, true
+		}
+	}
+	return nil, false
 }

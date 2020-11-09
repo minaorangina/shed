@@ -18,15 +18,19 @@ func HandleInitialCards(ge GameEngine) error {
 	initialCards := dealInitialCards(deck, ps)
 
 	// confirm with player
-	confirmed, err := confirmInitialCards(ps, initialCards, ge.MessagePlayers)
+	err := confirmInitialCards(ps, initialCards, ge.MessagePlayers)
 	if err != nil {
 		return err
 	}
 
+	// block to get initial cards here or something
+	confirmed := map[string]players.PlayerCards{}
+
 	// assign cards
 	for _, p := range ge.Players() {
-		p.Hand = confirmed[p.ID].Hand
-		p.Seen = confirmed[p.ID].Seen
+		cards := p.Cards()
+		cards.Hand = confirmed[p.ID()].Hand
+		cards.Seen = confirmed[p.ID()].Seen
 	}
 
 	return nil
@@ -34,7 +38,8 @@ func HandleInitialCards(ge GameEngine) error {
 
 func dealUnseenCards(deck deck.Deck, ps players.Players) {
 	for _, p := range ps {
-		p.Unseen = deck.Deal(3)
+		cards := p.Cards()
+		cards.Unseen = deck.Deal(3)
 	}
 }
 
@@ -48,7 +53,7 @@ func dealInitialCards(deck deck.Deck, ps players.Players) map[string]players.Ini
 			Hand: dealtHand,
 			Seen: dealtSeen,
 		}
-		cards[p.ID] = ic
+		cards[p.ID()] = ic
 	}
 
 	return cards
@@ -57,35 +62,31 @@ func dealInitialCards(deck deck.Deck, ps players.Players) map[string]players.Ini
 func confirmInitialCards(
 	ps players.Players,
 	ic map[string]players.InitialCards,
-	messageFn func([]players.OutboundMessage) ([]players.InboundMessage, error),
-) (map[string]players.InitialCards, error) {
+	messageFn func([]players.OutboundMessage) error,
+) error {
 	messages := []players.OutboundMessage{}
 	for _, p := range ps {
-		o := buildOpponents(p.ID, ps)
-		m := buildReorgMessage(p, o, ic[p.ID], "Rearrange your hand")
+		playerID := p.ID()
+		o := buildOpponents(playerID, ps)
+		m := buildReorgMessage(p, o, ic[playerID], "Rearrange your hand")
 		messages = append(messages, m)
 	}
 
 	// this will block
-	reply, err := messageFn(messages)
-	if err != nil {
-		return nil, err
-	}
-
-	return messagesToInitialCards(reply), nil
+	return messageFn(messages)
 }
 
 // to test (easier when state hydration exists)
 func buildReorgMessage(
-	player *players.Player,
+	player players.Player,
 	opponents []players.Opponent,
 	initialCards players.InitialCards,
 	message string,
 ) players.OutboundMessage {
 
 	return players.OutboundMessage{
-		PlayerID:  player.ID,
-		Name:      player.Name,
+		PlayerID:  player.ID(),
+		Name:      player.Name(),
 		Message:   message,
 		Hand:      initialCards.Hand,
 		Seen:      initialCards.Seen,

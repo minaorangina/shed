@@ -12,8 +12,8 @@ import (
 
 func main() {
 
-	player1 := players.NewPlayer(players.NewID(), "Harry", os.Stdin, os.Stdout)
-	player2 := players.NewPlayer(players.NewID(), "Sally", os.Stdin, os.Stdout)
+	player1 := players.NewWSPlayer(players.NewID(), "Harry", os.Stdin, os.Stdout)
+	player2 := players.NewWSPlayer(players.NewID(), "Sally", os.Stdin, os.Stdout)
 
 	ps := players.NewPlayers(player1, player2)
 

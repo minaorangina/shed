@@ -121,6 +121,11 @@ func TestGetCardChoices(t *testing.T) {
 		{"\n\nneidn", []int{}},
 		{"\n\n\n", []int{}},
 		{"\r\n\r\n\r\n", []int{}},
+		{"SKIP", []int{}},
+		{"Skip", []int{}},
+		{"skip", []int{}},
+		{"S", []int{}},
+		{"s", []int{}},
 	}
 
 	for _, c := range cases {

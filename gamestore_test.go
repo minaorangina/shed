@@ -24,6 +24,7 @@ func TestInMemoryGameStore(t *testing.T) {
 		creator := players.APlayer(playerID, "Hermione")
 
 		store := NewInMemoryGameStore(nil, nil)
+
 		err := store.AddPendingGame(gameID, creator)
 		utils.AssertNoError(t, err)
 
@@ -89,7 +90,7 @@ func TestInMemoryGameStore(t *testing.T) {
 		utils.AssertTrue(t, ok)
 
 		pendingPlayers := pendingGame.Players()
-		got, ok := pendingPlayers.Find(playerToAdd.ID)
+		got, ok := pendingPlayers.Find(playerToAdd.ID())
 		utils.AssertTrue(t, ok)
 		utils.AssertEqual(t, got, playerToAdd)
 	})

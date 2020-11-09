@@ -39,11 +39,11 @@ type playerInfo struct {
 type GameEngine interface {
 	Setup() error
 	Start() error
-	MessagePlayers([]players.OutboundMessage) ([]players.InboundMessage, error)
+	MessagePlayers([]players.OutboundMessage) error
 	Deck() deck.Deck
 	Players() players.Players
 	ID() string
-	AddPlayer(*players.Player) error
+	AddPlayer(players.Player) error
 }
 
 type gameEngine struct {
@@ -90,9 +90,9 @@ func (ge *gameEngine) Setup() error {
 }
 
 // AddPlayer adds a player to a game
-func (ge *gameEngine) AddPlayer(p *players.Player) error {
+func (ge *gameEngine) AddPlayer(p players.Player) error {
 	ps := ge.Players()
-	ge.players = players.AddPlayer(&ps, p)
+	ge.players = players.AddPlayer(ps, p)
 	return nil
 }
 
@@ -123,7 +123,7 @@ func (ge *gameEngine) CheckNumPlayers() error {
 	return nil
 }
 
-func (ge *gameEngine) MessagePlayers(messages []players.OutboundMessage) ([]players.InboundMessage, error) {
+func (ge *gameEngine) MessagePlayers(messages []players.OutboundMessage) error {
 	return messagePlayersAwaitReply(ge.Players(), messages)
 }
 
@@ -139,23 +139,19 @@ func (ge *gameEngine) Players() players.Players {
 func messagePlayersAwaitReply(
 	ps players.Players,
 	messages []players.OutboundMessage,
-) (
-	[]players.InboundMessage,
-	error,
-) {
-	ch := make(chan players.InboundMessage)
+) error {
 	for _, m := range messages {
 		if p, ok := ps.Find(m.PlayerID); ok {
-			go p.SendMessageAwaitReply(ch, m)
+			go p.Send(m)
 			break // debug
 		}
 	}
 
-	responses := []players.InboundMessage{}
-	for i := 0; i < len(messages); i++ {
-		resp := <-ch
-		responses = append(responses, resp)
-	}
+	// responses := []players.InboundMessage{}
+	// for i := 0; i < len(messages); i++ {
+	// 	resp := <-ch
+	// 	responses = append(responses, resp)
+	// }
 
-	return responses, nil
+	return nil
 }

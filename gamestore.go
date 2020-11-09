@@ -11,8 +11,8 @@ type GameStore interface {
 	PendingGames() map[string]GameEngine
 	FindActiveGame(ID string) (GameEngine, bool)
 	FindPendingGame(ID string) (GameEngine, bool)
-	AddPendingGame(ID string, creator *players.Player) error
-	AddToPendingPlayers(ID string, player *players.Player) error
+	AddPendingGame(ID string, creator players.Player) error
+	AddToPendingPlayers(ID string, player players.Player) error
 	ActivateGame(ID string) error
 }
 
@@ -55,10 +55,11 @@ func (s *InMemoryGameStore) FindPendingGame(ID string) (GameEngine, bool) {
 }
 
 // mutex definitely required
-func (s *InMemoryGameStore) AddPendingGame(gameID string, creator *players.Player) error {
+func (s *InMemoryGameStore) AddPendingGame(gameID string, creator players.Player) error {
 	if _, exists := s.pending[gameID]; exists {
 		return fmt.Errorf("Game with id %s already exists", gameID)
 	}
+
 	game, err := New(gameID, players.NewPlayers(creator), nil)
 	if err != nil {
 		return err
@@ -69,7 +70,7 @@ func (s *InMemoryGameStore) AddPendingGame(gameID string, creator *players.Playe
 	return nil
 }
 
-func (s *InMemoryGameStore) AddToPendingPlayers(ID string, player *players.Player) error {
+func (s *InMemoryGameStore) AddToPendingPlayers(ID string, player players.Player) error {
 	pendingGame, ok := s.FindPendingGame(ID)
 	if !ok {
 		return fmt.Errorf("Pending game with id %s does not exist", ID)

@@ -20,29 +20,29 @@ func messagesToInitialCards(messages []players.InboundMessage) map[string]player
 }
 
 func namesToPlayers(names []string) players.Players {
-	ps := []*players.Player{}
+	ps := []players.Player{}
 	for _, n := range names {
-		player := players.NewPlayer(players.NewID(), n, os.Stdin, os.Stdout)
+		player := players.NewTestPlayer(players.NewID(), n, os.Stdin, os.Stdout)
 		ps = append(ps, player)
 	}
 
-	return players.Players(ps)
+	return ps
 }
 
 func playersToNames(players players.Players) []string {
 	names := []string{}
 	for _, p := range players {
-		names = append(names, p.Name)
+		names = append(names, p.Name())
 	}
 
 	return names
 }
 
 func playerInfoToPlayers(playerInfo []playerInfo) players.Players {
-	ps := []*players.Player{}
+	ps := []players.Player{}
 	for _, info := range playerInfo {
-		ps = append(ps, players.NewPlayer(info.id, info.name, os.Stdin, os.Stdout))
+		ps = append(ps, players.NewTestPlayer(info.id, info.name, os.Stdin, os.Stdout))
 	}
 
-	return players.Players(ps)
+	return players.NewPlayers(ps...)
 }
