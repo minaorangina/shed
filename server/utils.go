@@ -177,6 +177,10 @@ func newTestServerWithInactiveGame(ps players.Players) (*httptest.Server, string
 	return server, gameID
 }
 
+func newTestServer(store shed.GameStore) *httptest.Server {
+	return httptest.NewServer(NewServer(store))
+}
+
 // ASSERTIONS
 
 func assertStatus(t *testing.T, got, want int) {

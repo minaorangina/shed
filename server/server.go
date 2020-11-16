@@ -11,6 +11,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/minaorangina/shed"
+	"github.com/minaorangina/shed/players"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -280,15 +281,14 @@ func (g *GameServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ps := game.Players()
-	p, ok := ps.Find(playerID)
-	if !ok {
+	pendingPlayer := g.store.FindPendingPlayer(gameID, playerID)
+	if pendingPlayer == nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("unknown user id"))
 		return
 	}
 
-	conn, err := upgrader.Upgrade(w, r, nil)
+	rawConn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -296,9 +296,11 @@ func (g *GameServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// hook up player and connection
+	// create player
+	player := players.NewWSPlayer(playerID, pendingPlayer.Name, rawConn)
 
-	fmt.Println(p, conn)
+	fmt.Println(player)
+	// reference to hub etc
 }
 
 func writeParseError(err error, w http.ResponseWriter, r *http.Request) {

@@ -217,31 +217,36 @@ func TestWS(t *testing.T) {
 		server, _ := newTestServerWithInactiveGame(ps)
 		defer server.Close()
 
-		wsURL := "ws" + strings.Trim(server.URL, "http") + "/ws?game_id=unknowngamelol&player_id=unknownhooman"
+		wsURL := "ws" + strings.Trim(server.URL, "http") +
+			"/ws?game_id=unknowngamelol&player_id=unknownhooman"
 
-		_, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+		_, resp, err := websocket.DefaultDialer.Dial(wsURL, nil)
 
 		utils.AssertErrored(t, err)
+		utils.AssertEqual(t, resp.StatusCode, http.StatusBadRequest)
 	})
 
 	t.Run("Successfully connects", func(t *testing.T) {
-		t.Skip()
-
 		gameID := "this-is-a-game-id"
 		name, playerID := "Delilah", "delilah1"
-		p := players.APlayer(playerID, name)
-		ps := players.NewPlayers(p)
 
-		game := newTestGame(t, gameID, "", ps, nil)
+		game := newTestGame(t, gameID, playerID, nil, nil)
 
-		server, _ := newTestServerWithInactiveGame(ps)
+		store := NewBasicStore()
+		store.AddInactiveGame(game)
+		store.AddPendingPlayer(gameID, playerID, name)
+
+		server := newTestServer(store)
 		defer server.Close()
 
-		wsURL := "ws" + strings.Trim(server.URL, "http") + "/ws?game_id=" + gameID + "&player_id=" + playerID
+		wsURL := "ws" + strings.Trim(server.URL, "http") +
+			"/ws?game_id=" + gameID + "&player_id=" + playerID
 
-		_, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+		ws, resp, err := websocket.DefaultDialer.Dial(wsURL, nil)
 
+		utils.AssertEqual(t, resp.StatusCode, http.StatusSwitchingProtocols)
 		utils.AssertNoError(t, err)
+		utils.AssertNotNil(t, ws)
 	})
 }
 
