@@ -41,7 +41,7 @@ func playersToNames(players players.Players) []string {
 func playerInfoToPlayers(playerInfo []PlayerInfo) players.Players {
 	ps := []players.Player{}
 	for _, info := range playerInfo {
-		ps = append(ps, players.NewTestPlayer(info.userID, info.name, os.Stdin, os.Stdout))
+		ps = append(ps, players.NewTestPlayer(info.PlayerID, info.Name, os.Stdin, os.Stdout))
 	}
 
 	return players.NewPlayers(ps...)

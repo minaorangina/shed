@@ -51,8 +51,8 @@ func TestGameEngineInit(t *testing.T) {
 	})
 	t.Run("has an ID", func(t *testing.T) {
 		gameID := "thisistheid"
-		userID := "i created it"
-		engine, err := New(gameID, userID, players.SomePlayers(), nil)
+		playerID := "i created it"
+		engine, err := New(gameID, playerID, players.SomePlayers(), nil)
 		utils.AssertNoError(t, err)
 
 		utils.AssertEqual(t, engine.ID(), gameID)
@@ -60,11 +60,11 @@ func TestGameEngineInit(t *testing.T) {
 
 	t.Run("has the user ID of the creator", func(t *testing.T) {
 		gameID := "thisistheid"
-		userID := "i created it"
-		engine, err := New(gameID, userID, players.SomePlayers(), nil)
+		playerID := "i created it"
+		engine, err := New(gameID, playerID, players.SomePlayers(), nil)
 		utils.AssertNoError(t, err)
 
-		utils.AssertEqual(t, engine.CreatorID(), userID)
+		utils.AssertEqual(t, engine.CreatorID(), playerID)
 	})
 }
 func TestGameEngineSetupFn(t *testing.T) {

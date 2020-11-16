@@ -264,14 +264,14 @@ func (g *GameServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 	}
 	gameID := vals[0]
 
-	vals, ok = query["user_id"]
+	vals, ok = query["player_id"]
 	if !ok || len(vals) != 1 {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("could not parse user ID"))
 		return
 	}
 
-	userID := vals[0]
+	playerID := vals[0]
 
 	game := g.store.FindInactiveGame(gameID)
 	if game == nil {
@@ -281,7 +281,7 @@ func (g *GameServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ps := game.Players()
-	p, ok := ps.Find(userID)
+	p, ok := ps.Find(playerID)
 	if !ok {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("unknown user id"))

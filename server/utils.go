@@ -38,7 +38,7 @@ func (s *stubStore) AddInactiveGame(gameID string, creator players.Player) error
 }
 
 // fails
-func (s *stubStore) AddPendingPlayer(gameID, userID, name string) error {
+func (s *stubStore) AddPendingPlayer(gameID, playerID, name string) error {
 	return fmt.Errorf("that didn't work now did it")
 }
 
@@ -66,7 +66,7 @@ func (s fakeStore) FindInactiveGame(ID string) shed.GameEngine {
 	return game
 }
 
-func (s fakeStore) FindPendingPlayer(gameID, userID string) *shed.PlayerInfo {
+func (s fakeStore) FindPendingPlayer(gameID, playerID string) *shed.PlayerInfo {
 	return &shed.PlayerInfo{}
 }
 
@@ -74,7 +74,7 @@ func (s fakeStore) AddInactiveGame(game shed.GameEngine) error {
 	return nil
 }
 
-func (s fakeStore) AddPendingPlayer(gameID, userID, name string) error {
+func (s fakeStore) AddPendingPlayer(gameID, playerID, name string) error {
 	return nil
 }
 
@@ -123,8 +123,8 @@ func newJoinGameRequest(data []byte) *http.Request {
 	return request
 }
 
-func newTestGame(t *testing.T, gameID, userID string, ps players.Players, setupFn func(shed.GameEngine) error) shed.GameEngine {
-	game, err := shed.New(gameID, userID, ps, setupFn)
+func newTestGame(t *testing.T, gameID, playerID string, ps players.Players, setupFn func(shed.GameEngine) error) shed.GameEngine {
+	game, err := shed.New(gameID, playerID, ps, setupFn)
 	utils.AssertNoError(t, err)
 
 	return game

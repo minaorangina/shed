@@ -16,15 +16,15 @@ var (
 )
 
 type PlayerInfo struct {
-	userID, name string
+	PlayerID, Name string
 }
 
 type GameStore interface {
 	FindActiveGame(gameID string) GameEngine
 	FindInactiveGame(gameID string) GameEngine
-	FindPendingPlayer(gameID, userID string) *PlayerInfo
+	FindPendingPlayer(gameID, playerID string) *PlayerInfo
 	AddInactiveGame(engine GameEngine) error
-	AddPendingPlayer(gameID, userID, name string) error
+	AddPendingPlayer(gameID, playerID, name string) error
 	AddPlayerToGame(gameID string, player players.Player) error
 	ActivateGame(gameID string) error
 }
@@ -54,14 +54,14 @@ func (s *InMemoryGameStore) FindInactiveGame(ID string) GameEngine {
 	return s.InactiveGames[ID]
 }
 
-func (s *InMemoryGameStore) FindPendingPlayer(gameID, userID string) *PlayerInfo {
+func (s *InMemoryGameStore) FindPendingPlayer(gameID, playerID string) *PlayerInfo {
 	pendingPlayers, ok := s.PendingPlayers[gameID]
 	if !ok {
 		return nil
 	}
 
 	for i, info := range pendingPlayers {
-		if info.userID == userID {
+		if info.PlayerID == playerID {
 			return &pendingPlayers[i]
 		}
 	}
@@ -82,14 +82,14 @@ func (s *InMemoryGameStore) AddInactiveGame(game GameEngine) error {
 
 // AddPendingPlayer adds the information from which to construct a Player in the future.
 // If the target Game does not exist, it will fail.
-func (s *InMemoryGameStore) AddPendingPlayer(gameID, userID, name string) error {
+func (s *InMemoryGameStore) AddPendingPlayer(gameID, playerID, name string) error {
 	game := s.FindInactiveGame(gameID)
 	if game == nil {
 		return ErrFnUnknownPendingGameID(gameID)
 	}
 
 	// mutex required
-	s.PendingPlayers[gameID] = append(s.PendingPlayers[gameID], PlayerInfo{userID, name})
+	s.PendingPlayers[gameID] = append(s.PendingPlayers[gameID], PlayerInfo{playerID, name})
 
 	return nil
 }

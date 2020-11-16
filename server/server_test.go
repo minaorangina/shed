@@ -210,17 +210,14 @@ func TestWS(t *testing.T) {
 	})
 
 	t.Run("Rejects if pending game doesn't exist", func(t *testing.T) {
-		// gameID := "this-is-a-game-id"
-		name, userID := "Delilah", "delilah1"
-		p := players.APlayer(userID, name)
+		name, playerID := "Delilah", "delilah1"
+		p := players.APlayer(playerID, name)
 		ps := players.NewPlayers(p)
-
-		// game := newTestGame(t, gameID, "", ps, nil)
 
 		server, _ := newTestServerWithInactiveGame(ps)
 		defer server.Close()
 
-		wsURL := "ws" + strings.Trim(server.URL, "http") + "/ws?game_id=unknowngamelol&user_id=unknownhooman"
+		wsURL := "ws" + strings.Trim(server.URL, "http") + "/ws?game_id=unknowngamelol&player_id=unknownhooman"
 
 		_, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
 
@@ -231,8 +228,8 @@ func TestWS(t *testing.T) {
 		t.Skip()
 
 		gameID := "this-is-a-game-id"
-		name, userID := "Delilah", "delilah1"
-		p := players.APlayer(userID, name)
+		name, playerID := "Delilah", "delilah1"
+		p := players.APlayer(playerID, name)
 		ps := players.NewPlayers(p)
 
 		game := newTestGame(t, gameID, "", ps, nil)
@@ -240,7 +237,7 @@ func TestWS(t *testing.T) {
 		server, _ := newTestServerWithInactiveGame(ps)
 		defer server.Close()
 
-		wsURL := "ws" + strings.Trim(server.URL, "http") + "/ws?game_id=" + gameID + "&user_id=" + userID
+		wsURL := "ws" + strings.Trim(server.URL, "http") + "/ws?game_id=" + gameID + "&player_id=" + playerID
 
 		_, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
 

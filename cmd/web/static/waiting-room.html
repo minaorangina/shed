@@ -10,13 +10,13 @@
   <p>Game created! Here's the code you need to share with people.</p>
   <script>
     if (window.WebSocket) {
-      const userID = window.sessionStorage.getItem("shed_user_id");
+      const playerID = window.sessionStorage.getItem("shed_player_id");
       const gameID = window.sessionStorage.getItem("shed_game_id");
 
       const conn = new WebSocket(
         "ws://" + document.location.host
         + "/ws?game_id=" + gameID
-        + "&user_id=" + userID
+        + "&player_id=" + playerID
       );
 
       conn.onopen = console.info
