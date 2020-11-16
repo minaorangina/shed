@@ -62,9 +62,9 @@ func TestServerPOSTNewGame(t *testing.T) {
 	})
 }
 
-func TestGETGameCreated(t *testing.T) {
+func TestGETGameWaitingRoom(t *testing.T) {
 	response := httptest.NewRecorder()
-	request, _ := http.NewRequest(http.MethodGet, "/created", nil)
+	request, _ := http.NewRequest(http.MethodGet, "/waitingroom", nil)
 
 	server := NewServer(newBasicStore())
 	server.ServeHTTP(response, request)

@@ -19,7 +19,7 @@ import (
 
 var (
 	homepage        = "static/index.html"
-	gameCreatedPage = "static/game-created.html"
+	waitingRoomPage = "static/waiting-room.html"
 )
 
 var upgrader = websocket.Upgrader{
@@ -90,7 +90,7 @@ func NewServer(store shed.GameStore) *GameServer {
 	router.Handle("/new", http.HandlerFunc(s.HandleNewGame))
 	router.Handle("/game/", http.HandlerFunc(s.HandleFindGame))
 	router.Handle("/join", http.HandlerFunc(s.HandleJoinGame))
-	router.Handle("/created", http.HandlerFunc(s.HandleCreatedGame))
+	router.Handle("/waitingroom", http.HandlerFunc(s.HandleWaitingRoom))
 	router.Handle("/ws", http.HandlerFunc(s.HandleWS))
 
 	s.store = store
@@ -240,9 +240,9 @@ func (g *GameServer) HandleJoinGame(w http.ResponseWriter, r *http.Request) {
 	w.Write(bytes)
 }
 
-func (g *GameServer) HandleCreatedGame(w http.ResponseWriter, r *http.Request) {
+func (g *GameServer) HandleWaitingRoom(w http.ResponseWriter, r *http.Request) {
 	// check if this person should get the file
-	servePage(w, gameCreatedPage)
+	servePage(w, waitingRoomPage)
 }
 
 func (g *GameServer) HandleWS(w http.ResponseWriter, r *http.Request) {
