@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/minaorangina/shed"
 	"github.com/minaorangina/shed/players"
@@ -12,8 +11,8 @@ import (
 
 func main() {
 
-	player1 := players.NewWSPlayer(players.NewID(), "Harry", os.Stdin, os.Stdout)
-	player2 := players.NewWSPlayer(players.NewID(), "Sally", os.Stdin, os.Stdout)
+	player1 := players.NewWSPlayer(players.NewID(), "Harry", nil)
+	player2 := players.NewWSPlayer(players.NewID(), "Sally", nil)
 
 	ps := players.NewPlayers(player1, player2)
 

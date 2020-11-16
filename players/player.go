@@ -15,13 +15,30 @@ func NewID() string {
 }
 
 // Conn represents a connection to a player in the real world
+// type Conn interface {
+// 	Send(data []byte) error
+// 	Receive(data []byte)
+// }
+
 type conn struct {
 	In  io.Reader
 	Out io.Writer
 }
 
-type wsConn struct {
+type WSConn struct {
 	Out *websocket.Conn
+}
+
+func NewWSConn(c *websocket.Conn) *WSConn {
+	return &WSConn{c}
+}
+
+func (c *WSConn) Send(data []byte) error {
+	return nil
+}
+
+func (c *WSConn) Receive(data []byte) {
+
 }
 
 type PlayerCards struct {
@@ -43,12 +60,12 @@ type WSPlayer struct {
 	PlayerCards
 	id   string
 	name string
-	Conn *conn // tcp or command line
+	conn *WSConn
 }
 
 // NewPlayer constructs a new player
-func NewWSPlayer(id, name string, in io.Reader, out io.Writer) Player {
-	return &WSPlayer{id: id, name: name, Conn: &conn{in, out}}
+func NewWSPlayer(id, name string, ws *websocket.Conn) Player {
+	return &WSPlayer{id: id, name: name, conn: &WSConn{ws}}
 }
 
 func (p *WSPlayer) ID() string {
