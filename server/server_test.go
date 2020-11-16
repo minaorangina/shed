@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gorilla/websocket"
+	"github.com/minaorangina/shed"
 	utils "github.com/minaorangina/shed/internal"
 	"github.com/minaorangina/shed/players"
 )
@@ -196,4 +198,63 @@ func TestServerGETGame(t *testing.T) {
 
 		utils.AssertEqual(t, response.Code, http.StatusNotFound)
 	})
+}
+
+func TestWS(t *testing.T) {
+	t.Run("Handles missing game details", func(t *testing.T) {
+		server := httptest.NewServer(NewServer(newBasicStore()))
+
+		_, _, err := websocket.DefaultDialer.Dial("ws"+strings.Trim(server.URL, "http")+"/ws", nil)
+		utils.AssertErrored(t, err)
+	})
+
+	t.Run("Rejects if pending game doesn't exist", func(t *testing.T) {
+		gameID := "this-is-a-game-id"
+		name, userID := "Delilah", "delilah1"
+		p := players.APlayer(userID, name)
+
+		game := newTestGame(t, gameID, players.NewPlayers(p), nil)
+
+		store := shed.NewInMemoryGameStore(nil, map[string]shed.GameEngine{gameID: game})
+
+		server := httptest.NewServer(NewServer(store))
+		defer server.Close()
+
+		wsURL := "ws" + strings.Trim(server.URL, "http") + "/ws?game_id=unknowngamelol&user_id=unknownhooman"
+
+		_, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+
+		utils.AssertErrored(t, err)
+	})
+
+	t.Run("Successfully connects", func(t *testing.T) {
+		t.Skip()
+
+		gameID := "this-is-a-game-id"
+		name, userID := "Delilah", "delilah1"
+		p := players.APlayer(userID, name)
+
+		game := newTestGame(t, gameID, players.NewPlayers(p), nil)
+
+		store := shed.NewInMemoryGameStore(nil, map[string]shed.GameEngine{gameID: game})
+
+		server := httptest.NewServer(NewServer(store))
+		defer server.Close()
+
+		wsURL := "ws" + strings.Trim(server.URL, "http") + "/ws?game_id=" + gameID + "&user_id=" + userID
+
+		_, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+
+		utils.AssertNoError(t, err)
+	})
+}
+
+func mustDialWS(t *testing.T, url string) *websocket.Conn {
+	ws, _, err := websocket.DefaultDialer.Dial(url, nil)
+
+	if err != nil {
+		t.Fatalf("could not open a ws connection on %s %v", url, err)
+	}
+
+	return ws
 }

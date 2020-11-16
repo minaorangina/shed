@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gorilla/websocket"
 	"github.com/minaorangina/shed"
 	"github.com/minaorangina/shed/players"
 	uuid "github.com/satori/go.uuid"
@@ -20,6 +21,11 @@ var (
 	homepage        = "static/index.html"
 	gameCreatedPage = "static/game-created.html"
 )
+
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+}
 
 type NewGameReq struct {
 	Name string `json:"name"`
@@ -85,6 +91,7 @@ func NewServer(store shed.GameStore) *GameServer {
 	router.Handle("/game/", http.HandlerFunc(s.HandleFindGame))
 	router.Handle("/join", http.HandlerFunc(s.HandleJoinGame))
 	router.Handle("/created", http.HandlerFunc(s.HandleCreatedGame))
+	router.Handle("/ws", http.HandlerFunc(s.HandleWS))
 
 	s.store = store
 
@@ -102,7 +109,7 @@ func (g *GameServer) HandleNewGame(w http.ResponseWriter, r *http.Request) {
 
 	var data NewGameReq
 	err := json.NewDecoder(r.Body).Decode(&data)
-	defer r.Body.Close() // why?
+	defer r.Body.Close()
 
 	if err != nil {
 		writeParseError(err, w, r)
@@ -236,6 +243,53 @@ func (g *GameServer) HandleJoinGame(w http.ResponseWriter, r *http.Request) {
 func (g *GameServer) HandleCreatedGame(w http.ResponseWriter, r *http.Request) {
 	// check if this person should get the file
 	servePage(w, gameCreatedPage)
+}
+
+func (g *GameServer) HandleWS(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	vals, ok := query["game_id"]
+	if !ok || len(vals) != 1 {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("could not parse game ID"))
+		return
+	}
+	gameID := vals[0]
+
+	vals, ok = query["user_id"]
+	if !ok || len(vals) != 1 {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("could not parse user ID"))
+		return
+	}
+
+	userID := vals[0]
+
+	game, ok := g.store.FindPendingGame(gameID)
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("unknown game id"))
+		return
+	}
+
+	ps := game.Players()
+	p, ok := ps.Find(userID)
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("unknown user id"))
+		return
+	}
+
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(fmt.Sprintf("could not upgrade to websocket: %v", err)))
+		return
+	}
+
+	// hook up player and connection
+
+	fmt.Println(p, conn)
 }
 
 func writeParseError(err error, w http.ResponseWriter, r *http.Request) {
