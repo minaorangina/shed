@@ -152,7 +152,12 @@ func newServerWithInactiveGame(ps players.Players) (*GameServer, string) {
 		InactiveGames: map[string]shed.GameEngine{
 			gameID: game,
 		},
-		PendingPlayers: map[string][]shed.PlayerInfo{},
+		PendingPlayers: map[string][]shed.PlayerInfo{
+			gameID: []shed.PlayerInfo{{
+				PlayerID: "pending-player-id",
+				Name:     "Penelope",
+			}},
+		},
 	}
 
 	server := NewServer(store)
