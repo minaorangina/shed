@@ -4,14 +4,13 @@ import (
 	"testing"
 
 	utils "github.com/minaorangina/shed/internal"
-	"github.com/minaorangina/shed/players"
 	"github.com/minaorangina/shed/protocol"
 )
 
 func TestBuildMessageToPlayer(t *testing.T) {
 	ge := gameEngineWithPlayers()
 	ps := ge.Players()
-	var opponents []players.Opponent
+	var opponents []Opponent
 	var id string
 	for _, p := range ps {
 		id = p.ID()
@@ -20,8 +19,8 @@ func TestBuildMessageToPlayer(t *testing.T) {
 	}
 
 	playerToContact, _ := ps.Find(id)
-	message := buildReorgMessage(playerToContact, opponents, players.InitialCards{}, "Let the games begin!")
-	expectedMessage := players.OutboundMessage{
+	message := buildReorgMessage(playerToContact, opponents, InitialCards{}, "Let the games begin!")
+	expectedMessage := OutboundMessage{
 		Message:   "Let the games begin!",
 		PlayerID:  playerToContact.ID(),
 		Name:      playerToContact.Name(),
@@ -40,9 +39,9 @@ func TestGameEngineMsgFromGame(t *testing.T) {
 	ge := gameEngineWithPlayers()
 	ge.Start() // mock required
 
-	messages := []players.OutboundMessage{}
-	want := []players.InboundMessage{}
-	initialCards := players.InitialCards{}
+	messages := []OutboundMessage{}
+	want := []InboundMessage{}
+	initialCards := InitialCards{}
 	for _, p := range ge.Players() {
 		o := buildOpponents(p.ID(), ge.Players())
 		m := buildReorgMessage(p, o, initialCards, "Rearrange your initial cards")
@@ -50,7 +49,7 @@ func TestGameEngineMsgFromGame(t *testing.T) {
 
 		cards := p.Cards()
 
-		want = append(want, players.InboundMessage{
+		want = append(want, InboundMessage{
 			PlayerID: p.ID(),
 			Hand:     cards.Hand,
 			Seen:     cards.Seen,

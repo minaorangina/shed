@@ -11,7 +11,6 @@ import (
 
 	"github.com/minaorangina/shed"
 	utils "github.com/minaorangina/shed/internal"
-	"github.com/minaorangina/shed/players"
 )
 
 type stubStore struct {
@@ -33,7 +32,7 @@ func (s *stubStore) FindInactiveGame(ID string) shed.GameEngine {
 
 // find pending player
 
-func (s *stubStore) AddInactiveGame(gameID string, creator players.Player) error {
+func (s *stubStore) AddInactiveGame(gameID string, creator shed.Player) error {
 	return nil
 }
 
@@ -78,7 +77,7 @@ func (s fakeStore) AddPendingPlayer(gameID, playerID, name string) error {
 	return nil
 }
 
-func (s fakeStore) AddPlayerToGame(gameID string, player players.Player) error {
+func (s fakeStore) AddPlayerToGame(gameID string, player shed.Player) error {
 	return nil
 }
 
@@ -123,7 +122,7 @@ func newJoinGameRequest(data []byte) *http.Request {
 	return request
 }
 
-func newTestGame(t *testing.T, gameID, playerID string, ps players.Players, setupFn func(shed.GameEngine) error) shed.GameEngine {
+func newTestGame(t *testing.T, gameID, playerID string, ps shed.Players, setupFn func(shed.GameEngine) error) shed.GameEngine {
 	game, err := shed.New(gameID, playerID, ps, setupFn)
 	utils.AssertNoError(t, err)
 
@@ -143,7 +142,7 @@ func newServerWithGame(game shed.GameEngine) http.Handler {
 	return NewServer(store)
 }
 
-func newServerWithInactiveGame(ps players.Players) (*GameServer, string) {
+func newServerWithInactiveGame(ps shed.Players) (*GameServer, string) {
 	gameID := "some-pending-id"
 	game, _ := shed.New(gameID, "", ps, nil)
 
@@ -165,7 +164,7 @@ func newServerWithInactiveGame(ps players.Players) (*GameServer, string) {
 	return server, gameID
 }
 
-func newTestServerWithInactiveGame(ps players.Players) (*httptest.Server, string) {
+func newTestServerWithInactiveGame(ps shed.Players) (*httptest.Server, string) {
 	gameID := "some-pending-id"
 	game, _ := shed.New(gameID, "", ps, nil)
 
@@ -195,7 +194,7 @@ func assertStatus(t *testing.T, got, want int) {
 	}
 }
 
-func assertJoinGameResponse(t *testing.T, body *bytes.Buffer, ps players.Players) {
+func assertJoinGameResponse(t *testing.T, body *bytes.Buffer, ps shed.Players) {
 	t.Helper()
 	bodyBytes, err := ioutil.ReadAll(body)
 	utils.AssertNoError(t, err)

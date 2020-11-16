@@ -1,4 +1,4 @@
-package players
+package shed
 
 import (
 	"github.com/minaorangina/shed/deck"

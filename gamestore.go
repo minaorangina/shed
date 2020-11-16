@@ -3,8 +3,6 @@ package shed
 import (
 	"errors"
 	"fmt"
-
-	"github.com/minaorangina/shed/players"
 )
 
 var (
@@ -25,7 +23,7 @@ type GameStore interface {
 	FindPendingPlayer(gameID, playerID string) *PlayerInfo
 	AddInactiveGame(engine GameEngine) error
 	AddPendingPlayer(gameID, playerID, name string) error
-	AddPlayerToGame(gameID string, player players.Player) error
+	AddPlayerToGame(gameID string, player Player) error
 	ActivateGame(gameID string) error
 }
 
@@ -94,7 +92,7 @@ func (s *InMemoryGameStore) AddPendingPlayer(gameID, playerID, name string) erro
 	return nil
 }
 
-func (s *InMemoryGameStore) AddPlayerToGame(gameID string, player players.Player) error {
+func (s *InMemoryGameStore) AddPlayerToGame(gameID string, player Player) error {
 	game := s.FindInactiveGame(gameID)
 	if game == nil {
 		return ErrFnUnknownPendingGameID(gameID)

@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	utils "github.com/minaorangina/shed/internal"
-	"github.com/minaorangina/shed/players"
 )
 
 func TestInMemoryGameStore(t *testing.T) {
@@ -50,7 +49,7 @@ func TestInMemoryGameStore(t *testing.T) {
 		gameID := "test-game-id"
 
 		store := NewTestGameStore(
-			newActiveGame(gameID, "", players.SomePlayers()),
+			newActiveGame(gameID, "", SomePlayers()),
 			nil, nil,
 		)
 
@@ -69,7 +68,7 @@ func TestInMemoryGameStore(t *testing.T) {
 		pendingID := "a-pending-game"
 		store := &InMemoryGameStore{
 			ActiveGames:    map[string]GameEngine{},
-			InactiveGames:  NewInactiveGame(pendingID, "creator-id", players.SomePlayers()),
+			InactiveGames:  NewInactiveGame(pendingID, "creator-id", SomePlayers()),
 			PendingPlayers: map[string][]PlayerInfo{},
 		}
 
@@ -87,12 +86,12 @@ func TestInMemoryGameStore(t *testing.T) {
 		pendingID := "a-pending-game"
 		store := NewTestGameStore(
 			nil,
-			NewInactiveGame(pendingID, "creator-id", players.SomePlayers()),
+			NewInactiveGame(pendingID, "creator-id", SomePlayers()),
 			nil,
 		)
 
 		playerID, playerName := "horatio-1", "Horatio"
-		playerToAdd := players.APlayer(playerID, playerName)
+		playerToAdd := APlayer(playerID, playerName)
 
 		err := store.AddPlayerToGame(pendingID, playerToAdd)
 		utils.AssertNoError(t, err)
@@ -109,7 +108,7 @@ func TestInMemoryGameStore(t *testing.T) {
 
 	t.Run("Disallows adding a player to an active game", func(t *testing.T) {
 		gameID := "test-game-id"
-		creator := players.NewPlayers(players.APlayer("some-player-id", "Horatio"))
+		creator := NewPlayers(APlayer("some-player-id", "Horatio"))
 
 		store := NewTestGameStore(
 			newActiveGame(gameID, "creator-id", creator),
@@ -128,7 +127,7 @@ func TestInMemoryGameStore(t *testing.T) {
 
 		store := NewTestGameStore(
 			nil,
-			NewInactiveGame(gameID, "creator-id", players.SomePlayers()),
+			NewInactiveGame(gameID, "creator-id", SomePlayers()),
 			nil,
 		)
 
@@ -156,12 +155,12 @@ func TestInMemoryGameStore(t *testing.T) {
 	})
 }
 
-func newActiveGame(gameID, playerID string, ps players.Players) map[string]GameEngine {
+func newActiveGame(gameID, playerID string, ps Players) map[string]GameEngine {
 	game, _ := New(gameID, playerID, ps, nil)
 	return map[string]GameEngine{gameID: game}
 }
 
-func NewInactiveGame(gameID, playerID string, ps players.Players) map[string]GameEngine {
+func NewInactiveGame(gameID, playerID string, ps Players) map[string]GameEngine {
 	game, _ := New(gameID, playerID, ps, nil)
 	return map[string]GameEngine{gameID: game}
 }

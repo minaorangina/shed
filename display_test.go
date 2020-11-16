@@ -1,4 +1,4 @@
-package players
+package shed
 
 import (
 	"testing"

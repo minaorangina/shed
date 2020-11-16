@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	utils "github.com/minaorangina/shed/internal"
-	"github.com/minaorangina/shed/players"
 )
 
 type spySetup struct {
@@ -33,7 +32,7 @@ func TestGameEngineAddPlayer(t *testing.T) {
 		name := "Héloise"
 		ge := gameEngineWithPlayers()
 
-		err := ge.AddPlayer(players.APlayer(playerID, name))
+		err := ge.AddPlayer(APlayer(playerID, name))
 		utils.AssertNoError(t, err)
 
 		ps := ge.Players()
@@ -52,7 +51,7 @@ func TestGameEngineInit(t *testing.T) {
 	t.Run("has an ID", func(t *testing.T) {
 		gameID := "thisistheid"
 		playerID := "i created it"
-		engine, err := New(gameID, playerID, players.SomePlayers(), nil)
+		engine, err := New(gameID, playerID, SomePlayers(), nil)
 		utils.AssertNoError(t, err)
 
 		utils.AssertEqual(t, engine.ID(), gameID)
@@ -61,7 +60,7 @@ func TestGameEngineInit(t *testing.T) {
 	t.Run("has the user ID of the creator", func(t *testing.T) {
 		gameID := "thisistheid"
 		playerID := "i created it"
-		engine, err := New(gameID, playerID, players.SomePlayers(), nil)
+		engine, err := New(gameID, playerID, SomePlayers(), nil)
 		utils.AssertNoError(t, err)
 
 		utils.AssertEqual(t, engine.CreatorID(), playerID)
@@ -70,7 +69,7 @@ func TestGameEngineInit(t *testing.T) {
 func TestGameEngineSetupFn(t *testing.T) {
 	t.Run("sets up correctly", func(t *testing.T) {
 		spy := spySetup{}
-		engine, err := New("", "", players.SomePlayers(), spy.setup)
+		engine, err := New("", "", SomePlayers(), spy.setup)
 		utils.AssertNoError(t, err)
 
 		err = engine.Setup()
@@ -84,7 +83,7 @@ func TestGameEngineSetupFn(t *testing.T) {
 	t.Run("requires legal number of players", func(t *testing.T) {
 		type gameTest struct {
 			testName string
-			input    players.Players
+			input    Players
 			want     error
 		}
 		testsShouldError := []gameTest{
@@ -109,7 +108,7 @@ func TestGameEngineSetupFn(t *testing.T) {
 	})
 
 	t.Run("does not error if no setup fn defined", func(t *testing.T) {
-		engine, err := New("", "", players.SomePlayers(), nil)
+		engine, err := New("", "", SomePlayers(), nil)
 		utils.AssertNoError(t, err)
 
 		err = engine.Setup()
@@ -120,7 +119,7 @@ func TestGameEngineSetupFn(t *testing.T) {
 		erroringSetupFn := func(ge GameEngine) error {
 			return errors.New("Whoops")
 		}
-		engine, err := New("", "", players.SomePlayers(), erroringSetupFn)
+		engine, err := New("", "", SomePlayers(), erroringSetupFn)
 		utils.AssertNoError(t, err)
 
 		err = engine.Setup()
@@ -135,7 +134,7 @@ func TestGameEngineStart(t *testing.T) {
 
 		type gameTest struct {
 			testName string
-			input    players.Players
+			input    Players
 			want     error
 		}
 		testsShouldError := []gameTest{

@@ -5,16 +5,15 @@ import (
 	"net/http"
 
 	"github.com/minaorangina/shed"
-	"github.com/minaorangina/shed/players"
 	"github.com/minaorangina/shed/server"
 )
 
 func main() {
 
-	player1 := players.NewWSPlayer(players.NewID(), "Harry", nil)
-	player2 := players.NewWSPlayer(players.NewID(), "Sally", nil)
+	player1 := shed.NewWSPlayer(shed.NewID(), "Harry", nil)
+	player2 := shed.NewWSPlayer(shed.NewID(), "Sally", nil)
 
-	ps := players.NewPlayers(player1, player2)
+	ps := shed.NewPlayers(player1, player2)
 
 	ge, err := shed.New("", "", ps, shed.HandleInitialCards)
 	if err != nil {

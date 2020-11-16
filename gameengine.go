@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/minaorangina/shed/deck"
-	"github.com/minaorangina/shed/players"
 )
 
 // playState represents the state of the current game
@@ -34,19 +33,19 @@ const (
 type GameEngine interface {
 	Setup() error
 	Start() error
-	MessagePlayers([]players.OutboundMessage) error
+	MessagePlayers([]OutboundMessage) error
 	Deck() deck.Deck
-	Players() players.Players
+	Players() Players
 	ID() string
 	CreatorID() string
-	AddPlayer(players.Player) error
+	AddPlayer(Player) error
 }
 
 type gameEngine struct {
 	id        string
 	creatorID string
 	playState playState
-	players   players.Players
+	players   Players
 	stage     Stage
 	deck      deck.Deck
 	setupFn   func(GameEngine) error
@@ -58,7 +57,7 @@ var (
 )
 
 // New constructs a new GameEngine
-func New(gameID string, creatorID string, players players.Players, setupFn func(GameEngine) error) (GameEngine, error) {
+func New(gameID string, creatorID string, players Players, setupFn func(GameEngine) error) (GameEngine, error) {
 	engine := gameEngine{
 		id:        gameID,
 		creatorID: creatorID,
@@ -92,9 +91,9 @@ func (ge *gameEngine) Setup() error {
 }
 
 // AddPlayer adds a player to a game
-func (ge *gameEngine) AddPlayer(p players.Player) error {
+func (ge *gameEngine) AddPlayer(p Player) error {
 	ps := ge.Players()
-	ge.players = players.AddPlayer(ps, p)
+	ge.players = AddPlayer(ps, p)
 	return nil
 }
 
@@ -125,7 +124,7 @@ func (ge *gameEngine) CheckNumPlayers() error {
 	return nil
 }
 
-func (ge *gameEngine) MessagePlayers(messages []players.OutboundMessage) error {
+func (ge *gameEngine) MessagePlayers(messages []OutboundMessage) error {
 	return messagePlayersAwaitReply(ge.Players(), messages)
 }
 
@@ -133,14 +132,14 @@ func (ge *gameEngine) Deck() deck.Deck {
 	return ge.deck
 }
 
-func (ge *gameEngine) Players() players.Players {
+func (ge *gameEngine) Players() Players {
 	// mutex?
 	return ge.players
 }
 
 func messagePlayersAwaitReply(
-	ps players.Players,
-	messages []players.OutboundMessage,
+	ps Players,
+	messages []OutboundMessage,
 ) error {
 	for _, m := range messages {
 		if p, ok := ps.Find(m.PlayerID); ok {
@@ -149,7 +148,7 @@ func messagePlayersAwaitReply(
 		}
 	}
 
-	// responses := []players.InboundMessage{}
+	// responses := []InboundMessage{}
 	// for i := 0; i < len(messages); i++ {
 	// 	resp := <-ch
 	// 	responses = append(responses, resp)

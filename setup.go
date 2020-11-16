@@ -2,7 +2,6 @@ package shed
 
 import (
 	"github.com/minaorangina/shed/deck"
-	"github.com/minaorangina/shed/players"
 )
 
 // HandleInitialCards is the setup function for Shed
@@ -24,7 +23,7 @@ func HandleInitialCards(ge GameEngine) error {
 	}
 
 	// block to get initial cards here or something
-	confirmed := map[string]players.PlayerCards{}
+	confirmed := map[string]PlayerCards{}
 
 	// assign cards
 	for _, p := range ge.Players() {
@@ -36,20 +35,20 @@ func HandleInitialCards(ge GameEngine) error {
 	return nil
 }
 
-func dealUnseenCards(deck deck.Deck, ps players.Players) {
+func dealUnseenCards(deck deck.Deck, ps Players) {
 	for _, p := range ps {
 		cards := p.Cards()
 		cards.Unseen = deck.Deal(3)
 	}
 }
 
-func dealInitialCards(deck deck.Deck, ps players.Players) map[string]players.InitialCards {
-	cards := map[string]players.InitialCards{}
+func dealInitialCards(deck deck.Deck, ps Players) map[string]InitialCards {
+	cards := map[string]InitialCards{}
 	for _, p := range ps {
 		dealtHand := deck.Deal(3)
 		dealtSeen := deck.Deal(3)
 
-		ic := players.InitialCards{
+		ic := InitialCards{
 			Hand: dealtHand,
 			Seen: dealtSeen,
 		}
@@ -60,11 +59,11 @@ func dealInitialCards(deck deck.Deck, ps players.Players) map[string]players.Ini
 }
 
 func confirmInitialCards(
-	ps players.Players,
-	ic map[string]players.InitialCards,
-	messageFn func([]players.OutboundMessage) error,
+	ps Players,
+	ic map[string]InitialCards,
+	messageFn func([]OutboundMessage) error,
 ) error {
-	messages := []players.OutboundMessage{}
+	messages := []OutboundMessage{}
 	for _, p := range ps {
 		playerID := p.ID()
 		o := buildOpponents(playerID, ps)
@@ -78,13 +77,13 @@ func confirmInitialCards(
 
 // to test (easier when state hydration exists)
 func buildReorgMessage(
-	player players.Player,
-	opponents []players.Opponent,
-	initialCards players.InitialCards,
+	player Player,
+	opponents []Opponent,
+	initialCards InitialCards,
 	message string,
-) players.OutboundMessage {
+) OutboundMessage {
 
-	return players.OutboundMessage{
+	return OutboundMessage{
 		PlayerID:  player.ID(),
 		Name:      player.Name(),
 		Message:   message,

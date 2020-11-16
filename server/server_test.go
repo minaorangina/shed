@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/gorilla/websocket"
+	"github.com/minaorangina/shed"
 	utils "github.com/minaorangina/shed/internal"
-	"github.com/minaorangina/shed/players"
 )
 
 func TestServerPing(t *testing.T) {
@@ -76,7 +76,7 @@ func TestGETGameWaitingRoom(t *testing.T) {
 
 func TestJoinGame(t *testing.T) {
 	t.Run("POST /join returns 200 for existing game", func(t *testing.T) {
-		server, pendingID := newServerWithInactiveGame(players.SomePlayers())
+		server, pendingID := newServerWithInactiveGame(shed.SomePlayers())
 
 		joiningPlayerName := "Heloise"
 		data := mustMakeJson(t, JoinGameReq{pendingID, joiningPlayerName})
@@ -106,7 +106,7 @@ func TestJoinGame(t *testing.T) {
 		response := httptest.NewRecorder()
 		request := newJoinGameRequest(nil)
 
-		game := newTestGame(t, "some-game-id", "", players.SomePlayers(), nil)
+		game := newTestGame(t, "some-game-id", "", shed.SomePlayers(), nil)
 		server := newServerWithGame(game)
 
 		server.ServeHTTP(response, request)
@@ -115,7 +115,7 @@ func TestJoinGame(t *testing.T) {
 	})
 
 	t.Run("POST /join returns 404 for an unknown game id", func(t *testing.T) {
-		server, _ := newServerWithInactiveGame(players.SomePlayers())
+		server, _ := newServerWithInactiveGame(shed.SomePlayers())
 
 		data := mustMakeJson(t, JoinGameReq{"some-game-id", "Heloise"})
 
@@ -167,7 +167,7 @@ func TestServerGETGame(t *testing.T) {
 	})
 
 	t.Run("returns an existing pending game", func(t *testing.T) {
-		server, pendingID := newServerWithInactiveGame(players.SomePlayers())
+		server, pendingID := newServerWithInactiveGame(shed.SomePlayers())
 
 		request := newGetGameRequest(pendingID)
 		response := httptest.NewRecorder()
@@ -211,8 +211,8 @@ func TestWS(t *testing.T) {
 
 	t.Run("Rejects if pending game doesn't exist", func(t *testing.T) {
 		name, playerID := "Delilah", "delilah1"
-		p := players.APlayer(playerID, name)
-		ps := players.NewPlayers(p)
+		p := shed.APlayer(playerID, name)
+		ps := shed.NewPlayers(p)
 
 		server, _ := newTestServerWithInactiveGame(ps)
 		defer server.Close()

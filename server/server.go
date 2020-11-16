@@ -11,7 +11,6 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/minaorangina/shed"
-	"github.com/minaorangina/shed/players"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -297,7 +296,7 @@ func (g *GameServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// create player
-	player := players.NewWSPlayer(playerID, pendingPlayer.Name, rawConn)
+	player := shed.NewWSPlayer(playerID, pendingPlayer.Name, rawConn)
 
 	fmt.Println(player)
 	// reference to hub etc
