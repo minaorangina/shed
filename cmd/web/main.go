@@ -16,7 +16,7 @@ func main() {
 
 	ps := players.NewPlayers(player1, player2)
 
-	ge, err := shed.New("", ps, shed.HandleInitialCards)
+	ge, err := shed.New("", "", ps, shed.HandleInitialCards)
 	if err != nil {
 		log.Fatal(err.Error())
 	}

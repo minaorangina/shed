@@ -18,6 +18,15 @@ func (s *spySetup) setup(ge GameEngine) error {
 	return nil
 }
 
+func TestGameEngineConstructor(t *testing.T) {
+	creatorID := "hermione-1"
+	t.Run("keeps track of who created it", func(t *testing.T) {
+		engine, err := New("some-id", creatorID, nil, nil)
+		utils.AssertNoError(t, err)
+		utils.AssertEqual(t, engine.CreatorID(), creatorID)
+	})
+}
+
 func TestGameEngineAddPlayer(t *testing.T) {
 	t.Run("can add more players", func(t *testing.T) {
 		playerID := "some-player-id"
@@ -41,17 +50,27 @@ func TestGameEngineInit(t *testing.T) {
 		}
 	})
 	t.Run("has an ID", func(t *testing.T) {
-		id := "thisistheid"
-		engine, err := New(id, players.SomePlayers(), nil)
+		gameID := "thisistheid"
+		userID := "i created it"
+		engine, err := New(gameID, userID, players.SomePlayers(), nil)
 		utils.AssertNoError(t, err)
 
-		utils.AssertEqual(t, engine.ID(), id)
+		utils.AssertEqual(t, engine.ID(), gameID)
+	})
+
+	t.Run("has the user ID of the creator", func(t *testing.T) {
+		gameID := "thisistheid"
+		userID := "i created it"
+		engine, err := New(gameID, userID, players.SomePlayers(), nil)
+		utils.AssertNoError(t, err)
+
+		utils.AssertEqual(t, engine.CreatorID(), userID)
 	})
 }
 func TestGameEngineSetupFn(t *testing.T) {
 	t.Run("sets up correctly", func(t *testing.T) {
 		spy := spySetup{}
-		engine, err := New("", players.SomePlayers(), spy.setup)
+		engine, err := New("", "", players.SomePlayers(), spy.setup)
 		utils.AssertNoError(t, err)
 
 		err = engine.Setup()
@@ -82,7 +101,7 @@ func TestGameEngineSetupFn(t *testing.T) {
 		}
 
 		for _, et := range testsShouldError {
-			ge, err := New("", et.input, nil)
+			ge, err := New("", "", et.input, nil)
 			utils.AssertNoError(t, err)
 			err = ge.Setup()
 			utils.AssertEqual(t, err.Error(), et.want.Error())
@@ -90,7 +109,7 @@ func TestGameEngineSetupFn(t *testing.T) {
 	})
 
 	t.Run("does not error if no setup fn defined", func(t *testing.T) {
-		engine, err := New("", players.SomePlayers(), nil)
+		engine, err := New("", "", players.SomePlayers(), nil)
 		utils.AssertNoError(t, err)
 
 		err = engine.Setup()
@@ -101,7 +120,7 @@ func TestGameEngineSetupFn(t *testing.T) {
 		erroringSetupFn := func(ge GameEngine) error {
 			return errors.New("Whoops")
 		}
-		engine, err := New("", players.SomePlayers(), erroringSetupFn)
+		engine, err := New("", "", players.SomePlayers(), erroringSetupFn)
 		utils.AssertNoError(t, err)
 
 		err = engine.Setup()
@@ -133,7 +152,7 @@ func TestGameEngineStart(t *testing.T) {
 		}
 
 		for _, et := range testsShouldError {
-			ge, err := New("", et.input, nil)
+			ge, err := New("", "", et.input, nil)
 			utils.AssertNoError(t, err)
 			err = ge.Start()
 			utils.AssertEqual(t, err.Error(), et.want.Error())

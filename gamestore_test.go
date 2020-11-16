@@ -141,12 +141,12 @@ func TestInMemoryGameStore(t *testing.T) {
 	})
 }
 
-func newActiveGame(gameID string, ps players.Players) map[string]GameEngine {
-	game, _ := New(gameID, ps, nil)
+func newActiveGame(gameID, userID string, ps players.Players) map[string]GameEngine {
+	game, _ := New(gameID, userID, ps, nil)
 	return map[string]GameEngine{gameID: game}
 }
 
-func NewPendingGame(gameID string, ps players.Players) map[string]GameEngine {
-	game, _ := New(gameID, ps, nil)
+func NewInactiveGame(gameID, userID string, ps players.Players) map[string]GameEngine {
+	game, _ := New(gameID, userID, ps, nil)
 	return map[string]GameEngine{gameID: game}
 }

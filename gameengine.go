@@ -30,11 +30,6 @@ const (
 	paused
 )
 
-type playerInfo struct {
-	id   string
-	name string
-}
-
 // GameEngine represents the engine of the game
 type GameEngine interface {
 	Setup() error
@@ -43,11 +38,13 @@ type GameEngine interface {
 	Deck() deck.Deck
 	Players() players.Players
 	ID() string
+	CreatorID() string
 	AddPlayer(players.Player) error
 }
 
 type gameEngine struct {
 	id        string
+	creatorID string
 	playState playState
 	players   players.Players
 	stage     Stage
@@ -61,12 +58,13 @@ var (
 )
 
 // New constructs a new GameEngine
-func New(id string, players players.Players, setupFn func(GameEngine) error) (GameEngine, error) {
+func New(gameID string, creatorID string, players players.Players, setupFn func(GameEngine) error) (GameEngine, error) {
 	engine := gameEngine{
-		id:      id,
-		players: players,
-		deck:    deck.New(),
-		setupFn: setupFn,
+		id:        gameID,
+		creatorID: creatorID,
+		players:   players,
+		deck:      deck.New(),
+		setupFn:   setupFn,
 	}
 
 	return &engine, nil
@@ -74,6 +72,10 @@ func New(id string, players players.Players, setupFn func(GameEngine) error) (Ga
 
 func (ge *gameEngine) ID() string {
 	return ge.id
+}
+
+func (ge *gameEngine) CreatorID() string {
+	return ge.creatorID
 }
 
 // Setup does any pre-game setup required
