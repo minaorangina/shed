@@ -54,7 +54,7 @@ type GetGameRes struct {
 // GameServer is a game server
 type GameServer struct {
 	store shed.GameStore
-	http.Handler
+	http.Server
 }
 
 func NewID() string {
@@ -98,6 +98,11 @@ func NewServer(store shed.GameStore) *GameServer {
 	s.Handler = router
 
 	return s
+}
+
+// ServeHTTP serves http
+func (g *GameServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	g.Handler.ServeHTTP(w, r)
 }
 
 // HandleNewGame handles a request to create a new game
