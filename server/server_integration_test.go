@@ -7,13 +7,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/minaorangina/shed"
 	utils "github.com/minaorangina/shed/internal"
 )
 
 func TestCreateAndJoinNewGame(t *testing.T) {
 	name := "Ingrid"
-	server := NewServer(shed.NewInMemoryGameStore(nil, nil))
+	server := NewServer(NewBasicStore())
 
 	data := mustMakeJson(t, NewGameReq{Name: name})
 

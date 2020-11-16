@@ -9,103 +9,116 @@ import (
 
 func TestInMemoryGameStore(t *testing.T) {
 	t.Run("Constructor prevents nil struct members", func(t *testing.T) {
-		store := NewInMemoryGameStore(nil, nil)
-		if store.ActiveGames() == nil {
-			t.Error("gamestore.game was nil")
+		store := NewInMemoryGameStore()
+		if store.ActiveGames == nil {
+			t.Error("Active games was nil")
 		}
-		if store.PendingGames() == nil {
-			t.Error("gamestore.pending was nil")
+		if store.InactiveGames == nil {
+			t.Error("Pending games was nil")
+		}
+		if store.PendingPlayers == nil {
+			t.Error("Pending players was nil")
 		}
 	})
 
 	t.Run("Can create a new pending game", func(t *testing.T) {
-		gameID := "some-game-id"
-		playerID := "player-1"
-		creator := players.APlayer(playerID, "Hermione")
 
-		store := NewInMemoryGameStore(nil, nil)
-
-		err := store.AddPendingGame(gameID, creator)
-		utils.AssertNoError(t, err)
-
-		game, ok := store.FindPendingGame(gameID)
-		utils.AssertTrue(t, ok)
-
-		ps := game.Players()
-		_, ok = ps.Find(playerID)
-		utils.AssertTrue(t, ok)
 	})
 
-	t.Run("Can retrieve existing active game", func(t *testing.T) {
-		id := "test-game-id"
+	t.Run("Can add pending players", func(t *testing.T) {
+		gameID := "some-game-id"
+		playerID, playerName := "player-1", "Hermione"
+		engine, err := New(gameID, playerID, nil, nil)
+		utils.AssertNoError(t, err)
 
-		store := NewInMemoryGameStore(
-			newActiveGame(id, players.SomePlayers()),
+		store := NewTestGameStore(
+			nil,
+			map[string]GameEngine{
+				gameID: engine,
+			},
 			nil,
 		)
 
-		game, ok := store.FindActiveGame(id)
-		utils.AssertTrue(t, ok)
+		err = store.AddPendingPlayer(gameID, playerID, playerName)
+		utils.AssertNoError(t, err)
+
+		pendingInfo := store.FindPendingPlayer(gameID, playerID)
+		utils.AssertNotNil(t, pendingInfo)
+	})
+
+	t.Run("Can retrieve existing active game", func(t *testing.T) {
+		gameID := "test-game-id"
+
+		store := NewTestGameStore(
+			newActiveGame(gameID, "", players.SomePlayers()),
+			nil, nil,
+		)
+
+		game := store.FindActiveGame(gameID)
 		utils.AssertNotNil(t, game)
 	})
 
 	t.Run("Handles a non-existent active game", func(t *testing.T) {
-		store := NewInMemoryGameStore(nil, nil)
-		_, ok := store.FindActiveGame("fake-id")
+		store := NewInMemoryGameStore()
+		game := store.FindActiveGame("fake-id")
 
-		utils.AssertEqual(t, ok, false)
+		utils.AssertEqual(t, game, nil)
 	})
 
 	t.Run("Can retrieve existing pending game", func(t *testing.T) {
 		pendingID := "a-pending-game"
-		store := NewInMemoryGameStore(
-			nil,
-			NewPendingGame(pendingID, players.SomePlayers()),
-		)
+		store := &InMemoryGameStore{
+			ActiveGames:    map[string]GameEngine{},
+			InactiveGames:  NewInactiveGame(pendingID, "creator-id", players.SomePlayers()),
+			PendingPlayers: map[string][]PlayerInfo{},
+		}
 
-		game, ok := store.FindPendingGame(pendingID)
-
-		utils.AssertTrue(t, ok)
+		game := store.FindInactiveGame(pendingID)
 		utils.AssertNotNil(t, game)
 	})
 
 	t.Run("Handles a non-existent pending game", func(t *testing.T) {
-		store := NewInMemoryGameStore(nil, nil)
-		_, ok := store.FindPendingGame("fake-id")
-		utils.AssertEqual(t, ok, false)
+		store := NewInMemoryGameStore()
+		game := store.FindInactiveGame("fake-id")
+		utils.AssertEqual(t, game, nil)
 	})
 
-	t.Run("Can add a player to a pending game", func(t *testing.T) {
+	t.Run("Can add a player to an inactive game", func(t *testing.T) {
 		pendingID := "a-pending-game"
-		store := NewInMemoryGameStore(
+		store := NewTestGameStore(
 			nil,
-			NewPendingGame(pendingID, players.SomePlayers()),
+			NewInactiveGame(pendingID, "creator-id", players.SomePlayers()),
+			nil,
 		)
 
-		playerToAdd := players.APlayer("player-id", "Horatio")
-		err := store.AddToPendingPlayers(pendingID, playerToAdd)
+		playerID, playerName := "horatio-1", "Horatio"
+		playerToAdd := players.APlayer(playerID, playerName)
+
+		err := store.AddPlayerToGame(pendingID, playerToAdd)
 		utils.AssertNoError(t, err)
 
-		pendingGame, ok := store.FindPendingGame(pendingID)
-		utils.AssertTrue(t, ok)
+		game := store.FindInactiveGame(pendingID)
+		utils.AssertNotNil(t, game)
 
-		pendingPlayers := pendingGame.Players()
-		got, ok := pendingPlayers.Find(playerToAdd.ID())
+		ps := game.Players()
+		p, ok := ps.Find(playerID)
+
 		utils.AssertTrue(t, ok)
-		utils.AssertEqual(t, got, playerToAdd)
+		utils.AssertEqual(t, p, playerToAdd)
 	})
 
 	t.Run("Disallows adding a player to an active game", func(t *testing.T) {
 		gameID := "test-game-id"
 		creator := players.NewPlayers(players.APlayer("some-player-id", "Horatio"))
 
-		store := NewInMemoryGameStore(
-			newActiveGame(gameID, creator),
+		store := NewTestGameStore(
+			newActiveGame(gameID, "creator-id", creator),
+			nil,
 			nil,
 		)
 
-		playerToAdd := players.APlayer("player-1", "Neville")
-		err := store.AddToPendingPlayers(gameID, playerToAdd)
+		playerID, playerName := "player-1", "Neville"
+		err := store.AddPendingPlayer(gameID, playerID, playerName)
 
 		utils.AssertErrored(t, err)
 	})
@@ -113,26 +126,28 @@ func TestInMemoryGameStore(t *testing.T) {
 	t.Run("Can activate a pending game", func(t *testing.T) {
 		gameID := "some-game-ID"
 
-		store := NewInMemoryGameStore(
+		store := NewTestGameStore(
 			nil,
-			NewPendingGame(gameID, players.SomePlayers()),
+			NewInactiveGame(gameID, "creator-id", players.SomePlayers()),
+			nil,
 		)
 
 		err := store.ActivateGame(gameID)
 		utils.AssertNoError(t, err)
 
-		_, ok := store.FindActiveGame(gameID)
-		utils.AssertTrue(t, ok)
+		game := store.FindActiveGame(gameID)
+		utils.AssertNotNil(t, game)
 
-		_, ok = store.FindPendingGame(gameID)
-		utils.AssertEqual(t, ok, false)
+		game = store.FindInactiveGame(gameID)
+		utils.AssertEqual(t, game, nil)
 	})
 
 	t.Run("Activating an already-active game is a no-op", func(t *testing.T) {
 		gameID := "this-is-a-game-id"
 
-		store := NewInMemoryGameStore(
-			newActiveGame(gameID, nil),
+		store := NewTestGameStore(
+			newActiveGame(gameID, "creator-id", nil),
+			nil,
 			nil,
 		)
 

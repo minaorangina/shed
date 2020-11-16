@@ -22,7 +22,8 @@ func main() {
 	}
 	ge.Start()
 
-	s := server.NewServer(shed.NewInMemoryGameStore(nil, nil))
+	s := server.NewServer(shed.NewInMemoryGameStore())
 	log.Println("Listening on port 8000...")
 	log.Fatal(http.ListenAndServe(":8000", s))
+	// log.Fatal(s.ListenAndServe(":8000"))
 }
