@@ -7,8 +7,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
+	"github.com/gorilla/websocket"
 	"github.com/minaorangina/shed"
 	utils "github.com/minaorangina/shed/internal"
 )
@@ -181,6 +183,8 @@ func newTestServerWithInactiveGame(ps shed.Players) (*httptest.Server, string) {
 	return server, gameID
 }
 
+// newTestServer starts and returns a new server.
+// The caller must call close to shut it down.
 func newTestServer(store shed.GameStore) *httptest.Server {
 	return httptest.NewServer(NewServer(store))
 }
@@ -230,4 +234,19 @@ func assertNewGameResponse(t *testing.T, body *bytes.Buffer, want string) {
 	if len(got.PlayerID) == 0 {
 		t.Error("expected a player id")
 	}
+}
+
+func mustDialWS(t *testing.T, url string) *websocket.Conn {
+	ws, resp, err := websocket.DefaultDialer.Dial(url, nil)
+
+	if err != nil {
+		t.Fatalf("could not open a ws connection on %s, code %d: %v", url, resp.StatusCode, err)
+	}
+
+	return ws
+}
+
+func makeWSUrl(serverURL, gameID, playerID string) string {
+	return "ws" + strings.Trim(serverURL, "http") +
+		"/ws?game_id=" + gameID + "&player_id=" + playerID
 }

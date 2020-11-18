@@ -89,3 +89,12 @@ func AssertNotNil(t *testing.T, got interface{}) {
 		t.Error("Value is unexpectedly nil")
 	}
 }
+
+// AssertNotEmptyString checks the string is not the empty string
+func AssertNotEmptyString(t *testing.T, got string) {
+	t.Helper()
+
+	if got == "" {
+		t.Error("unexpected empty string")
+	}
+}

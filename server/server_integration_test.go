@@ -1,55 +1,104 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	utils "github.com/minaorangina/shed/internal"
 )
 
 func TestCreateAndJoinNewGame(t *testing.T) {
+	// Given a request to create a new game
 	name := "Ingrid"
-	server := NewServer(NewBasicStore())
+	store := NewBasicStore()
+	server := newTestServer(store)
+	defer server.Close()
 
 	data := mustMakeJson(t, NewGameReq{Name: name})
+	url := server.URL + "/new"
 
-	response := httptest.NewRecorder()
-	request := newCreateGameRequest(data)
+	response, err := http.Post(url, "application/json", bytes.NewReader(data))
+	utils.AssertNoError(t, err)
+	defer response.Body.Close()
 
-	server.ServeHTTP(response, request)
+	// the request succeeds
+	assertStatus(t, response.StatusCode, http.StatusCreated)
 
-	assertStatus(t, response.Code, http.StatusCreated)
-
-	bodyBytes, err := ioutil.ReadAll(response.Result().Body)
+	bodyBytes, err := ioutil.ReadAll(response.Body)
 	utils.AssertNoError(t, err)
 
-	var payload NewGameRes
-	err = json.Unmarshal(bodyBytes, &payload)
-	utils.AssertNoError(t, err)
+	// the payload contains the correct data
+	var createPayload NewGameRes
+	err = json.Unmarshal(bodyBytes, &createPayload)
 
+	utils.AssertNoError(t, err)
+	utils.AssertNotEmptyString(t, createPayload.GameID)
+	utils.AssertNotEmptyString(t, createPayload.PlayerID)
+
+	// an entry for the game exists in the store
+	game := store.FindInactiveGame(createPayload.GameID)
+	utils.AssertNotNil(t, game)
+
+	// and a pending player is created
+	utils.AssertNotNil(t, store.FindPendingPlayer(createPayload.GameID, createPayload.PlayerID))
+
+	// Given a successful upgrade to WS for the creator
+	url = makeWSUrl(server.URL, createPayload.GameID, createPayload.PlayerID)
+	conn := mustDialWS(t, url)
+	defer conn.Close()
+
+	// a Player is created
+	ps := game.Players()
+	_, ok := ps.Find(createPayload.PlayerID)
+	utils.AssertTrue(t, ok)
+
+	// and the pending player entry is NOT removed
+	// (placeholder for real auth)
+	utils.AssertNotNil(t,
+		store.FindPendingPlayer(createPayload.GameID, createPayload.PlayerID))
+
+	// Given a request by a new joiner to join the game
 	joinerName := "Astrid"
-	data = mustMakeJson(t, JoinGameReq{GameID: payload.GameID, Name: joinerName})
+	data = mustMakeJson(t, JoinGameReq{GameID: createPayload.GameID, Name: joinerName})
+	url = server.URL + "/join"
 
-	joinResponse := httptest.NewRecorder()
-	joinRequest := newJoinGameRequest(data)
+	response, err = http.Post(url, "application/json", bytes.NewBuffer(data))
+	utils.AssertNoError(t, err)
+	defer response.Body.Close()
 
-	server.ServeHTTP(joinResponse, joinRequest)
+	// the request succeeds
+	assertStatus(t, response.StatusCode, http.StatusOK)
 
-	assertStatus(t, joinResponse.Code, http.StatusOK)
-
-	bodyBytes, err = ioutil.ReadAll(joinResponse.Body)
+	bodyBytes, err = ioutil.ReadAll(response.Body)
 	utils.AssertNoError(t, err)
 
-	var got JoinGameRes
-	err = json.Unmarshal(bodyBytes, &got)
+	// the payload contains the correct data
+	var joinPayload JoinGameRes
+	err = json.Unmarshal(bodyBytes, &joinPayload)
 	utils.AssertNoError(t, err)
+	utils.AssertNotEmptyString(t, joinPayload.PlayerID)
 
-	if got.PlayerID == "" {
-		t.Error("Expected a player id")
-	}
+	// and a pending player is created
+	utils.AssertNotNil(t,
+		store.FindPendingPlayer(createPayload.GameID, joinPayload.PlayerID))
+
+	// Given a successful upgrade to WS for the new joiner
+	url = makeWSUrl(server.URL, createPayload.GameID, joinPayload.PlayerID)
+	conn = mustDialWS(t, url)
+	defer conn.Close()
+
+	// a Player was created
+	ps = game.Players()
+	_, ok = ps.Find(joinPayload.PlayerID)
+	utils.AssertTrue(t, ok)
+
+	// and the pending player entry is NOT removed
+	// (placeholder for real auth)
+	utils.AssertNotNil(t,
+		store.FindPendingPlayer(createPayload.GameID, joinPayload.PlayerID))
 }
 func TestRearrangingHand(t *testing.T) {
 	// players := SomePlayers()

@@ -127,6 +127,8 @@ func (g *GameServer) HandleNewGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// get hub running
+
 	err = g.store.AddInactiveGame(game)
 	if err != nil {
 		log.Println(err.Error())
@@ -298,8 +300,14 @@ func (g *GameServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 	// create player
 	player := shed.NewWSPlayer(playerID, pendingPlayer.Name, rawConn)
 
-	fmt.Println(player)
 	// reference to hub etc
+	err = game.AddPlayer(player)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(fmt.Sprintf("could not add player to game: %v", err)))
+		return
+	}
 }
 
 func writeParseError(err error, w http.ResponseWriter, r *http.Request) {

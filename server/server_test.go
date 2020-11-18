@@ -249,13 +249,3 @@ func TestWS(t *testing.T) {
 		utils.AssertNotNil(t, ws)
 	})
 }
-
-func mustDialWS(t *testing.T, url string) *websocket.Conn {
-	ws, _, err := websocket.DefaultDialer.Dial(url, nil)
-
-	if err != nil {
-		t.Fatalf("could not open a ws connection on %s %v", url, err)
-	}
-
-	return ws
-}
