@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/minaorangina/shed/deck"
+	"github.com/minaorangina/shed/protocol"
 )
 
 // playState represents the state of the current game
@@ -41,14 +42,18 @@ type GameEngine interface {
 	AddPlayer(Player) error
 }
 
+// gameEngine represents the engine of the game
+
 type gameEngine struct {
-	id        string
-	creatorID string
-	playState playState
-	players   Players
-	stage     Stage
-	deck      deck.Deck
-	setupFn   func(GameEngine) error
+	id          string
+	creatorID   string
+	playState   playState
+	players     Players
+	registerCh  chan Player
+	broadcastCh chan []byte
+	stage       Stage
+	deck        deck.Deck
+	setupFn     func(GameEngine) error
 }
 
 var (
@@ -57,16 +62,21 @@ var (
 )
 
 // New constructs a new GameEngine
-func New(gameID string, creatorID string, players Players, setupFn func(GameEngine) error) (GameEngine, error) {
-	engine := gameEngine{
-		id:        gameID,
-		creatorID: creatorID,
-		players:   players,
-		deck:      deck.New(),
-		setupFn:   setupFn,
+func New(gameID string, creatorID string, players Players, setupFn func(GameEngine) error) (*gameEngine, error) {
+	engine := &gameEngine{
+		id:          gameID,
+		creatorID:   creatorID,
+		players:     players,
+		registerCh:  make(chan Player),
+		broadcastCh: make(chan []byte),
+		deck:        deck.New(),
+		setupFn:     setupFn,
 	}
 
-	return &engine, nil
+	// Listen for websocket connections
+	go engine.Listen()
+
+	return engine, nil
 }
 
 func (ge *gameEngine) ID() string {
@@ -92,8 +102,7 @@ func (ge *gameEngine) Setup() error {
 
 // AddPlayer adds a player to a game
 func (ge *gameEngine) AddPlayer(p Player) error {
-	ps := ge.Players()
-	ge.players = AddPlayer(ps, p)
+	ge.registerCh <- p
 	return nil
 }
 
@@ -137,6 +146,7 @@ func (ge *gameEngine) Players() Players {
 	return ge.players
 }
 
+// outside of the interface
 func messagePlayersAwaitReply(
 	ps Players,
 	messages []OutboundMessage,
@@ -155,4 +165,39 @@ func messagePlayersAwaitReply(
 	// }
 
 	return nil
+}
+
+// outside of the interface
+func (ge *gameEngine) Listen() {
+	for {
+		select {
+		case player := <-ge.registerCh:
+			ps := ge.Players()
+			ge.players = AddPlayer(ps, player)
+			ge.broadcast([]byte(player.Name()))
+
+		case msg := <-ge.broadcastCh:
+			for _, p := range ge.players {
+				outbound := buildNewJoinerMessage(p, msg)
+				p.Send(outbound)
+			}
+		}
+	}
+}
+
+// outside of the interface
+func (ge *gameEngine) broadcast(msg []byte) {
+	ge.broadcastCh <- msg
+}
+
+func buildNewJoinerMessage(player Player, msg []byte) OutboundMessage {
+	return OutboundMessage{
+		PlayerID:  player.ID(),
+		Name:      player.Name(),
+		Message:   string(msg),
+		Hand:      nil,
+		Seen:      nil,
+		Opponents: nil,
+		Command:   protocol.NewJoiner,
+	}
 }

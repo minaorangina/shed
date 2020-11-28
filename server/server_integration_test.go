@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"testing"
+	"time"
 
 	utils "github.com/minaorangina/shed/internal"
 )
@@ -47,8 +48,8 @@ func TestCreateAndJoinNewGame(t *testing.T) {
 
 	// Given a successful upgrade to WS for the creator
 	url = makeWSUrl(server.URL, createPayload.GameID, createPayload.PlayerID)
-	conn := mustDialWS(t, url)
-	defer conn.Close()
+	creatorConn := mustDialWS(t, url)
+	defer creatorConn.Close()
 
 	// a Player is created
 	ps := game.Players()
@@ -87,8 +88,8 @@ func TestCreateAndJoinNewGame(t *testing.T) {
 
 	// Given a successful upgrade to WS for the new joiner
 	url = makeWSUrl(server.URL, createPayload.GameID, joinPayload.PlayerID)
-	conn = mustDialWS(t, url)
-	defer conn.Close()
+	joinerConn := mustDialWS(t, url)
+	defer joinerConn.Close()
 
 	// a Player was created
 	ps = game.Players()
@@ -99,8 +100,32 @@ func TestCreateAndJoinNewGame(t *testing.T) {
 	// (placeholder for real auth)
 	utils.AssertNotNil(t,
 		store.FindPendingPlayer(createPayload.GameID, joinPayload.PlayerID))
+
+	// and existing players are informed of the new joiner
+	within(t, time.Duration(2*time.Second), func() {
+		_, bytes, err := creatorConn.ReadMessage()
+		utils.AssertNoError(t, err)
+		utils.AssertTrue(t, len(bytes) > 0)
+	})
 }
 func TestRearrangingHand(t *testing.T) {
 	// players := SomePlayers()
 
+}
+
+func within(t *testing.T, d time.Duration, assert func()) {
+	t.Helper()
+
+	done := make(chan struct{}, 1)
+
+	go func() {
+		assert()
+		done <- struct{}{}
+	}()
+
+	select {
+	case <-time.After(d):
+		t.Error("timed out")
+	case <-done:
+	}
 }

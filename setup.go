@@ -2,6 +2,7 @@ package shed
 
 import (
 	"github.com/minaorangina/shed/deck"
+	"github.com/minaorangina/shed/protocol"
 )
 
 // HandleInitialCards is the setup function for Shed
@@ -90,5 +91,6 @@ func buildReorgMessage(
 		Hand:      initialCards.Hand,
 		Seen:      initialCards.Seen,
 		Opponents: opponents,
+		Command:   protocol.Reorg,
 	}
 }

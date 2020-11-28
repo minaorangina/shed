@@ -128,6 +128,7 @@ func (g *GameServer) HandleNewGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// get hub running
+	go game.Listen()
 
 	err = g.store.AddInactiveGame(game)
 	if err != nil {
