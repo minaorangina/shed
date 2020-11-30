@@ -62,14 +62,26 @@ var (
 )
 
 // New constructs a new GameEngine
-func NewGameEngine(gameID string, creatorID string, players Players, setupFn func(GameEngine) error) (*gameEngine, error) {
+func NewGameEngine(gameID string,
+	creatorID string,
+	players Players,
+	setupFn func(GameEngine) error,
+	registerCh chan Player,
+	broadcastCh chan []byte,
+) (*gameEngine, error) {
+	if registerCh == nil {
+		registerCh = make(chan Player)
+	}
+	if broadcastCh == nil {
+		broadcastCh = make(chan []byte)
+	}
 	engine := &gameEngine{
 		id:          gameID,
 		creatorID:   creatorID,
 		players:     players,
-		registerCh:  make(chan Player),
-		broadcastCh: make(chan []byte),
-		deck:        deck.New(),
+		registerCh:  registerCh,
+		broadcastCh: broadcastCh,
+		deck:        deck.New(), // to move to Game
 		setupFn:     setupFn,
 	}
 
