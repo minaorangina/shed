@@ -15,9 +15,8 @@ import (
 )
 
 var (
-	homepage             = "static/index.html"
-	waitingRoomPage      = "static/waiting-room.html"
-	waitingRoomAdminPage = "static/waiting-room-admin.html"
+	homepage            = "static/index.html"
+	waitingRoomTemplate = "static/waiting-room.tmpl"
 )
 
 var upgrader = websocket.Upgrader{
@@ -281,11 +280,22 @@ func (g *GameServer) HandleWaitingRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if game.CreatorID() == playerID {
-		servePage(w, waitingRoomAdminPage)
-	} else {
-		servePage(w, waitingRoomPage)
+	tmpl, err := template.ParseFiles(waitingRoomTemplate)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("something went wrong"))
+		return
 	}
+
+	data := struct {
+		GameID  string
+		IsAdmin bool
+	}{
+		GameID:  gameID,
+		IsAdmin: playerID == game.CreatorID(),
+	}
+
+	tmpl.Execute(w, data)
 }
 
 func (g *GameServer) HandleWS(w http.ResponseWriter, r *http.Request) {

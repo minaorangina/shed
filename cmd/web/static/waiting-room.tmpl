@@ -3,11 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Shed | waiting room (admin)</title>
+  <title>Shed | waiting room </title>
 </head>
 <body>
-  <h1>New game</h1>
-  <p>Game created! Here's the code you need to share with people.</p>
+  <h1>Waiting room</h1>
+  {{ if .IsAdmin }}
+    <p>Game created! Here's the code you need to share with people:</p>
+    <p>{{ .GameID }}</p>
+    {{ else }}
+    <p>Joined! Waiting for the game to start...</p>
+  {{ end }}
+
   <script>
     if (window.WebSocket) {
       const playerID = window.sessionStorage.getItem("shed_player_id");

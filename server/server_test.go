@@ -94,7 +94,8 @@ func TestGETGameWaitingRoom(t *testing.T) {
 		bodyBytes, err := ioutil.ReadAll(response.Body)
 		utils.AssertNoError(t, err)
 		utils.AssertTrue(t, strings.Contains(string(bodyBytes), "<!DOCTYPE html>"))
-		utils.AssertTrue(t, strings.Contains(string(bodyBytes), "admin"))
+		utils.AssertTrue(t, strings.Contains(string(bodyBytes), "</html>"))
+		utils.AssertTrue(t, strings.Contains(string(bodyBytes), "created"))
 	})
 
 	t.Run("game joiners see standard view", func(t *testing.T) {
@@ -119,7 +120,8 @@ func TestGETGameWaitingRoom(t *testing.T) {
 		bodyBytes, err := ioutil.ReadAll(response.Body)
 		utils.AssertNoError(t, err)
 		utils.AssertTrue(t, strings.Contains(string(bodyBytes), "<!DOCTYPE html>"))
-		utils.AssertTrue(t, strings.Contains(string(bodyBytes), "joiner"))
+		utils.AssertTrue(t, strings.Contains(string(bodyBytes), "</html>"))
+		utils.AssertTrue(t, strings.Contains(string(bodyBytes), "Joined"))
 	})
 }
 
