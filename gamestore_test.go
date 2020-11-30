@@ -27,7 +27,7 @@ func TestInMemoryGameStore(t *testing.T) {
 	t.Run("Can add pending players", func(t *testing.T) {
 		gameID := "some-game-id"
 		playerID, playerName := "player-1", "Hermione"
-		engine, err := New(gameID, playerID, nil, nil)
+		engine, err := NewGameEngine(gameID, playerID, nil, nil)
 		utils.AssertNoError(t, err)
 
 		store := NewTestGameStore(
@@ -156,11 +156,11 @@ func TestInMemoryGameStore(t *testing.T) {
 }
 
 func newActiveGame(gameID, playerID string, ps Players) map[string]GameEngine {
-	game, _ := New(gameID, playerID, ps, nil)
+	game, _ := NewGameEngine(gameID, playerID, ps, nil)
 	return map[string]GameEngine{gameID: game}
 }
 
 func NewInactiveGame(gameID, playerID string, ps Players) map[string]GameEngine {
-	game, _ := New(gameID, playerID, ps, nil)
+	game, _ := NewGameEngine(gameID, playerID, ps, nil)
 	return map[string]GameEngine{gameID: game}
 }

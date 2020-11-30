@@ -23,12 +23,12 @@ type stubStore struct {
 
 func (s *stubStore) FindActiveGame(ID string) shed.GameEngine {
 	// allows any game
-	game, _ := shed.New("", "", nil, nil)
+	game, _ := shed.NewGameEngine("", "", nil, nil)
 	return game
 }
 func (s *stubStore) FindInactiveGame(ID string) shed.GameEngine {
 	// allows any pending game
-	game, _ := shed.New("", "", nil, nil)
+	game, _ := shed.NewGameEngine("", "", nil, nil)
 	return game
 }
 
@@ -58,12 +58,12 @@ func (s fakeStore) InactiveGames() map[string]shed.GameEngine {
 
 func (s fakeStore) FindActiveGame(ID string) shed.GameEngine {
 	// allows any game
-	game, _ := shed.New("", "", nil, nil)
+	game, _ := shed.NewGameEngine("", "", nil, nil)
 	return game
 }
 func (s fakeStore) FindInactiveGame(ID string) shed.GameEngine {
 	// allows any pending game
-	game, _ := shed.New("", "", nil, nil)
+	game, _ := shed.NewGameEngine("", "", nil, nil)
 	return game
 }
 
@@ -125,7 +125,7 @@ func newJoinGameRequest(data []byte) *http.Request {
 }
 
 func newTestGame(t *testing.T, gameID, playerID string, ps shed.Players, setupFn func(shed.GameEngine) error) shed.GameEngine {
-	game, err := shed.New(gameID, playerID, ps, setupFn)
+	game, err := shed.NewGameEngine(gameID, playerID, ps, setupFn)
 	utils.AssertNoError(t, err)
 
 	return game
@@ -146,7 +146,7 @@ func newServerWithGame(game shed.GameEngine) http.Handler {
 
 func newServerWithInactiveGame(ps shed.Players) (*GameServer, string) {
 	gameID := "some-pending-id"
-	game, _ := shed.New(gameID, "", ps, nil)
+	game, _ := shed.NewGameEngine(gameID, "", ps, nil)
 
 	store := &shed.InMemoryGameStore{
 		ActiveGames: map[string]shed.GameEngine{},
@@ -168,7 +168,7 @@ func newServerWithInactiveGame(ps shed.Players) (*GameServer, string) {
 
 func newTestServerWithInactiveGame(ps shed.Players) (*httptest.Server, string) {
 	gameID := "some-pending-id"
-	game, _ := shed.New(gameID, "", ps, nil)
+	game, _ := shed.NewGameEngine(gameID, "", ps, nil)
 
 	store := &shed.InMemoryGameStore{
 		ActiveGames: map[string]shed.GameEngine{},

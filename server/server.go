@@ -120,7 +120,7 @@ func (g *GameServer) HandleNewGame(w http.ResponseWriter, r *http.Request) {
 
 	// generate game ID
 	gameID, playerID := NewID(), NewID()
-	game, err := shed.New(gameID, playerID, nil, nil)
+	game, err := shed.NewGameEngine(gameID, playerID, nil, nil)
 	if err != nil {
 		log.Println(err.Error())
 		w.WriteHeader(http.StatusInternalServerError)

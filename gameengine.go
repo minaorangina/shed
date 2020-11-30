@@ -62,7 +62,7 @@ var (
 )
 
 // New constructs a new GameEngine
-func New(gameID string, creatorID string, players Players, setupFn func(GameEngine) error) (*gameEngine, error) {
+func NewGameEngine(gameID string, creatorID string, players Players, setupFn func(GameEngine) error) (*gameEngine, error) {
 	engine := &gameEngine{
 		id:          gameID,
 		creatorID:   creatorID,
