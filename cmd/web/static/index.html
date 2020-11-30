@@ -28,11 +28,20 @@
           return res.json()
         })
         .then(body => {
+          let url = "http://" + window.location.host + "/waiting-room?"
+          let prependAmpersand = false;
+
           for (let key in body) {
             window.sessionStorage.setItem(`shed_${key}`, body[key]);
+            if (prependAmpersand) {
+              url += "&"
+            }
+            url += key + "=" + body[key]
+            prependAmpersand = true
           }
 
-          window.location.href = "http://" + window.location.host + "/created";
+          console.log(url)
+          window.location.href = url
         })
         .catch(console.error)
     });

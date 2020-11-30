@@ -10,6 +10,7 @@
   {{ if .IsAdmin }}
     <p>Game created! Here's the code you need to share with people:</p>
     <p>{{ .GameID }}</p>
+    <button class="start-button">Start game!</button>
     {{ else }}
     <p>Joined! Waiting for the game to start...</p>
   {{ end }}
@@ -28,7 +29,11 @@
       conn.onopen = console.info
 
       conn.onerror = e => console.error("websocket error", e.error);
+
+      conn.onmessage = console.info
     }
+
+    document.querySelector(".start-button").addEventListener("click", () => console.log("CLICKED!"));
   </script>
 </body>
 </html>
