@@ -158,7 +158,6 @@ func (ge *gameEngine) Players() Players {
 	return ge.players
 }
 
-// outside of the interface
 func messagePlayersAwaitReply(
 	ps Players,
 	messages []OutboundMessage,
@@ -177,6 +176,18 @@ func messagePlayersAwaitReply(
 	// }
 
 	return nil
+}
+
+func buildNewJoinerMessage(player Player, msg []byte) OutboundMessage {
+	return OutboundMessage{
+		PlayerID:  player.ID(),
+		Name:      player.Name(),
+		Message:   string(msg),
+		Hand:      nil,
+		Seen:      nil,
+		Opponents: nil,
+		Command:   protocol.NewJoiner,
+	}
 }
 
 // outside of the interface
@@ -200,16 +211,4 @@ func (ge *gameEngine) Listen() {
 // outside of the interface
 func (ge *gameEngine) broadcast(msg []byte) {
 	ge.broadcastCh <- msg
-}
-
-func buildNewJoinerMessage(player Player, msg []byte) OutboundMessage {
-	return OutboundMessage{
-		PlayerID:  player.ID(),
-		Name:      player.Name(),
-		Message:   string(msg),
-		Hand:      nil,
-		Seen:      nil,
-		Opponents: nil,
-		Command:   protocol.NewJoiner,
-	}
 }

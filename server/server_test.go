@@ -62,16 +62,65 @@ func TestServerPOSTNewGame(t *testing.T) {
 }
 
 func TestGETGameWaitingRoom(t *testing.T) {
-	response := httptest.NewRecorder()
-	request, _ := http.NewRequest(http.MethodGet, "/waitingroom", nil)
+	t.Run("fails for bad credentials", func(t *testing.T) {
+		response := httptest.NewRecorder()
+		request, _ := http.NewRequest(http.MethodGet, "/waitingroom", nil)
 
-	server := NewServer(NewBasicStore())
-	server.ServeHTTP(response, request)
+		server := NewServer(NewBasicStore())
+		server.ServeHTTP(response, request)
 
-	assertStatus(t, response.Code, http.StatusOK)
-	bodyBytes, err := ioutil.ReadAll(response.Body)
-	utils.AssertNoError(t, err)
-	utils.AssertTrue(t, strings.Contains(string(bodyBytes), "<!DOCTYPE html>"))
+		assertStatus(t, response.Code, http.StatusBadRequest)
+	})
+
+	t.Run("game creator sees a special admin view", func(t *testing.T) {
+		gameID, creatorID := "some-game-id", "i-am-the-creator"
+
+		url := "/waitingroom?game_id=" + gameID + "&player_id=" + creatorID
+
+		response := httptest.NewRecorder()
+		request, _ := http.NewRequest(http.MethodGet, url, nil)
+
+		store := NewBasicStore()
+		game, err := shed.NewGameEngine(gameID, creatorID, nil, nil, nil, nil)
+		utils.AssertNoError(t, err)
+
+		store.InactiveGames[gameID] = game
+		store.PendingPlayers[gameID] = []shed.PlayerInfo{{PlayerID: creatorID, Name: "Horatio"}}
+
+		server := NewServer(store)
+		server.ServeHTTP(response, request)
+
+		assertStatus(t, response.Code, http.StatusOK)
+		bodyBytes, err := ioutil.ReadAll(response.Body)
+		utils.AssertNoError(t, err)
+		utils.AssertTrue(t, strings.Contains(string(bodyBytes), "<!DOCTYPE html>"))
+		utils.AssertTrue(t, strings.Contains(string(bodyBytes), "admin"))
+	})
+
+	t.Run("game joiners see standard view", func(t *testing.T) {
+		gameID, playerID := "some-game-id", "i-am-some-rando"
+
+		url := "/waitingroom?game_id=" + gameID + "&player_id=" + playerID
+
+		response := httptest.NewRecorder()
+		request, _ := http.NewRequest(http.MethodGet, url, nil)
+
+		store := NewBasicStore()
+		game, err := shed.NewGameEngine(gameID, "i-am-the-creator", nil, nil, nil, nil)
+		utils.AssertNoError(t, err)
+
+		store.InactiveGames[gameID] = game
+		store.PendingPlayers[gameID] = []shed.PlayerInfo{{PlayerID: playerID, Name: "Horatio"}}
+
+		server := NewServer(store)
+		server.ServeHTTP(response, request)
+
+		assertStatus(t, response.Code, http.StatusOK)
+		bodyBytes, err := ioutil.ReadAll(response.Body)
+		utils.AssertNoError(t, err)
+		utils.AssertTrue(t, strings.Contains(string(bodyBytes), "<!DOCTYPE html>"))
+		utils.AssertTrue(t, strings.Contains(string(bodyBytes), "joiner"))
+	})
 }
 
 func TestJoinGame(t *testing.T) {

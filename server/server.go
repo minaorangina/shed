@@ -15,8 +15,9 @@ import (
 )
 
 var (
-	homepage        = "static/index.html"
-	waitingRoomPage = "static/waiting-room.html"
+	homepage             = "static/index.html"
+	waitingRoomPage      = "static/waiting-room.html"
+	waitingRoomAdminPage = "static/waiting-room-admin.html"
 )
 
 var upgrader = websocket.Upgrader{
@@ -254,15 +255,11 @@ func (g *GameServer) HandleJoinGame(w http.ResponseWriter, r *http.Request) {
 
 func (g *GameServer) HandleWaitingRoom(w http.ResponseWriter, r *http.Request) {
 	// check if this person should get the file
-	servePage(w, waitingRoomPage)
-}
-
-func (g *GameServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	vals, ok := query["game_id"]
 	if !ok || len(vals) != 1 {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("could not parse game ID"))
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("missing game ID"))
 		return
 	}
 	gameID := vals[0]
@@ -270,7 +267,41 @@ func (g *GameServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 	vals, ok = query["player_id"]
 	if !ok || len(vals) != 1 {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("could not parse user ID"))
+		w.Write([]byte("missing user ID"))
+		return
+	}
+
+	playerID := vals[0]
+	_ = playerID
+
+	game := g.store.FindInactiveGame(gameID)
+	if game == nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte("unknown game id"))
+		return
+	}
+
+	if game.CreatorID() == playerID {
+		servePage(w, waitingRoomAdminPage)
+	} else {
+		servePage(w, waitingRoomPage)
+	}
+}
+
+func (g *GameServer) HandleWS(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	vals, ok := query["game_id"]
+	if !ok || len(vals) != 1 {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("missing game ID"))
+		return
+	}
+	gameID := vals[0]
+
+	vals, ok = query["player_id"]
+	if !ok || len(vals) != 1 {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("missing user ID"))
 		return
 	}
 
