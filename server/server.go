@@ -15,8 +15,8 @@ import (
 )
 
 var (
-	homepage            = "static/index.html"
-	waitingRoomTemplate = "static/waiting-room.tmpl"
+	homepage            = "./static/index.html"
+	waitingRoomTemplate = "./static/waiting-room.tmpl"
 )
 
 var upgrader = websocket.Upgrader{
@@ -28,7 +28,7 @@ type NewGameReq struct {
 	Name string `json:"name"`
 }
 
-type NewGameRes struct {
+type PendingGameRes struct {
 	GameID   string `json:"game_id"`
 	PlayerID string `json:"player_id"`
 	Name     string `json:"name"`
@@ -38,11 +38,6 @@ type JoinGameReq struct {
 	GameID string `json:"game_id"`
 	Name   string `json:"name"`
 }
-
-type JoinGameRes struct {
-	PlayerID string `json:"player_id"`
-}
-
 type GetGameRes struct {
 	Status string `json:"status"`
 	GameID string `json:"game_id"`
@@ -56,6 +51,10 @@ type GameServer struct {
 
 func NewID() string {
 	return uuid.NewV4().String()
+}
+
+func unknownGameIDMsg(unknownID string) string {
+	return fmt.Sprintf("unknown game ID '%s'", unknownID)
 }
 
 func servePage(w http.ResponseWriter, path string) {
@@ -74,6 +73,7 @@ func NewServer(store shed.GameStore) *GameServer {
 	s := new(GameServer)
 
 	router := http.NewServeMux()
+	fileServer := http.FileServer(http.Dir("./static"))
 
 	router.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Root endpoint")
@@ -84,10 +84,11 @@ func NewServer(store shed.GameStore) *GameServer {
 
 		servePage(w, homepage)
 	}))
+	router.Handle("/static/", http.StripPrefix("/static", fileServer))
 	router.Handle("/new", http.HandlerFunc(s.HandleNewGame))
 	router.Handle("/game/", http.HandlerFunc(s.HandleFindGame))
 	router.Handle("/join", http.HandlerFunc(s.HandleJoinGame))
-	router.Handle("/waitingroom", http.HandlerFunc(s.HandleWaitingRoom))
+	router.Handle("/waiting-room", http.HandlerFunc(s.HandleWaitingRoom))
 	router.Handle("/ws", http.HandlerFunc(s.HandleWS))
 
 	s.store = store
@@ -144,7 +145,7 @@ func (g *GameServer) HandleNewGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	payload := NewGameRes{gameID, playerID, data.Name}
+	payload := PendingGameRes{gameID, playerID, data.Name}
 	bytes, err := json.Marshal(payload)
 	if err != nil {
 		log.Println(err.Error())
@@ -165,7 +166,8 @@ func (g *GameServer) HandleFindGame(w http.ResponseWriter, r *http.Request) {
 
 	gameID := strings.Replace(r.URL.String(), "/game/", "", 1)
 	if gameID == "" {
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("missing game ID"))
 		return
 	}
 
@@ -188,6 +190,7 @@ func (g *GameServer) HandleFindGame(w http.ResponseWriter, r *http.Request) {
 
 	if !found {
 		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(unknownGameIDMsg(gameID)))
 		return
 	}
 
@@ -227,8 +230,8 @@ func (g *GameServer) HandleJoinGame(w http.ResponseWriter, r *http.Request) {
 	// This step is repeated in AddPendingPlayer. One of these will have to go eventually.
 	game := g.store.FindInactiveGame(data.GameID)
 	if game == nil {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(fmt.Sprintf("Game matching id '%s' not found", data.GameID)))
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(unknownGameIDMsg(data.GameID)))
 		return
 	}
 
@@ -240,7 +243,11 @@ func (g *GameServer) HandleJoinGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	payload := JoinGameRes{playerID}
+	payload := PendingGameRes{
+		PlayerID: playerID,
+		GameID:   data.GameID,
+		Name:     data.Name,
+	}
 	bytes, err := json.Marshal(payload)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -276,7 +283,7 @@ func (g *GameServer) HandleWaitingRoom(w http.ResponseWriter, r *http.Request) {
 	game := g.store.FindInactiveGame(gameID)
 	if game == nil {
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte("unknown game id"))
+		w.Write([]byte(unknownGameIDMsg(gameID)))
 		return
 	}
 
@@ -320,7 +327,7 @@ func (g *GameServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 	game := g.store.FindInactiveGame(gameID)
 	if game == nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("unknown game id"))
+		w.Write([]byte(unknownGameIDMsg(gameID)))
 		return
 	}
 

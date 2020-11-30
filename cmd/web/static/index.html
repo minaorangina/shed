@@ -4,13 +4,58 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Shed</title>
+  <link href="static/index.css" rel="stylesheet" />
 </head>
 <body>
   <h1>Welcome to Shed!</h1>
 
   <button class="new-game">New game</button>
 
+  <h2>Join a game</h2>
+  <form action="" class="game-code-form" autocomplete=off>
+    <p class="form-error">Missing values</p>
+    <label for="game-code">Enter code:</label>
+    <input type=text id="game-code" />
+    <label for="game-code">Your name:</label>
+    <input type=text id="player-name" />
+    <button>Join</button>
+  </form>
+
   <script>
+    const form = document.querySelector(".game-code-form");
+    form.addEventListener("submit", e => {
+      e.preventDefault();
+      // sanitise?
+      const code = document.querySelector("#game-code").value.trim()
+      const name = document.querySelector("#player-name").value.trim()
+
+      if (code === "" || name === "") {
+        document.querySelector(".form-error").style.visibility = "visible";
+        return
+      }
+
+      document.querySelector(".form-error").style.visibility = "hidden";
+
+      const req = new Request("/join", {
+        method: "POST",
+        headers: new Headers(),
+        body: JSON.stringify({
+          game_id: code,
+          name: "Mina",
+        })
+      });
+
+        fetch(req)
+          .then(res => {
+            if (!res.ok) {
+              throw new Error(`Network response was not ok: ${res.status} ${res.statusText}`);
+            }
+            return res.json()
+          })
+          .then(handleResponse)
+          .catch(console.error)
+    })
+
     const button = document.querySelector(".new-game");
     button.addEventListener("click", () => {
       const req = new Request("/new", {
@@ -27,24 +72,26 @@
           }
           return res.json()
         })
-        .then(body => {
-          let url = "http://" + window.location.host + "/waiting-room?"
-          let prependAmpersand = false;
-
-          for (let key in body) {
-            window.sessionStorage.setItem(`shed_${key}`, body[key]);
-            if (prependAmpersand) {
-              url += "&"
-            }
-            url += key + "=" + body[key]
-            prependAmpersand = true
-          }
-
-          console.log(url)
-          window.location.href = url
-        })
+        .then(handleResponse)
         .catch(console.error)
     });
+
+    function handleResponse(body) {
+      let url = "http://" + window.location.host + "/waiting-room?"
+      let prependAmpersand = false;
+
+      for (let key in body) {
+        window.sessionStorage.setItem(`shed_${key}`, body[key]);
+        if (prependAmpersand) {
+          url += "&"
+        }
+        url += key + "=" + body[key]
+        prependAmpersand = true
+      }
+
+      console.log(url)
+      window.location.href = url
+    }
   </script>
 </body>
 </html>

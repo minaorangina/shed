@@ -26,6 +26,22 @@ func TestServerPing(t *testing.T) {
 	utils.AssertNoError(t, err)
 	utils.AssertTrue(t, strings.Contains(string(bodyBytes), "<!DOCTYPE html>"))
 }
+
+func TestStatic(t *testing.T) {
+	t.Run("fetches css", func(t *testing.T) {
+		response := httptest.NewRecorder()
+		request, _ := http.NewRequest(http.MethodGet, "/static/index.css", nil)
+
+		server := NewServer(NewBasicStore())
+		server.ServeHTTP(response, request)
+
+		assertStatus(t, response.Code, http.StatusOK)
+
+		bodyBytes, err := ioutil.ReadAll(response.Body)
+		utils.AssertNoError(t, err)
+		utils.AssertTrue(t, strings.Contains(string(bodyBytes), ".form-error"))
+	})
+}
 func TestServerPOSTNewGame(t *testing.T) {
 	t.Run("succeeds and returns expected data", func(t *testing.T) {
 		data := mustMakeJson(t, NewGameReq{"Elton"})
@@ -37,7 +53,7 @@ func TestServerPOSTNewGame(t *testing.T) {
 		server.ServeHTTP(response, request)
 
 		assertStatus(t, response.Code, http.StatusCreated)
-		assertNewGameResponse(t, response.Body, "Elton")
+		assertPendingGameResponse(t, response.Body, "Elton")
 	})
 
 	t.Run("returns 400 if the player's name is missing", func(t *testing.T) {
@@ -64,7 +80,7 @@ func TestServerPOSTNewGame(t *testing.T) {
 func TestGETGameWaitingRoom(t *testing.T) {
 	t.Run("fails for bad credentials", func(t *testing.T) {
 		response := httptest.NewRecorder()
-		request, _ := http.NewRequest(http.MethodGet, "/waitingroom", nil)
+		request, _ := http.NewRequest(http.MethodGet, "/waiting-room", nil)
 
 		server := NewServer(NewBasicStore())
 		server.ServeHTTP(response, request)
@@ -75,7 +91,7 @@ func TestGETGameWaitingRoom(t *testing.T) {
 	t.Run("game creator sees a special admin view", func(t *testing.T) {
 		gameID, creatorID := "some-game-id", "i-am-the-creator"
 
-		url := "/waitingroom?game_id=" + gameID + "&player_id=" + creatorID
+		url := "/waiting-room?game_id=" + gameID + "&player_id=" + creatorID
 
 		response := httptest.NewRecorder()
 		request, _ := http.NewRequest(http.MethodGet, url, nil)
@@ -101,7 +117,7 @@ func TestGETGameWaitingRoom(t *testing.T) {
 	t.Run("game joiners see standard view", func(t *testing.T) {
 		gameID, playerID := "some-game-id", "i-am-some-rando"
 
-		url := "/waitingroom?game_id=" + gameID + "&player_id=" + playerID
+		url := "/waiting-room?game_id=" + gameID + "&player_id=" + playerID
 
 		response := httptest.NewRecorder()
 		request, _ := http.NewRequest(http.MethodGet, url, nil)
@@ -142,14 +158,19 @@ func TestJoinGame(t *testing.T) {
 		bodyBytes, err := ioutil.ReadAll(response.Body)
 		utils.AssertNoError(t, err)
 
-		var got JoinGameRes
+		var got PendingGameRes
 		err = json.Unmarshal(bodyBytes, &got)
 		if err != nil {
 			t.Fatalf("Could not unmarshal json: %s", err.Error())
 		}
-
 		if got.PlayerID == "" {
 			t.Error("Expected a player id")
+		}
+		if got.GameID == "" {
+			t.Error("Expected a game id")
+		}
+		if got.Name == "" {
+			t.Error("Expected a player name")
 		}
 	})
 
@@ -165,7 +186,7 @@ func TestJoinGame(t *testing.T) {
 		assertStatus(t, response.Code, http.StatusBadRequest)
 	})
 
-	t.Run("POST /join returns 404 for an unknown game id", func(t *testing.T) {
+	t.Run("POST /join returns 400 for an unknown game id", func(t *testing.T) {
 		server, _ := newServerWithInactiveGame(shed.SomePlayers())
 
 		data := mustMakeJson(t, JoinGameReq{"some-game-id", "Heloise"})
@@ -175,7 +196,7 @@ func TestJoinGame(t *testing.T) {
 
 		server.ServeHTTP(response, request)
 
-		assertStatus(t, response.Code, http.StatusNotFound)
+		assertStatus(t, response.Code, http.StatusBadRequest)
 	})
 
 	t.Run("POST /join returns 500 if joining fails", func(t *testing.T) {

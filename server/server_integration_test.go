@@ -32,7 +32,7 @@ func TestCreateAndJoinNewGame(t *testing.T) {
 	utils.AssertNoError(t, err)
 
 	// the payload contains the correct data
-	var createPayload NewGameRes
+	var createPayload PendingGameRes
 	err = json.Unmarshal(bodyBytes, &createPayload)
 
 	utils.AssertNoError(t, err)
@@ -77,7 +77,7 @@ func TestCreateAndJoinNewGame(t *testing.T) {
 	utils.AssertNoError(t, err)
 
 	// the payload contains the correct data
-	var joinPayload JoinGameRes
+	var joinPayload PendingGameRes
 	err = json.Unmarshal(bodyBytes, &joinPayload)
 	utils.AssertNoError(t, err)
 	utils.AssertNotEmptyString(t, joinPayload.PlayerID)

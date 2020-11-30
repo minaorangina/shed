@@ -33,7 +33,10 @@
       conn.onmessage = console.info
     }
 
-    document.querySelector(".start-button").addEventListener("click", () => console.log("CLICKED!"));
+    const adminStartButton = document.querySelector(".start-button")
+    if (adminStartButton) {
+      adminStartButton.addEventListener("click", () => console.log("CLICKED!"));
+    }
   </script>
 </body>
 </html>

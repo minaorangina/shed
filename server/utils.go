@@ -198,29 +198,13 @@ func assertStatus(t *testing.T, got, want int) {
 	}
 }
 
-func assertJoinGameResponse(t *testing.T, body *bytes.Buffer, ps shed.Players) {
-	t.Helper()
-	bodyBytes, err := ioutil.ReadAll(body)
-	utils.AssertNoError(t, err)
-
-	var got JoinGameRes
-	err = json.Unmarshal(bodyBytes, &got)
-	if err != nil {
-		t.Fatalf("Could not unmarshal json: %s", err.Error())
-	}
-
-	if got.PlayerID == "" {
-		t.Error("Expected a player id")
-	}
-}
-
-func assertNewGameResponse(t *testing.T, body *bytes.Buffer, want string) {
+func assertPendingGameResponse(t *testing.T, body *bytes.Buffer, want string) {
 	// probably upgrade to a jwt or something
 	t.Helper()
 	bodyBytes, err := ioutil.ReadAll(body)
 	utils.AssertNoError(t, err)
 
-	var got NewGameRes
+	var got PendingGameRes
 	err = json.Unmarshal(bodyBytes, &got)
 	if err != nil {
 		t.Fatalf("could not unmarshal json: %s", err.Error())
