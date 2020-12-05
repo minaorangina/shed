@@ -144,9 +144,11 @@ func newServerWithGame(game shed.GameEngine) http.Handler {
 	return NewServer(store)
 }
 
+// newServerWithInactiveGame returns a GameServer with an inactive game
+// and some hard-coded values
 func newServerWithInactiveGame(ps shed.Players) (*GameServer, string) {
 	gameID := "some-pending-id"
-	game, _ := shed.NewGameEngine(gameID, "", ps, nil, nil, nil)
+	game, _ := shed.NewGameEngine(gameID, "hersha-1", ps, nil, nil, nil)
 
 	store := &shed.InMemoryGameStore{
 		ActiveGames: map[string]shed.GameEngine{},
@@ -154,10 +156,16 @@ func newServerWithInactiveGame(ps shed.Players) (*GameServer, string) {
 			gameID: game,
 		},
 		PendingPlayers: map[string][]shed.PlayerInfo{
-			gameID: []shed.PlayerInfo{{
-				PlayerID: "pending-player-id",
-				Name:     "Penelope",
-			}},
+			gameID: []shed.PlayerInfo{
+				{
+					PlayerID: "pending-player-id",
+					Name:     "Penelope",
+				},
+				{
+					PlayerID: "hersha-1",
+					Name:     "Hersha",
+				},
+			},
 		},
 	}
 
@@ -166,16 +174,29 @@ func newServerWithInactiveGame(ps shed.Players) (*GameServer, string) {
 	return server, gameID
 }
 
+// newTestServerWithInactiveGame returns an httptest.Server with an inactive game
+// and some hard-coded values
 func newTestServerWithInactiveGame(ps shed.Players) (*httptest.Server, string) {
 	gameID := "some-pending-id"
-	game, _ := shed.NewGameEngine(gameID, "", ps, nil, nil, nil)
+	game, _ := shed.NewGameEngine(gameID, "hersha-1", ps, nil, nil, nil)
 
 	store := &shed.InMemoryGameStore{
 		ActiveGames: map[string]shed.GameEngine{},
 		InactiveGames: map[string]shed.GameEngine{
 			gameID: game,
 		},
-		PendingPlayers: map[string][]shed.PlayerInfo{},
+		PendingPlayers: map[string][]shed.PlayerInfo{
+			gameID: []shed.PlayerInfo{
+				{
+					PlayerID: "pending-player-id",
+					Name:     "Penelope",
+				},
+				{
+					PlayerID: "hersha-1",
+					Name:     "Hersha",
+				},
+			},
+		},
 	}
 
 	server := httptest.NewServer(NewServer(store))

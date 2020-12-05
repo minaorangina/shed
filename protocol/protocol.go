@@ -6,4 +6,5 @@ type Cmd int
 const (
 	NewJoiner Cmd = iota
 	Reorg
+	Start
 )

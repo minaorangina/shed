@@ -4,9 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	utils "github.com/minaorangina/shed/internal"
+	"github.com/minaorangina/shed/protocol"
 )
+
+var gameEngineTestTimeout = time.Duration(200 * time.Millisecond)
 
 type spySetup struct {
 	called bool
@@ -39,6 +43,33 @@ func TestGameEngineAddPlayer(t *testing.T) {
 		_, ok := ps.Find(playerID)
 		utils.AssertTrue(t, ok)
 	})
+
+	t.Run("broadcasts to other players", func(t *testing.T) {
+		sendCh := make(chan []byte)
+		player1ID := "i-am-a-spy"
+
+		player1 := &WSPlayer{
+			id:     player1ID,
+			name:   "Spy",
+			conn:   nil,
+			sendCh: sendCh,
+		}
+
+		engine, err := NewGameEngine("game-id", player1ID, nil, nil, nil, nil)
+		utils.AssertNoError(t, err)
+
+		player1.engine = engine
+		engine.players = NewPlayers(player1)
+
+		joiningPlayer := APlayer("joiner-1", "Ms Joiner")
+		engine.AddPlayer(joiningPlayer)
+
+		utils.Within(t, gameEngineTestTimeout, func() {
+			msg, ok := <-sendCh
+			utils.AssertTrue(t, ok)
+			utils.AssertEqual(t, fmt.Sprintf("%s has joined the game!", joiningPlayer.Name()), string(msg))
+		})
+	})
 }
 
 func TestGameEngineInit(t *testing.T) {
@@ -67,45 +98,6 @@ func TestGameEngineInit(t *testing.T) {
 	})
 }
 func TestGameEngineSetupFn(t *testing.T) {
-	t.Run("sets up correctly", func(t *testing.T) {
-		spy := spySetup{}
-		engine, err := NewGameEngine("", "", SomePlayers(), spy.setup, nil, nil)
-		utils.AssertNoError(t, err)
-
-		err = engine.Setup()
-		utils.AssertNoError(t, err)
-
-		if spy.called != true {
-			t.Errorf("Expected spy setup fn to be called")
-		}
-	})
-
-	t.Run("requires legal number of players", func(t *testing.T) {
-		type gameTest struct {
-			testName string
-			input    Players
-			want     error
-		}
-		testsShouldError := []gameTest{
-			{
-				"too few players",
-				namesToPlayers([]string{"Grace"}),
-				ErrTooFewPlayers,
-			},
-			{
-				"too many players",
-				namesToPlayers([]string{"Ada", "Katherine", "Grace", "Hedy", "Marlyn"}),
-				ErrTooManyPlayers,
-			},
-		}
-
-		for _, et := range testsShouldError {
-			ge, err := NewGameEngine("", "", et.input, nil, nil, nil)
-			utils.AssertNoError(t, err)
-			err = ge.Setup()
-			utils.AssertEqual(t, err.Error(), et.want.Error())
-		}
-	})
 
 	t.Run("does not error if no setup fn defined", func(t *testing.T) {
 		engine, err := NewGameEngine("", "", SomePlayers(), nil, nil, nil)
@@ -131,7 +123,6 @@ func TestGameEngineSetupFn(t *testing.T) {
 
 func TestGameEngineStart(t *testing.T) {
 	t.Run("only starts with legal number of players", func(t *testing.T) {
-
 		type gameTest struct {
 			testName string
 			input    Players
@@ -158,24 +149,50 @@ func TestGameEngineStart(t *testing.T) {
 		}
 	})
 
-	t.Run("unnamed for now", func(t *testing.T) {
-		t.Skip("do not run TestGameStart")
-		ge := gameEngineWithPlayers()
+	t.Run("starting more than once is a no-op", func(t *testing.T) {
+		engine, err := NewGameEngine("", "", SomePlayers(), nil, nil, nil)
+		utils.AssertNoError(t, err)
 
-		err := ge.Start() // mock required
-		if err != nil {
-			t.Fatalf("Could not start game")
+		engine.playState = inProgress
+		err = engine.Start()
+		utils.AssertNoError(t, err)
+	})
+
+	t.Run("calls the setup fn", func(t *testing.T) {
+		spy := spySetup{}
+		engine, err := NewGameEngine("", "", SomePlayers(), spy.setup, nil, nil)
+		utils.AssertNoError(t, err)
+
+		err = engine.Start()
+		utils.AssertNoError(t, err)
+
+		if spy.called != true {
+			t.Errorf("Expected spy setup fn to be called")
+		}
+	})
+}
+
+func TestGameEngineReceiveMessage(t *testing.T) {
+	t.Run("performs correct action for start game command", func(t *testing.T) {
+		var called bool
+		setupFn := func(ge GameEngine) error {
+			called = true
+			return nil
 		}
 
-		for _, p := range ge.Players() {
-			c := p.Cards()
-			numHand := len(c.Hand)
-			numSeen := len(c.Seen)
-			numUnseen := len(c.Unseen)
-			if numHand != 3 {
-				formatStr := "hand - %d\nseen - %d\nunseen - %d\n"
-				t.Errorf("Expected all threes. Actual:\n" + fmt.Sprintf(formatStr, numHand, numSeen, numUnseen))
-			}
+		engine, err := NewGameEngine("", "", SomePlayers(), setupFn, nil, nil)
+		utils.AssertNoError(t, err)
+
+		msg := InboundMessage{
+			PlayerID: "an-id",
+			Command:  protocol.Start,
 		}
+		engine.Receive(msg)
+
+		utils.Within(t, gameEngineTestTimeout, func() {
+			utils.AssertTrue(t, called)
+		})
+
+		utils.AssertEqual(t, engine.playState, inProgress)
 	})
 }

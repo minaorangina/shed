@@ -22,6 +22,7 @@ type OutboundMessage struct {
 	Seen      []deck.Card  `json:"seen"`
 	Opponents []Opponent   `json:"opponents"`
 	Command   protocol.Cmd `json:"command"`
+	Broadcast bool
 }
 
 // InitialCards represent the default cards dealt to a Player

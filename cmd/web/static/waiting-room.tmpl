@@ -31,11 +31,13 @@
       conn.onerror = e => console.error("websocket error", e.error);
 
       conn.onmessage = console.info
-    }
 
-    const adminStartButton = document.querySelector(".start-button")
-    if (adminStartButton) {
-      adminStartButton.addEventListener("click", () => console.log("CLICKED!"));
+      const adminStartButton = document.querySelector(".start-button")
+      if (adminStartButton) {
+        adminStartButton.addEventListener("click", () => {
+          conn.send("START");
+        }));
+      }
     }
   </script>
 </body>
