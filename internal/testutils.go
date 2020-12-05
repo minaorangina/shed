@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 )
 
 // FailureMessage returns a failure message for a failed test
@@ -96,5 +97,22 @@ func AssertNotEmptyString(t *testing.T, got string) {
 
 	if got == "" {
 		t.Error("unexpected empty string")
+	}
+}
+
+func Within(t *testing.T, d time.Duration, assert func()) {
+	t.Helper()
+
+	done := make(chan struct{}, 1)
+
+	go func() {
+		assert()
+		done <- struct{}{}
+	}()
+
+	select {
+	case <-time.After(d):
+		t.Error("timed out")
+	case <-done:
 	}
 }

@@ -8,8 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gorilla/websocket"
 	utils "github.com/minaorangina/shed/internal"
 )
+
+var serverTestTimeout = time.Duration(300 * time.Millisecond)
 
 func TestCreateAndJoinNewGame(t *testing.T) {
 	// Given a request to create a new game
@@ -102,30 +105,53 @@ func TestCreateAndJoinNewGame(t *testing.T) {
 		store.FindPendingPlayer(createPayload.GameID, joinPayload.PlayerID))
 
 	// and existing players are informed of the new joiner
-	within(t, time.Duration(2*time.Second), func() {
-		_, bytes, err := creatorConn.ReadMessage()
+	utils.Within(t, serverTestTimeout, func() {
+		_, got, err := creatorConn.ReadMessage()
 		utils.AssertNoError(t, err)
-		utils.AssertTrue(t, len(bytes) > 0)
+		utils.AssertTrue(t, len(got) > 0)
 	})
+}
+
+func TestStartGame(t *testing.T) {
+	// given an inactive game and players with ws connections
+	server, gameID := newTestServerWithInactiveGame(nil)
+	creatorID, player2ID := "hersha-1", "pending-player-id"
+
+	url := makeWSUrl(server.URL, gameID, creatorID)
+	creatorConn := mustDialWS(t, url)
+	defer creatorConn.Close()
+
+	url = makeWSUrl(server.URL, gameID, player2ID)
+	player2Conn := mustDialWS(t, url)
+	defer player2Conn.Close()
+
+	// when the creator sends the command to start the game
+	w, err := creatorConn.NextWriter(websocket.TextMessage)
+	utils.AssertNoError(t, err)
+	defer w.Close()
+
+	w.Write([]byte("START"))
+
+	// then the start event is broadcast to other players
+	utils.Within(t, serverTestTimeout, func() {
+		_, got, err := player2Conn.ReadMessage()
+		utils.AssertNoError(t, err)
+		utils.AssertTrue(t, len(got) > 0)
+		utils.AssertEqual(t, got, []byte("START"))
+	})
+
+	// and it's no longer possible for players to join the game
+	joinerName := "Astrid"
+	data := mustMakeJson(t, JoinGameReq{GameID: gameID, Name: joinerName})
+	url = server.URL + "/join"
+
+	response, err := http.Post(url, "application/json", bytes.NewBuffer(data))
+	utils.AssertNoError(t, err)
+	defer response.Body.Close()
+
+	assertStatus(t, response.StatusCode, http.StatusBadRequest)
 }
 func TestRearrangingHand(t *testing.T) {
 	// players := SomePlayers()
 
-}
-
-func within(t *testing.T, d time.Duration, assert func()) {
-	t.Helper()
-
-	done := make(chan struct{}, 1)
-
-	go func() {
-		assert()
-		done <- struct{}{}
-	}()
-
-	select {
-	case <-time.After(d):
-		t.Error("timed out")
-	case <-done:
-	}
 }
