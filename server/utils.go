@@ -23,12 +23,12 @@ type stubStore struct {
 
 func (s *stubStore) FindActiveGame(ID string) shed.GameEngine {
 	// allows any game
-	game, _ := shed.NewGameEngine("", "", nil, nil, nil, nil)
+	game, _ := shed.NewGameEngine(shed.GameEngineOpts{})
 	return game
 }
 func (s *stubStore) FindInactiveGame(ID string) shed.GameEngine {
 	// allows any pending game
-	game, _ := shed.NewGameEngine("", "", nil, nil, nil, nil)
+	game, _ := shed.NewGameEngine(shed.GameEngineOpts{})
 	return game
 }
 
@@ -58,12 +58,12 @@ func (s fakeStore) InactiveGames() map[string]shed.GameEngine {
 
 func (s fakeStore) FindActiveGame(ID string) shed.GameEngine {
 	// allows any game
-	game, _ := shed.NewGameEngine("", "", nil, nil, nil, nil)
+	game, _ := shed.NewGameEngine(shed.GameEngineOpts{})
 	return game
 }
 func (s fakeStore) FindInactiveGame(ID string) shed.GameEngine {
 	// allows any pending game
-	game, _ := shed.NewGameEngine("", "", nil, nil, nil, nil)
+	game, _ := shed.NewGameEngine(shed.GameEngineOpts{})
 	return game
 }
 
@@ -125,7 +125,7 @@ func newJoinGameRequest(data []byte) *http.Request {
 }
 
 func newTestGame(t *testing.T, gameID, playerID string, ps shed.Players, setupFn func(shed.GameEngine) error) shed.GameEngine {
-	game, err := shed.NewGameEngine(gameID, playerID, ps, setupFn, nil, nil)
+	game, err := shed.NewGameEngine(shed.GameEngineOpts{GameID: gameID, CreatorID: playerID, Players: ps, SetupFn: setupFn})
 	utils.AssertNoError(t, err)
 
 	return game
@@ -148,7 +148,7 @@ func newServerWithGame(game shed.GameEngine) http.Handler {
 // and some hard-coded values
 func newServerWithInactiveGame(ps shed.Players) (*GameServer, string) {
 	gameID := "some-pending-id"
-	game, _ := shed.NewGameEngine(gameID, "hersha-1", ps, nil, nil, nil)
+	game, _ := shed.NewGameEngine(shed.GameEngineOpts{GameID: gameID, CreatorID: "hersha-1", Players: ps})
 
 	store := &shed.InMemoryGameStore{
 		ActiveGames: map[string]shed.GameEngine{},
@@ -158,12 +158,12 @@ func newServerWithInactiveGame(ps shed.Players) (*GameServer, string) {
 		PendingPlayers: map[string][]shed.PlayerInfo{
 			gameID: []shed.PlayerInfo{
 				{
-					PlayerID: "pending-player-id",
-					Name:     "Penelope",
-				},
-				{
 					PlayerID: "hersha-1",
 					Name:     "Hersha",
+				},
+				{
+					PlayerID: "pending-player-id",
+					Name:     "Penelope",
 				},
 			},
 		},
@@ -178,7 +178,7 @@ func newServerWithInactiveGame(ps shed.Players) (*GameServer, string) {
 // and some hard-coded values
 func newTestServerWithInactiveGame(ps shed.Players) (*httptest.Server, string) {
 	gameID := "some-pending-id"
-	game, _ := shed.NewGameEngine(gameID, "hersha-1", ps, nil, nil, nil)
+	game, _ := shed.NewGameEngine(shed.GameEngineOpts{GameID: gameID, CreatorID: "hersha-1", Players: ps})
 
 	store := &shed.InMemoryGameStore{
 		ActiveGames: map[string]shed.GameEngine{},
@@ -246,6 +246,9 @@ func mustDialWS(t *testing.T, url string) *websocket.Conn {
 
 	if err != nil {
 		t.Fatalf("could not open a ws connection on %s, code %d: %v", url, resp.StatusCode, err)
+	}
+	if ws == nil {
+		t.Fatal("unexpected nil websocket conn")
 	}
 
 	return ws

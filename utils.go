@@ -46,7 +46,10 @@ func playerInfoToPlayers(playerInfo []PlayerInfo) Players {
 }
 
 func gameEngineWithPlayers() GameEngine {
-	ge, _ := NewGameEngine("theid", "some-user-id", SomePlayers(), nil, nil, nil)
+	ge, _ := NewGameEngine(GameEngineOpts{
+		GameID:    "theid",
+		CreatorID: "some-user-id",
+		Players:   SomePlayers()})
 	return ge
 }
 

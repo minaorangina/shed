@@ -2,7 +2,6 @@ package shed
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -54,7 +53,6 @@ func (tp *TestPlayer) Cards() *PlayerCards {
 }
 
 func (tp *TestPlayer) Send(msg OutboundMessage) error {
-	fmt.Fprintf(tp.conn.Out, ("hello"))
 	return nil
 }
 

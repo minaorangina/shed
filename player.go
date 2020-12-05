@@ -1,7 +1,9 @@
 package shed
 
 import (
+	"encoding/json"
 	"io"
+	"log"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -80,16 +82,26 @@ type Player interface {
 
 type WSPlayer struct {
 	PlayerCards
-	id   string
-	name string
-	conn *websocket.Conn // think about how to mock this out
-	send chan []byte
+	id     string
+	name   string
+	conn   *websocket.Conn // think about how to mock this out
+	sendCh chan []byte
+	engine GameEngine
 }
 
 // NewPlayer constructs a new player
-func NewWSPlayer(id, name string, ws *websocket.Conn) Player {
-	player := &WSPlayer{id: id, name: name, conn: ws, send: make(chan []byte)}
+func NewWSPlayer(id, name string, ws *websocket.Conn, sendCh chan []byte, engine GameEngine) Player {
+	player := &WSPlayer{
+		id:     id,
+		name:   name,
+		conn:   ws,
+		sendCh: sendCh,
+		engine: engine,
+	}
+
 	go player.writePump()
+	go player.readPump()
+
 	return player
 }
 
@@ -110,22 +122,21 @@ func (p *WSPlayer) Cards() *PlayerCards {
 	}
 }
 
+// Send formats a OutboundMessage and forwards to ws connection
 func (p *WSPlayer) Send(msg OutboundMessage) error {
-	// check command
 	var formattedMsg []byte
+
 	switch msg.Command {
 	case protocol.Reorg:
 
 	case protocol.NewJoiner:
-		formattedMsg = append([]byte(msg.Message), []byte(" has joined the game!")...)
+		formattedMsg = []byte(msg.Message)
 
-		// convert to appropriate format
-
-		// call Send on the connection
-
+	case protocol.HasStarted:
+		formattedMsg = []byte("STARTED")
 	}
-
-	p.send <- formattedMsg
+	// should this be in a goroutine?
+	p.sendCh <- formattedMsg
 
 	return nil
 }
@@ -134,6 +145,37 @@ func (p *WSPlayer) Receive(msg []byte) {
 	// convert to InboundMessage
 
 	// put on the game engine chan
+}
+
+func (p *WSPlayer) readPump() {
+	defer func() {
+		p.engine.RemovePlayer(p)
+		p.conn.Close()
+	}()
+
+	p.conn.SetReadLimit(maxMessageSize)
+	p.conn.SetReadDeadline(time.Now().Add(pongWait))
+	p.conn.SetPongHandler(func(string) error { p.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	for {
+		_, message, err := p.conn.ReadMessage()
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				log.Printf("error: %v", err)
+			}
+			break
+		}
+		// switch on message contents
+		var inbound InboundMessage
+
+		err = json.Unmarshal(message, &inbound)
+		if err != nil {
+			log.Printf("error unmarshalling json: %v", err)
+			continue
+		}
+		// fmt.Println("READPUMP BYTES", string(message))
+		// fmt.Println("READPUMP INBOUND", inbound)
+		p.engine.Receive(inbound)
+	}
 }
 
 func (p *WSPlayer) writePump() {
@@ -146,96 +188,28 @@ func (p *WSPlayer) writePump() {
 
 	for {
 		select {
-		case msg, ok := <-p.send:
+		case msg, ok := <-p.sendCh:
 			p.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The hub closed the channel.
-				p.conn.WriteMessage(websocket.CloseMessage, []byte{})
-				return
+				p.conn.WriteMessage(websocket.CloseMessage, []byte("Something went wrong"))
 			}
 
-			w, err := p.conn.NextWriter(websocket.TextMessage)
+			err := p.conn.WriteMessage(websocket.TextMessage, msg)
 			if err != nil {
-				return
+				panic(err)
+				// return
 			}
-			w.Write(msg)
+			// fmt.Println("WRITE PUMP", string(msg))
 
 		case <-ticker.C:
 			p.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := p.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				return
+				panic(err)
+				// return
 			}
 		}
 	}
-}
-
-type CLIPlayer struct {
-	PlayerCards
-	id   string
-	name string
-	Conn *conn
-}
-
-func (p CLIPlayer) ID() string {
-	return p.id
-}
-
-func (p CLIPlayer) Name() string {
-	return p.name
-}
-
-// Cards returns all of a player's cards
-func (p CLIPlayer) Cards() *PlayerCards {
-	return &PlayerCards{
-		Hand:   p.Hand,
-		Seen:   p.Seen,
-		Unseen: p.Unseen,
-	}
-}
-
-func (p CLIPlayer) Send(msg OutboundMessage) error {
-	// check command
-	switch msg.Command {
-	case protocol.Reorg:
-		inbound := p.handleReorg(msg)
-		_ = inbound
-
-		// convert to appropriate format
-
-		// call Send on the connection
-
-		return nil
-	}
-	return nil
-}
-
-func (p CLIPlayer) Receive(msg []byte) {
-	// convert to InboundMessage
-
-	// put on the game engine chan
-}
-
-func (p CLIPlayer) handleReorg(msg OutboundMessage) InboundMessage {
-	response := InboundMessage{
-		PlayerID: msg.PlayerID,
-		Command:  msg.Command,
-		Hand:     msg.Hand,
-		Seen:     msg.Seen,
-	}
-
-	playerCards := PlayerCards{
-		Seen: msg.Seen,
-		Hand: msg.Hand,
-	}
-	SendText(p.Conn.Out, "%s, here are your cards:\n\n", msg.Name)
-	SendText(p.Conn.Out, buildCardDisplayText(playerCards))
-
-	// could probably make this one step. user submits or skips - no need to
-	if shouldReorganise := offerCardSwitch(p.Conn, offerTimeout); shouldReorganise {
-		response = reorganiseCards(p.Conn, msg)
-	}
-
-	return response
 }
 
 // Players represents all players in the game
