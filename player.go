@@ -1,7 +1,9 @@
 package shed
 
 import (
+	"encoding/json"
 	"io"
+	"log"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -96,7 +98,10 @@ func NewWSPlayer(id, name string, ws *websocket.Conn, sendCh chan []byte, engine
 		sendCh: sendCh,
 		engine: engine,
 	}
+
 	go player.writePump()
+	go player.readPump()
+
 	return player
 }
 
@@ -126,8 +131,10 @@ func (p *WSPlayer) Send(msg OutboundMessage) error {
 
 	case protocol.NewJoiner:
 		formattedMsg = []byte(msg.Message)
-	}
 
+	case protocol.HasStarted:
+		formattedMsg = []byte("STARTED")
+	}
 	// should this be in a goroutine?
 	p.sendCh <- formattedMsg
 
@@ -138,6 +145,37 @@ func (p *WSPlayer) Receive(msg []byte) {
 	// convert to InboundMessage
 
 	// put on the game engine chan
+}
+
+func (p *WSPlayer) readPump() {
+	defer func() {
+		p.engine.RemovePlayer(p)
+		p.conn.Close()
+	}()
+
+	p.conn.SetReadLimit(maxMessageSize)
+	p.conn.SetReadDeadline(time.Now().Add(pongWait))
+	p.conn.SetPongHandler(func(string) error { p.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	for {
+		_, message, err := p.conn.ReadMessage()
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				log.Printf("error: %v", err)
+			}
+			break
+		}
+		// switch on message contents
+		var inbound InboundMessage
+
+		err = json.Unmarshal(message, &inbound)
+		if err != nil {
+			log.Printf("error unmarshalling json: %v", err)
+			continue
+		}
+		// fmt.Println("READPUMP BYTES", string(message))
+		// fmt.Println("READPUMP INBOUND", inbound)
+		p.engine.Receive(inbound)
+	}
 }
 
 func (p *WSPlayer) writePump() {
@@ -157,12 +195,12 @@ func (p *WSPlayer) writePump() {
 				p.conn.WriteMessage(websocket.CloseMessage, []byte("Something went wrong"))
 			}
 
-			w, err := p.conn.NextWriter(websocket.TextMessage)
+			err := p.conn.WriteMessage(websocket.TextMessage, msg)
 			if err != nil {
 				panic(err)
 				// return
 			}
-			w.Write(msg)
+			// fmt.Println("WRITE PUMP", string(msg))
 
 		case <-ticker.C:
 			p.conn.SetWriteDeadline(time.Now().Add(writeWait))
@@ -172,4 +210,30 @@ func (p *WSPlayer) writePump() {
 			}
 		}
 	}
+}
+
+// Players represents all players in the game
+type Players []Player
+
+// NewPlayers returns a set of Players
+func NewPlayers(p ...Player) Players {
+	return Players(p)
+}
+
+// AddPlayer adds a player to a set of Players
+func AddPlayer(ps Players, p Player) Players {
+	if _, ok := ps.Find(p.ID()); !ok {
+		return Players(append(ps, p))
+	}
+	return ps
+}
+
+// Find finds a player by id
+func (ps Players) Find(id string) (Player, bool) {
+	for _, p := range ps {
+		if got := p.ID(); got == id {
+			return p, true
+		}
+	}
+	return nil, false
 }

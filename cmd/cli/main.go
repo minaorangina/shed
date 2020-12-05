@@ -8,7 +8,11 @@ import (
 
 func main() {
 	players := shed.SomePlayers()
-	game, err := shed.NewGameEngine("some-id", "creator-id", players, nil, nil, nil)
+	game, err := shed.NewGameEngine(shed.GameEngineOpts{
+		GameID:    "some-id",
+		CreatorID: "creator-id",
+		Players:   players,
+	})
 	if err != nil {
 		log.Fatal("Could not initialise a new game")
 	}

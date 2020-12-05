@@ -9,14 +9,14 @@ import (
 type InboundMessage struct {
 	PlayerID string       `json:"player_id"`
 	Command  protocol.Cmd `json:"command"`
-	Hand     []deck.Card  `json:"hand"`
-	Seen     []deck.Card  `json:"seen"`
+	Hand     []deck.Card  `json:"hand",omitempty`
+	Seen     []deck.Card  `json:"seen",omitempty`
 }
 
 // OutboundMessage is a message from GameEngine to Player
 type OutboundMessage struct {
 	PlayerID  string       `json:"player_id"`
-	Name      string       `json:"name"`
+	Name      string       `json:"name"` // pointless?
 	Message   string       `json:"message"`
 	Hand      []deck.Card  `json:"hand"`
 	Seen      []deck.Card  `json:"seen"`

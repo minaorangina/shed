@@ -27,7 +27,7 @@ func HandleInitialCards(ge GameEngine) error {
 	confirmed := map[string]PlayerCards{}
 
 	// assign cards
-	for _, p := range ge.Players() {
+	for _, p := range ps {
 		cards := p.Cards()
 		cards.Hand = confirmed[p.ID()].Hand
 		cards.Seen = confirmed[p.ID()].Seen

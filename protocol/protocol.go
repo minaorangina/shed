@@ -7,4 +7,5 @@ const (
 	NewJoiner Cmd = iota
 	Reorg
 	Start
+	HasStarted
 )

@@ -3,16 +3,18 @@ package server
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"testing"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/minaorangina/shed"
 	utils "github.com/minaorangina/shed/internal"
 )
 
-var serverTestTimeout = time.Duration(300 * time.Millisecond)
+var serverTestTimeout = time.Duration(600 * time.Millisecond)
 
 func TestCreateAndJoinNewGame(t *testing.T) {
 	// Given a request to create a new game
@@ -125,24 +127,37 @@ func TestStartGame(t *testing.T) {
 	player2Conn := mustDialWS(t, url)
 	defer player2Conn.Close()
 
-	// when the creator sends the command to start the game
-	w, err := creatorConn.NextWriter(websocket.TextMessage)
-	utils.AssertNoError(t, err)
-	defer w.Close()
-
-	w.Write([]byte("START"))
-
-	// then the start event is broadcast to other players
 	utils.Within(t, serverTestTimeout, func() {
-		_, got, err := player2Conn.ReadMessage()
+		_, bytes, err := creatorConn.ReadMessage()
 		utils.AssertNoError(t, err)
-		utils.AssertTrue(t, len(got) > 0)
-		utils.AssertEqual(t, got, []byte("START"))
+		utils.AssertTrue(t, len(bytes) > 0)
+		utils.AssertEqual(t, string(bytes), fmt.Sprintf("Penelope has joined the game!"))
+	})
+
+	// when the creator sends the command to start the game
+	data, err := json.Marshal(shed.InboundMessage{PlayerID: creatorID, Command: 2})
+	utils.AssertNoError(t, err)
+	err = creatorConn.WriteMessage(websocket.TextMessage, data)
+	utils.AssertNoError(t, err)
+
+	// then the start event is broadcast to all players
+	utils.Within(t, serverTestTimeout, func() {
+		_, bytes, err := player2Conn.ReadMessage()
+		utils.AssertNoError(t, err)
+		utils.AssertTrue(t, len(bytes) > 0)
+		utils.AssertEqual(t, string(bytes), "STARTED")
+	})
+
+	utils.Within(t, serverTestTimeout, func() {
+		_, bytes, err := creatorConn.ReadMessage()
+		utils.AssertNoError(t, err)
+		utils.AssertTrue(t, len(bytes) > 0)
+		utils.AssertEqual(t, string(bytes), "STARTED")
 	})
 
 	// and it's no longer possible for players to join the game
 	joinerName := "Astrid"
-	data := mustMakeJson(t, JoinGameReq{GameID: gameID, Name: joinerName})
+	data = mustMakeJson(t, JoinGameReq{GameID: gameID, Name: joinerName})
 	url = server.URL + "/join"
 
 	response, err := http.Post(url, "application/json", bytes.NewBuffer(data))

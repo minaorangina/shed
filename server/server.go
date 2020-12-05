@@ -121,7 +121,7 @@ func (g *GameServer) HandleNewGame(w http.ResponseWriter, r *http.Request) {
 
 	// generate game ID
 	gameID, playerID := NewID(), NewID()
-	game, err := shed.NewGameEngine(gameID, playerID, nil, nil, nil, nil)
+	game, err := shed.NewGameEngine(shed.GameEngineOpts{GameID: gameID, CreatorID: playerID})
 	if err != nil {
 		log.Println(err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
@@ -323,7 +323,6 @@ func (g *GameServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	playerID := vals[0]
-
 	game := g.store.FindInactiveGame(gameID)
 	if game == nil {
 		w.WriteHeader(http.StatusBadRequest)

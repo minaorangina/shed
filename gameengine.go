@@ -41,21 +41,32 @@ type GameEngine interface {
 	ID() string
 	CreatorID() string
 	AddPlayer(Player) error
+	RemovePlayer(Player)
 	Receive(InboundMessage)
 }
 
 // gameEngine represents the engine of the game
 
 type gameEngine struct {
-	id         string
-	creatorID  string
-	playState  playState
-	players    Players
-	registerCh chan Player
-	inboundCh  chan InboundMessage
-	stage      Stage
-	deck       deck.Deck
-	setupFn    func(GameEngine) error
+	id           string
+	creatorID    string
+	playState    playState
+	players      Players
+	registerCh   chan Player
+	unregisterCh chan Player
+	inboundCh    chan InboundMessage
+	stage        Stage
+	deck         deck.Deck
+	setupFn      func(GameEngine) error
+}
+
+type GameEngineOpts struct {
+	GameID                   string
+	CreatorID                string
+	Players                  Players
+	SetupFn                  func(GameEngine) error
+	RegisterCh, UnregisterCh chan Player
+	InboundCh                chan InboundMessage
 }
 
 var (
@@ -64,27 +75,22 @@ var (
 )
 
 // New constructs a new GameEngine
-func NewGameEngine(gameID string,
-	creatorID string,
-	players Players,
-	setupFn func(GameEngine) error,
-	registerCh chan Player,
-	inboundCh chan InboundMessage,
-) (*gameEngine, error) {
-	if registerCh == nil {
-		registerCh = make(chan Player)
+func NewGameEngine(opts GameEngineOpts) (*gameEngine, error) {
+	if opts.RegisterCh == nil {
+		opts.RegisterCh = make(chan Player)
 	}
-	if inboundCh == nil {
-		inboundCh = make(chan InboundMessage)
+	if opts.InboundCh == nil {
+		opts.InboundCh = make(chan InboundMessage)
 	}
 	engine := &gameEngine{
-		id:         gameID,
-		creatorID:  creatorID,
-		players:    players,
-		registerCh: registerCh,
-		inboundCh:  inboundCh,
-		deck:       deck.New(), // to move to Game
-		setupFn:    setupFn,
+		id:           opts.GameID,
+		creatorID:    opts.CreatorID,
+		players:      opts.Players,
+		registerCh:   opts.RegisterCh,
+		unregisterCh: opts.UnregisterCh,
+		inboundCh:    opts.InboundCh,
+		deck:         deck.New(), // to move to Game
+		setupFn:      opts.SetupFn,
 	}
 
 	// Listen for websocket connections
@@ -106,14 +112,20 @@ func (ge *gameEngine) Deck() deck.Deck {
 }
 
 func (ge *gameEngine) Players() Players {
-	// mutex?
 	return ge.players
 }
 
 // AddPlayer adds a player to a game
 func (ge *gameEngine) AddPlayer(p Player) error {
+	if ge.playState != idle {
+		return errors.New("cannot add player - game has started")
+	}
 	ge.registerCh <- p
 	return nil
+}
+
+func (ge *gameEngine) RemovePlayer(p Player) {
+	ge.unregisterCh <- p
 }
 
 // Setup does any pre-game setup required
@@ -154,8 +166,7 @@ func (ge *gameEngine) MessagePlayers(messages []OutboundMessage) error {
 
 // Receive forwards InboundMessages from Players for sorting
 func (ge *gameEngine) Receive(msg InboundMessage) {
-	panic("not expecting this")
-	// ge.inboundCh <- msg
+	ge.inboundCh <- msg
 }
 
 func (ge *gameEngine) checkNumPlayers() error {
@@ -178,29 +189,53 @@ func (ge *gameEngine) Listen() {
 			ps := ge.Players()
 			ge.players = AddPlayer(ps, joiner)
 			for _, p := range ge.players {
+				if p.ID() == joiner.ID() {
+					continue
+				}
 				outbound := buildNewJoinerMessage(joiner, p)
 				p.Send(outbound)
+			}
+
+		case leaver := <-ge.unregisterCh:
+			fmt.Println("THIS HAPPENED")
+			ps := ge.Players()
+			target, ok := ps.Find(leaver.ID())
+			if ok {
+				underlyingPlayer, typeOK := target.(*WSPlayer)
+				if !typeOK {
+					panic("this shouldn't have happened")
+				}
+				underlyingPlayer.conn = nil
 			}
 
 		case msg := <-ge.inboundCh:
 			switch msg.Command {
 			case protocol.Start:
 				ge.Start()
-
+				for _, p := range ge.players {
+					outbound := buildGameHasStartedMessage(p)
+					p.Send(outbound)
+				}
 			}
 		}
 	}
 }
 
+func buildGameHasStartedMessage(recipient Player) OutboundMessage {
+	return OutboundMessage{
+		PlayerID: recipient.ID(),
+		Name:     recipient.Name(),
+		Message:  fmt.Sprintf("STARTED"),
+		Command:  protocol.HasStarted,
+	}
+}
+
 func buildNewJoinerMessage(joiner, recipient Player) OutboundMessage {
 	return OutboundMessage{
-		PlayerID:  recipient.ID(),
-		Name:      recipient.Name(),
-		Message:   fmt.Sprintf("%s has joined the game!", joiner.Name()),
-		Hand:      nil,
-		Seen:      nil,
-		Opponents: nil,
-		Command:   protocol.NewJoiner,
+		PlayerID: recipient.ID(),
+		Name:     recipient.Name(),
+		Message:  fmt.Sprintf("%s has joined the game!", joiner.Name()),
+		Command:  protocol.NewJoiner,
 	}
 }
 
