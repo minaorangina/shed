@@ -156,15 +156,15 @@ func TestStartGame(t *testing.T) {
 	})
 
 	// and it's no longer possible for players to join the game
-	// joinerName := "Astrid"
-	// data = mustMakeJson(t, JoinGameReq{GameID: gameID, Name: joinerName})
-	// url = server.URL + "/join"
+	joinerName := "Astrid"
+	data = mustMakeJson(t, JoinGameReq{GameID: gameID, Name: joinerName})
+	url = server.URL + "/join"
 
-	// response, err := http.Post(url, "application/json", bytes.NewBuffer(data))
-	// utils.AssertNoError(t, err)
-	// defer response.Body.Close()
+	response, err := http.Post(url, "application/json", bytes.NewBuffer(data))
+	utils.AssertNoError(t, err)
+	defer response.Body.Close()
 
-	// assertStatus(t, response.StatusCode, http.StatusBadRequest)
+	assertStatus(t, response.StatusCode, http.StatusBadRequest)
 }
 func TestRearrangingHand(t *testing.T) {
 	// players := SomePlayers()

@@ -185,7 +185,7 @@ func TestGameEngineStart(t *testing.T) {
 		engine, err := NewGameEngine(GameEngineOpts{Players: SomePlayers()})
 		utils.AssertNoError(t, err)
 
-		engine.playState = inProgress
+		engine.playState = InProgress
 		err = engine.Start()
 		utils.AssertNoError(t, err)
 	})
@@ -225,6 +225,6 @@ func TestGameEngineReceiveMessage(t *testing.T) {
 			utils.AssertTrue(t, called)
 		})
 
-		utils.AssertEqual(t, engine.playState, inProgress)
+		utils.AssertEqual(t, engine.playState, InProgress)
 	})
 }

@@ -68,23 +68,19 @@ func buildOpponents(playerID string, ps Players) []Opponent {
 
 // NewTestGameStore is a convenience function for creating InMemoryGameStore in tests
 func NewTestGameStore(
-	activeGames,
-	inactiveGames map[string]GameEngine,
+	games map[string]GameEngine,
 	pendingPlayers map[string][]PlayerInfo,
 ) *InMemoryGameStore {
-	if activeGames == nil {
-		activeGames = map[string]GameEngine{}
+	if games == nil {
+		games = map[string]GameEngine{}
 	}
-	if inactiveGames == nil {
-		inactiveGames = map[string]GameEngine{}
-	}
+
 	if pendingPlayers == nil {
 		pendingPlayers = map[string][]PlayerInfo{}
 	}
 
 	return &InMemoryGameStore{
-		ActiveGames:    activeGames,
-		InactiveGames:  inactiveGames,
+		Games:          games,
 		PendingPlayers: pendingPlayers,
 	}
 }

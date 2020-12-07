@@ -8,17 +8,17 @@ import (
 	"github.com/minaorangina/shed/protocol"
 )
 
-// playState represents the state of the current game
+// PlayState represents the state of the current game
 // idle -> no game play (pre game and post game)
-// inProgress -> game in progress
+// InProgress -> game in progress
 // paused -> game is paused
-type playState int
+type PlayState int
 
-func (gps playState) String() string {
+func (gps PlayState) String() string {
 	if gps == 0 {
 		return "idle"
 	} else if gps == 1 {
-		return "inProgress"
+		return "InProgress"
 	} else if gps == 2 {
 		return "paused"
 	}
@@ -26,9 +26,9 @@ func (gps playState) String() string {
 }
 
 const (
-	idle playState = iota
-	inProgress
-	paused
+	Idle PlayState = iota
+	InProgress
+	Paused
 )
 
 // GameEngine represents the engine of the game
@@ -43,6 +43,7 @@ type GameEngine interface {
 	AddPlayer(Player) error
 	RemovePlayer(Player)
 	Receive(InboundMessage)
+	PlayState() PlayState
 }
 
 // gameEngine represents the engine of the game
@@ -50,7 +51,7 @@ type GameEngine interface {
 type gameEngine struct {
 	id           string
 	creatorID    string
-	playState    playState
+	playState    PlayState
 	players      Players
 	registerCh   chan Player
 	unregisterCh chan Player
@@ -60,6 +61,7 @@ type gameEngine struct {
 	setupFn      func(GameEngine) error
 }
 
+// GameEngineOpts represents options for constructing a new GameEngine
 type GameEngineOpts struct {
 	GameID                   string
 	CreatorID                string
@@ -67,6 +69,7 @@ type GameEngineOpts struct {
 	SetupFn                  func(GameEngine) error
 	RegisterCh, UnregisterCh chan Player
 	InboundCh                chan InboundMessage
+	PlayState                PlayState
 }
 
 var (
@@ -91,6 +94,7 @@ func NewGameEngine(opts GameEngineOpts) (*gameEngine, error) {
 		inboundCh:    opts.InboundCh,
 		deck:         deck.New(), // to move to Game
 		setupFn:      opts.SetupFn,
+		playState:    opts.PlayState,
 	}
 
 	// Listen for websocket connections
@@ -115,9 +119,13 @@ func (ge *gameEngine) Players() Players {
 	return ge.players
 }
 
+func (ge *gameEngine) PlayState() PlayState {
+	return ge.playState
+}
+
 // AddPlayer adds a player to a game
 func (ge *gameEngine) AddPlayer(p Player) error {
-	if ge.playState != idle {
+	if ge.playState != Idle {
 		return errors.New("cannot add player - game has started")
 	}
 	ge.registerCh <- p
@@ -148,7 +156,7 @@ func (ge *gameEngine) Start() error {
 		return err
 	}
 
-	if ge.playState != idle {
+	if ge.playState != Idle {
 		return nil
 	}
 
@@ -156,7 +164,9 @@ func (ge *gameEngine) Start() error {
 		return err
 	}
 
-	ge.playState = inProgress
+	// mutex
+	ge.playState = InProgress
+
 	return nil
 }
 

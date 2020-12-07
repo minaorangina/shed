@@ -97,10 +97,13 @@ func TestGETGameWaitingRoom(t *testing.T) {
 		request, _ := http.NewRequest(http.MethodGet, url, nil)
 
 		store := NewBasicStore()
-		game, err := shed.NewGameEngine(shed.GameEngineOpts{GameID: gameID, CreatorID: creatorID})
+		game, err := shed.NewGameEngine(shed.GameEngineOpts{
+			GameID:    gameID,
+			CreatorID: creatorID,
+		})
 		utils.AssertNoError(t, err)
 
-		store.InactiveGames[gameID] = game
+		store.Games[gameID] = game
 		store.PendingPlayers[gameID] = []shed.PlayerInfo{{PlayerID: creatorID, Name: "Horatio"}}
 
 		server := NewServer(store)
@@ -123,10 +126,13 @@ func TestGETGameWaitingRoom(t *testing.T) {
 		request, _ := http.NewRequest(http.MethodGet, url, nil)
 
 		store := NewBasicStore()
-		game, err := shed.NewGameEngine(shed.GameEngineOpts{GameID: gameID, CreatorID: "i-am-the-creator"})
+		game, err := shed.NewGameEngine(shed.GameEngineOpts{
+			GameID:    gameID,
+			CreatorID: "i-am-the-creator",
+		})
 		utils.AssertNoError(t, err)
 
-		store.InactiveGames[gameID] = game
+		store.Games[gameID] = game
 		store.PendingPlayers[gameID] = []shed.PlayerInfo{{PlayerID: playerID, Name: "Horatio"}}
 
 		server := NewServer(store)
@@ -178,7 +184,7 @@ func TestJoinGame(t *testing.T) {
 		response := httptest.NewRecorder()
 		request := newJoinGameRequest(nil)
 
-		game := newTestGame(t, "some-game-id", "", shed.SomePlayers(), nil)
+		game := newTestGame(t, shed.GameEngineOpts{GameID: "some-game-id", Players: shed.SomePlayers()})
 		server := newServerWithGame(game)
 
 		server.ServeHTTP(response, request)
@@ -218,7 +224,10 @@ func TestJoinGame(t *testing.T) {
 func TestServerGETGame(t *testing.T) {
 	t.Run("returns an existing active game", func(t *testing.T) {
 		testID := "12u34"
-		server := newServerWithGame(newTestGame(t, testID, "", nil, nil))
+		server := newServerWithGame(newTestGame(t, shed.GameEngineOpts{
+			GameID:    testID,
+			PlayState: shed.InProgress,
+		}))
 
 		request := newGetGameRequest(testID)
 		response := httptest.NewRecorder()
@@ -262,7 +271,7 @@ func TestServerGETGame(t *testing.T) {
 	t.Run("returns a 404 if game doesn't exist", func(t *testing.T) {
 		gameID := "12u34"
 		nonExistentID := "bad-game-id"
-		server := newServerWithGame(newTestGame(t, gameID, "", nil, nil))
+		server := newServerWithGame(newTestGame(t, shed.GameEngineOpts{GameID: gameID}))
 
 		request := newGetGameRequest(nonExistentID)
 		response := httptest.NewRecorder()
@@ -302,7 +311,7 @@ func TestWS(t *testing.T) {
 		gameID := "this-is-a-game-id"
 		name, playerID := "Delilah", "delilah1"
 
-		game := newTestGame(t, gameID, playerID, nil, nil)
+		game := newTestGame(t, shed.GameEngineOpts{GameID: gameID, CreatorID: playerID})
 
 		store := NewBasicStore()
 		store.AddInactiveGame(game)

@@ -121,7 +121,10 @@ func (g *GameServer) HandleNewGame(w http.ResponseWriter, r *http.Request) {
 
 	// generate game ID
 	gameID, playerID := NewID(), NewID()
-	game, err := shed.NewGameEngine(shed.GameEngineOpts{GameID: gameID, CreatorID: playerID})
+	game, err := shed.NewGameEngine(shed.GameEngineOpts{
+		GameID:    gameID,
+		CreatorID: playerID,
+	})
 	if err != nil {
 		log.Println(err.Error())
 		w.WriteHeader(http.StatusInternalServerError)

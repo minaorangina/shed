@@ -89,8 +89,7 @@ func (s fakeStore) ActivateGame(gameID string) error {
 
 func NewBasicStore() *shed.InMemoryGameStore {
 	return &shed.InMemoryGameStore{
-		ActiveGames:    map[string]shed.GameEngine{},
-		InactiveGames:  map[string]shed.GameEngine{},
+		Games:          map[string]shed.GameEngine{},
 		PendingPlayers: map[string][]shed.PlayerInfo{},
 	}
 }
@@ -124,8 +123,8 @@ func newJoinGameRequest(data []byte) *http.Request {
 	return request
 }
 
-func newTestGame(t *testing.T, gameID, playerID string, ps shed.Players, setupFn func(shed.GameEngine) error) shed.GameEngine {
-	game, err := shed.NewGameEngine(shed.GameEngineOpts{GameID: gameID, CreatorID: playerID, Players: ps, SetupFn: setupFn})
+func newTestGame(t *testing.T, opts shed.GameEngineOpts) shed.GameEngine {
+	game, err := shed.NewGameEngine(opts)
 	utils.AssertNoError(t, err)
 
 	return game
@@ -134,10 +133,9 @@ func newTestGame(t *testing.T, gameID, playerID string, ps shed.Players, setupFn
 func newServerWithGame(game shed.GameEngine) http.Handler {
 	id := game.ID()
 	store := &shed.InMemoryGameStore{
-		ActiveGames: map[string]shed.GameEngine{
+		Games: map[string]shed.GameEngine{
 			id: game,
 		},
-		InactiveGames:  map[string]shed.GameEngine{},
 		PendingPlayers: map[string][]shed.PlayerInfo{},
 	}
 
@@ -151,8 +149,7 @@ func newServerWithInactiveGame(ps shed.Players) (*GameServer, string) {
 	game, _ := shed.NewGameEngine(shed.GameEngineOpts{GameID: gameID, CreatorID: "hersha-1", Players: ps})
 
 	store := &shed.InMemoryGameStore{
-		ActiveGames: map[string]shed.GameEngine{},
-		InactiveGames: map[string]shed.GameEngine{
+		Games: map[string]shed.GameEngine{
 			gameID: game,
 		},
 		PendingPlayers: map[string][]shed.PlayerInfo{
@@ -177,25 +174,27 @@ func newServerWithInactiveGame(ps shed.Players) (*GameServer, string) {
 // newTestServerWithInactiveGame returns an httptest.Server with an inactive game
 // and some hard-coded values
 func newTestServerWithInactiveGame(ps shed.Players) (*httptest.Server, string) {
-	gameID := "some-pending-id"
-	game, _ := shed.NewGameEngine(shed.GameEngineOpts{GameID: gameID, CreatorID: "hersha-1", Players: ps})
-
 	store := &shed.InMemoryGameStore{
-		ActiveGames: map[string]shed.GameEngine{},
-		InactiveGames: map[string]shed.GameEngine{
-			gameID: game,
+		Games:          map[string]shed.GameEngine{},
+		PendingPlayers: map[string][]shed.PlayerInfo{},
+	}
+
+	gameID := "some-pending-id"
+	game, _ := shed.NewGameEngine(shed.GameEngineOpts{
+		GameID:    gameID,
+		CreatorID: "hersha-1",
+		Players:   ps,
+	})
+
+	store.Games[gameID] = game
+	store.PendingPlayers[gameID] = []shed.PlayerInfo{
+		{
+			PlayerID: "pending-player-id",
+			Name:     "Penelope",
 		},
-		PendingPlayers: map[string][]shed.PlayerInfo{
-			gameID: []shed.PlayerInfo{
-				{
-					PlayerID: "pending-player-id",
-					Name:     "Penelope",
-				},
-				{
-					PlayerID: "hersha-1",
-					Name:     "Hersha",
-				},
-			},
+		{
+			PlayerID: "hersha-1",
+			Name:     "Hersha",
 		},
 	}
 
