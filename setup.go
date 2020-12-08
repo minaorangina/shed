@@ -17,21 +17,35 @@ func HandleInitialCards(ge GameEngine) error {
 	dealUnseenCards(deck, ps)
 	initialCards := dealInitialCards(deck, ps)
 
-	// confirm with player
-	err := confirmInitialCards(ps, initialCards, ge.MessagePlayers)
+	// // confirm with player
+	// err := confirmInitialCards(ps, initialCards, ge.MessagePlayers)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// prompt player
+	messages := []OutboundMessage{}
+	for _, p := range ps {
+		playerID := p.ID()
+		o := buildOpponents(playerID, ps)
+		m := buildReorgMessage(p, o, initialCards[playerID])
+		messages = append(messages, m)
+	}
+
+	err := ge.MessagePlayers(messages)
 	if err != nil {
 		return err
 	}
 
-	// block to get initial cards here or something
-	confirmed := map[string]PlayerCards{}
+	// // block to get initial cards here or something
+	// confirmed := map[string]PlayerCards{}
 
-	// assign cards
-	for _, p := range ps {
-		cards := p.Cards()
-		cards.Hand = confirmed[p.ID()].Hand
-		cards.Seen = confirmed[p.ID()].Seen
-	}
+	// // assign cards
+	// for _, p := range ps {
+	// 	cards := p.Cards()
+	// 	cards.Hand = confirmed[p.ID()].Hand
+	// 	cards.Seen = confirmed[p.ID()].Seen
+	// }
 
 	return nil
 }
@@ -68,7 +82,7 @@ func confirmInitialCards(
 	for _, p := range ps {
 		playerID := p.ID()
 		o := buildOpponents(playerID, ps)
-		m := buildReorgMessage(p, o, ic[playerID], "Rearrange your hand")
+		m := buildReorgMessage(p, o, ic[playerID])
 		messages = append(messages, m)
 	}
 
@@ -81,13 +95,11 @@ func buildReorgMessage(
 	player Player,
 	opponents []Opponent,
 	initialCards InitialCards,
-	message string,
 ) OutboundMessage {
 
 	return OutboundMessage{
 		PlayerID:  player.ID(),
 		Name:      player.Name(),
-		Message:   message,
 		Hand:      initialCards.Hand,
 		Seen:      initialCards.Seen,
 		Opponents: opponents,

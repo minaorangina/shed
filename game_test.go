@@ -19,9 +19,8 @@ func TestBuildMessageToPlayer(t *testing.T) {
 	}
 
 	playerToContact, _ := ps.Find(id)
-	message := buildReorgMessage(playerToContact, opponents, InitialCards{}, "Let the games begin!")
+	message := buildReorgMessage(playerToContact, opponents, InitialCards{})
 	expectedMessage := OutboundMessage{
-		Message:   "Let the games begin!",
 		PlayerID:  playerToContact.ID(),
 		Name:      playerToContact.Name(),
 		Hand:      playerToContact.Cards().Hand,
@@ -44,7 +43,7 @@ func TestGameEngineMsgFromGame(t *testing.T) {
 	initialCards := InitialCards{}
 	for _, p := range ge.Players() {
 		o := buildOpponents(p.ID(), ge.Players())
-		m := buildReorgMessage(p, o, initialCards, "Rearrange your initial cards")
+		m := buildReorgMessage(p, o, initialCards)
 		messages = append(messages, m)
 
 		cards := p.Cards()

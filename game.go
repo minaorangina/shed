@@ -16,3 +16,5 @@ func (s Stage) String() string { // TODO: test
 	}
 	return ""
 }
+
+type Game interface{}

@@ -59,6 +59,7 @@ type gameEngine struct {
 	stage        Stage
 	deck         deck.Deck
 	setupFn      func(GameEngine) error
+	game         Game
 }
 
 // GameEngineOpts represents options for constructing a new GameEngine
@@ -70,6 +71,7 @@ type GameEngineOpts struct {
 	RegisterCh, UnregisterCh chan Player
 	InboundCh                chan InboundMessage
 	PlayState                PlayState
+	Game                     Game
 }
 
 var (
@@ -78,7 +80,7 @@ var (
 )
 
 // New constructs a new GameEngine
-func NewGameEngine(opts GameEngineOpts) (*gameEngine, error) {
+func NewGameEngine(opts GameEngineOpts) *gameEngine {
 	if opts.RegisterCh == nil {
 		opts.RegisterCh = make(chan Player)
 	}
@@ -100,7 +102,7 @@ func NewGameEngine(opts GameEngineOpts) (*gameEngine, error) {
 	// Listen for websocket connections
 	go engine.Listen()
 
-	return engine, nil
+	return engine
 }
 
 func (ge *gameEngine) ID() string {
@@ -171,7 +173,19 @@ func (ge *gameEngine) Start() error {
 }
 
 func (ge *gameEngine) MessagePlayers(messages []OutboundMessage) error {
-	return messagePlayersAwaitReply(ge.Players(), messages)
+	missingPlayers := []string{}
+	for _, m := range messages {
+		p, ok := ge.players.Find(m.PlayerID)
+		if !ok {
+			missingPlayers = append(missingPlayers, m.PlayerID)
+		}
+		p.Send(m)
+	}
+	if len(missingPlayers) > 0 {
+		return fmt.Errorf("could not send to some players")
+	}
+
+	return nil
 }
 
 // Receive forwards InboundMessages from Players for sorting
@@ -227,6 +241,10 @@ func (ge *gameEngine) Listen() {
 					p.Send(outbound)
 				}
 			}
+
+			// for all other cases, send to "Game"
+			// case protocol.Reorg:
+
 		}
 	}
 }

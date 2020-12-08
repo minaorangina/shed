@@ -23,12 +23,12 @@ type stubStore struct {
 
 func (s *stubStore) FindActiveGame(ID string) shed.GameEngine {
 	// allows any game
-	game, _ := shed.NewGameEngine(shed.GameEngineOpts{})
+	game := shed.NewGameEngine(shed.GameEngineOpts{})
 	return game
 }
 func (s *stubStore) FindInactiveGame(ID string) shed.GameEngine {
 	// allows any pending game
-	game, _ := shed.NewGameEngine(shed.GameEngineOpts{})
+	game := shed.NewGameEngine(shed.GameEngineOpts{})
 	return game
 }
 
@@ -58,12 +58,12 @@ func (s fakeStore) InactiveGames() map[string]shed.GameEngine {
 
 func (s fakeStore) FindActiveGame(ID string) shed.GameEngine {
 	// allows any game
-	game, _ := shed.NewGameEngine(shed.GameEngineOpts{})
+	game := shed.NewGameEngine(shed.GameEngineOpts{})
 	return game
 }
 func (s fakeStore) FindInactiveGame(ID string) shed.GameEngine {
 	// allows any pending game
-	game, _ := shed.NewGameEngine(shed.GameEngineOpts{})
+	game := shed.NewGameEngine(shed.GameEngineOpts{})
 	return game
 }
 
@@ -124,8 +124,7 @@ func newJoinGameRequest(data []byte) *http.Request {
 }
 
 func newTestGame(t *testing.T, opts shed.GameEngineOpts) shed.GameEngine {
-	game, err := shed.NewGameEngine(opts)
-	utils.AssertNoError(t, err)
+	game := shed.NewGameEngine(opts)
 
 	return game
 }
@@ -146,7 +145,7 @@ func newServerWithGame(game shed.GameEngine) http.Handler {
 // and some hard-coded values
 func newServerWithInactiveGame(ps shed.Players) (*GameServer, string) {
 	gameID := "some-pending-id"
-	game, _ := shed.NewGameEngine(shed.GameEngineOpts{GameID: gameID, CreatorID: "hersha-1", Players: ps})
+	game := shed.NewGameEngine(shed.GameEngineOpts{GameID: gameID, CreatorID: "hersha-1", Players: ps})
 
 	store := &shed.InMemoryGameStore{
 		Games: map[string]shed.GameEngine{
@@ -180,7 +179,7 @@ func newTestServerWithInactiveGame(ps shed.Players) (*httptest.Server, string) {
 	}
 
 	gameID := "some-pending-id"
-	game, _ := shed.NewGameEngine(shed.GameEngineOpts{
+	game := shed.NewGameEngine(shed.GameEngineOpts{
 		GameID:    gameID,
 		CreatorID: "hersha-1",
 		Players:   ps,

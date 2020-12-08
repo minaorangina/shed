@@ -97,11 +97,10 @@ func TestGETGameWaitingRoom(t *testing.T) {
 		request, _ := http.NewRequest(http.MethodGet, url, nil)
 
 		store := NewBasicStore()
-		game, err := shed.NewGameEngine(shed.GameEngineOpts{
+		game := shed.NewGameEngine(shed.GameEngineOpts{
 			GameID:    gameID,
 			CreatorID: creatorID,
 		})
-		utils.AssertNoError(t, err)
 
 		store.Games[gameID] = game
 		store.PendingPlayers[gameID] = []shed.PlayerInfo{{PlayerID: creatorID, Name: "Horatio"}}
@@ -126,11 +125,10 @@ func TestGETGameWaitingRoom(t *testing.T) {
 		request, _ := http.NewRequest(http.MethodGet, url, nil)
 
 		store := NewBasicStore()
-		game, err := shed.NewGameEngine(shed.GameEngineOpts{
+		game := shed.NewGameEngine(shed.GameEngineOpts{
 			GameID:    gameID,
 			CreatorID: "i-am-the-creator",
 		})
-		utils.AssertNoError(t, err)
 
 		store.Games[gameID] = game
 		store.PendingPlayers[gameID] = []shed.PlayerInfo{{PlayerID: playerID, Name: "Horatio"}}
