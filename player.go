@@ -48,23 +48,6 @@ type Conn interface {
 	Conn() io.Closer
 }
 
-type WSConn struct {
-	Out *websocket.Conn
-}
-
-func NewWSConn(c *websocket.Conn) *WSConn {
-	return &WSConn{c}
-}
-
-func (c *WSConn) Send(data []byte) error {
-
-	return nil
-}
-
-func (c *WSConn) Receive(data []byte) {
-
-}
-
 type PlayerCards struct {
 	Hand   []deck.Card
 	Seen   []deck.Card
