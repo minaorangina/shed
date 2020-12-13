@@ -4,6 +4,19 @@ import (
 	"os"
 )
 
+type SpyGame struct {
+	startCalled bool
+}
+
+func (g *SpyGame) Start(playerIDs []string) error {
+	g.startCalled = true
+	return nil
+}
+
+func (g *SpyGame) Next() ([]OutboundMessage, bool) {
+	return nil, false
+}
+
 func messagesToInitialCards(messages []InboundMessage) map[string]InitialCards {
 	reorganised := map[string]InitialCards{}
 

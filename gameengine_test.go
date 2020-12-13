@@ -125,6 +125,8 @@ func TestGameEngineInit(t *testing.T) {
 		utils.AssertEqual(t, engine.CreatorID(), playerID)
 	})
 }
+
+// might move to the Game, or possibly become obsolete
 func TestGameEngineSetupFn(t *testing.T) {
 	t.Run("does not error if no setup fn defined", func(t *testing.T) {
 		engine := NewGameEngine(GameEngineOpts{Players: SomePlayers()})
@@ -167,7 +169,7 @@ func TestGameEngineStart(t *testing.T) {
 		}
 
 		for _, et := range testsShouldError {
-			ge := NewGameEngine(GameEngineOpts{Players: et.input})
+			ge := NewGameEngine(GameEngineOpts{Players: et.input, Game: &SpyGame{}})
 			err := ge.Start()
 			utils.AssertEqual(t, err.Error(), et.want.Error())
 		}
@@ -183,7 +185,10 @@ func TestGameEngineStart(t *testing.T) {
 
 	t.Run("calls the setup fn", func(t *testing.T) {
 		spy := spySetup{}
-		engine := NewGameEngine(GameEngineOpts{Players: SomePlayers(), SetupFn: spy.setup})
+		engine := NewGameEngine(GameEngineOpts{
+			Players: SomePlayers(),
+			SetupFn: spy.setup,
+			Game:    &SpyGame{}})
 
 		err := engine.Start()
 		utils.AssertNoError(t, err)

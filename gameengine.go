@@ -8,6 +8,11 @@ import (
 	"github.com/minaorangina/shed/protocol"
 )
 
+var (
+	ErrTooFewPlayers  = errors.New("minimum of 2 players required")
+	ErrTooManyPlayers = errors.New("maximum of 4 players allowed")
+)
+
 // PlayState represents the state of the current game
 // idle -> no game play (pre game and post game)
 // InProgress -> game in progress
@@ -74,11 +79,6 @@ type GameEngineOpts struct {
 	Game                     Game
 }
 
-var (
-	ErrTooFewPlayers  = errors.New("minimum of 2 players required")
-	ErrTooManyPlayers = errors.New("maximum of 4 players allowed")
-)
-
 // New constructs a new GameEngine
 func NewGameEngine(opts GameEngineOpts) *gameEngine {
 	if opts.RegisterCh == nil {
@@ -97,6 +97,7 @@ func NewGameEngine(opts GameEngineOpts) *gameEngine {
 		deck:         deck.New(), // to move to Game
 		setupFn:      opts.SetupFn,
 		playState:    opts.PlayState,
+		game:         opts.Game,
 	}
 
 	// Listen for websocket connections
@@ -140,26 +141,27 @@ func (ge *gameEngine) RemovePlayer(p Player) {
 
 // Setup does any pre-game setup required
 func (ge *gameEngine) Setup() error {
-	if err := ge.checkNumPlayers(); err != nil {
-		return err
-	}
-
-	var err error
 	if ge.setupFn != nil {
-		err = ge.setupFn(ge)
+		return ge.setupFn(ge)
 	}
-	return err
+	return nil
 }
 
 // Start starts a game
 // Might be renamed `next`
 func (ge *gameEngine) Start() error {
-	if err := ge.checkNumPlayers(); err != nil {
-		return err
-	}
-
 	if ge.playState != Idle {
 		return nil
+	}
+
+	if ge.game == nil {
+		return errors.New("cannot start nil game")
+	}
+
+	// should return error
+	err := ge.game.Start(ge.players.IDs())
+	if err != nil {
+		return err
 	}
 
 	if err := ge.Setup(); err != nil {
