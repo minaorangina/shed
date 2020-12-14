@@ -3,12 +3,14 @@ package shed
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/minaorangina/shed/deck"
 	"github.com/minaorangina/shed/protocol"
 )
 
 var (
+	ErrNilGame        = errors.New("game is nil")
 	ErrTooFewPlayers  = errors.New("minimum of 2 players required")
 	ErrTooManyPlayers = errors.New("maximum of 4 players allowed")
 )
@@ -79,8 +81,11 @@ type GameEngineOpts struct {
 	Game                     Game
 }
 
-// New constructs a new GameEngine
-func NewGameEngine(opts GameEngineOpts) *gameEngine {
+// NewGameEngine constructs a new GameEngine
+func NewGameEngine(opts GameEngineOpts) (*gameEngine, error) {
+	if opts.Game == nil {
+		return nil, ErrNilGame
+	}
 	if opts.RegisterCh == nil {
 		opts.RegisterCh = make(chan Player)
 	}
@@ -103,27 +108,7 @@ func NewGameEngine(opts GameEngineOpts) *gameEngine {
 	// Listen for websocket connections
 	go engine.Listen()
 
-	return engine
-}
-
-func (ge *gameEngine) ID() string {
-	return ge.id
-}
-
-func (ge *gameEngine) CreatorID() string {
-	return ge.creatorID
-}
-
-func (ge *gameEngine) Deck() deck.Deck {
-	return ge.deck
-}
-
-func (ge *gameEngine) Players() Players {
-	return ge.players
-}
-
-func (ge *gameEngine) PlayState() PlayState {
-	return ge.playState
+	return engine, nil
 }
 
 // AddPlayer adds a player to a game
@@ -155,12 +140,11 @@ func (ge *gameEngine) Start() error {
 	}
 
 	if ge.game == nil {
-		return errors.New("cannot start nil game")
+		return ErrNilGame
 	}
 
 	// should return error
-	err := ge.game.Start(ge.players.IDs())
-	if err != nil {
+	if err := ge.game.Start(ge.players.IDs()); err != nil {
 		return err
 	}
 
@@ -249,6 +233,26 @@ func (ge *gameEngine) Listen() {
 
 		}
 	}
+}
+
+func (ge *gameEngine) ID() string {
+	return ge.id
+}
+
+func (ge *gameEngine) CreatorID() string {
+	return ge.creatorID
+}
+
+func (ge *gameEngine) Deck() deck.Deck {
+	return ge.deck
+}
+
+func (ge *gameEngine) Players() Players {
+	return ge.players
+}
+
+func (ge *gameEngine) PlayState() PlayState {
+	return ge.playState
 }
 
 func buildGameHasStartedMessage(recipient Player) OutboundMessage {

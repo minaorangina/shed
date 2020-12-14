@@ -13,8 +13,8 @@ func (g *SpyGame) Start(playerIDs []string) error {
 	return nil
 }
 
-func (g *SpyGame) Next() ([]OutboundMessage, bool) {
-	return nil, false
+func (g *SpyGame) Next() ([]OutboundMessage, error) {
+	return nil, nil
 }
 
 func messagesToInitialCards(messages []InboundMessage) map[string]InitialCards {
@@ -59,10 +59,12 @@ func playerInfoToPlayers(playerInfo []PlayerInfo) Players {
 }
 
 func gameEngineWithPlayers() GameEngine {
-	ge := NewGameEngine(GameEngineOpts{
+	ge, _ := NewGameEngine(GameEngineOpts{
 		GameID:    "theid",
 		CreatorID: "some-user-id",
-		Players:   SomePlayers()})
+		Players:   SomePlayers(),
+		Game:      NewShed(),
+	})
 	return ge
 }
 

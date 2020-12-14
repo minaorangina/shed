@@ -1,6 +1,10 @@
 package shed
 
-import "github.com/minaorangina/shed/deck"
+import (
+	"errors"
+
+	"github.com/minaorangina/shed/deck"
+)
 
 // Stage represents the main stages in the game
 type Stage int
@@ -26,7 +30,7 @@ func (s Stage) String() string { // TODO: test
 
 type Game interface {
 	Start(playerIDs []string) error
-	Next() (messages []OutboundMessage, ok bool)
+	Next() (messages []OutboundMessage, err error)
 }
 
 type shed struct {
@@ -41,6 +45,9 @@ func NewShed() *shed {
 }
 
 func (s *shed) Start(playerIDs []string) error {
+	if s == nil {
+		return ErrNilGame
+	}
 	if len(playerIDs) < minPlayers {
 		return ErrTooFewPlayers
 	}
@@ -57,9 +64,12 @@ func (s *shed) Start(playerIDs []string) error {
 	return nil
 }
 
-func (s *shed) Next() ([]OutboundMessage, bool) {
-	if s.gamePlayers == nil {
-		panic("game has no players")
+func (s *shed) Next() ([]OutboundMessage, error) {
+	if s == nil {
+		return nil, ErrNilGame
 	}
-	return nil, false
+	if s.gamePlayers == nil {
+		return nil, errors.New("game has no players")
+	}
+	return nil, nil
 }

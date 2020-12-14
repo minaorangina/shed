@@ -4,8 +4,43 @@ import (
 	"testing"
 
 	utils "github.com/minaorangina/shed/internal"
-	"github.com/minaorangina/shed/protocol"
 )
+
+func TestShedStart(t *testing.T) {
+	t.Run("only starts with legal number of players", func(t *testing.T) {
+
+		tt := []struct {
+			name      string
+			playerIDs []string
+			err       error
+		}{
+			{
+				"too few players",
+				[]string{"Grace"},
+				ErrTooFewPlayers,
+			},
+			{
+				"too many players",
+				[]string{"Ada", "Katherine", "Grace", "Hedy", "Marlyn"},
+				ErrTooManyPlayers,
+			},
+			{
+				"just right",
+				[]string{"Ada", "Katherine", "Grace", "Hedy"},
+				nil,
+			},
+		}
+
+		for _, tc := range tt {
+			t.Run(tc.name, func(t *testing.T) {
+				game := NewShed()
+				err := game.Start(tc.playerIDs)
+
+				utils.AssertDeepEqual(t, err, tc.err)
+			})
+		}
+	})
+}
 
 func TestBuildMessageToPlayer(t *testing.T) {
 	ge := gameEngineWithPlayers()

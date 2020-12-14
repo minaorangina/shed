@@ -24,7 +24,9 @@ func TestInMemoryGameStore(t *testing.T) {
 	t.Run("Can add pending players", func(t *testing.T) {
 		gameID := "some-game-id"
 		playerID, playerName := "player-1", "Hermione"
-		engine := NewGameEngine(GameEngineOpts{GameID: gameID, CreatorID: playerID})
+		engine, err := NewGameEngine(GameEngineOpts{GameID: gameID, CreatorID: playerID, Game: &SpyGame{}})
+		utils.AssertNoError(t, err)
+		utils.AssertNotNil(t, engine)
 
 		store := NewTestGameStore(
 			map[string]GameEngine{
@@ -33,7 +35,7 @@ func TestInMemoryGameStore(t *testing.T) {
 			nil,
 		)
 
-		err := store.AddPendingPlayer(gameID, playerID, playerName)
+		err = store.AddPendingPlayer(gameID, playerID, playerName)
 		utils.AssertNoError(t, err)
 
 		pendingInfo := store.FindPendingPlayer(gameID, playerID)
@@ -116,16 +118,22 @@ func TestInMemoryGameStore(t *testing.T) {
 }
 
 func newActiveGame(gameID, playerID string, ps Players) map[string]GameEngine {
-	game := NewGameEngine(GameEngineOpts{
+	game, _ := NewGameEngine(GameEngineOpts{
 		GameID:    gameID,
 		CreatorID: playerID,
 		Players:   ps,
 		PlayState: InProgress,
+		Game:      NewShed(),
 	})
 	return map[string]GameEngine{gameID: game}
 }
 
 func NewInactiveGame(gameID, playerID string, ps Players) map[string]GameEngine {
-	game := NewGameEngine(GameEngineOpts{GameID: gameID, CreatorID: playerID, Players: ps})
+	game, _ := NewGameEngine(GameEngineOpts{
+		GameID:    gameID,
+		CreatorID: playerID,
+		Players:   ps,
+		Game:      NewShed(),
+	})
 	return map[string]GameEngine{gameID: game}
 }
