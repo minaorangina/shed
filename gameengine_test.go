@@ -24,7 +24,8 @@ func (s *spySetup) setup(ge GameEngine) error {
 func TestGameEngineConstructor(t *testing.T) {
 	creatorID := "hermione-1"
 	t.Run("keeps track of who created it", func(t *testing.T) {
-		engine := NewGameEngine(GameEngineOpts{GameID: "some-id", CreatorID: creatorID})
+		engine, err := NewGameEngine(GameEngineOpts{GameID: "some-id", CreatorID: creatorID, Game: &SpyGame{}})
+		utils.AssertNoError(t, err)
 		utils.AssertEqual(t, engine.CreatorID(), creatorID)
 	})
 }
@@ -54,7 +55,8 @@ func TestGameEngineAddPlayer(t *testing.T) {
 			sendCh: sendCh,
 		}
 
-		engine := NewGameEngine(GameEngineOpts{GameID: "game-id", CreatorID: player1ID})
+		engine, err := NewGameEngine(GameEngineOpts{GameID: "game-id", CreatorID: player1ID, Game: &SpyGame{}})
+		utils.AssertNoError(t, err)
 
 		player1.engine = engine
 		engine.players = NewPlayers(player1)
@@ -89,7 +91,15 @@ func TestRemovePlayer(t *testing.T) {
 
 		players := NewPlayers(player1, player2)
 
-		engine := NewGameEngine(GameEngineOpts{GameID: "game-id", CreatorID: player1ID, Players: players, UnregisterCh: unregisterCh})
+		engine, err := NewGameEngine(GameEngineOpts{
+			GameID:       "game-id",
+			CreatorID:    player1ID,
+			Players:      players,
+			UnregisterCh: unregisterCh,
+			Game:         &SpyGame{},
+		})
+		utils.AssertNoError(t, err)
+		utils.AssertNotNil(t, engine)
 
 		go func() {
 			unregisterCh <- player1
@@ -102,6 +112,7 @@ func TestRemovePlayer(t *testing.T) {
 		})
 	})
 }
+
 func TestGameEngineInit(t *testing.T) {
 	t.Run("constructs with correct number of cards", func(t *testing.T) {
 		ge := gameEngineWithPlayers()
@@ -112,7 +123,12 @@ func TestGameEngineInit(t *testing.T) {
 	t.Run("has an ID", func(t *testing.T) {
 		gameID := "thisistheid"
 		playerID := "i created it"
-		engine := NewGameEngine(GameEngineOpts{GameID: gameID, CreatorID: playerID, Players: SomePlayers()})
+		engine, err := NewGameEngine(GameEngineOpts{
+			GameID:    gameID,
+			CreatorID: playerID,
+			Players:   SomePlayers(),
+			Game:      &SpyGame{}})
+		utils.AssertNoError(t, err)
 
 		utils.AssertEqual(t, engine.ID(), gameID)
 	})
@@ -120,7 +136,12 @@ func TestGameEngineInit(t *testing.T) {
 	t.Run("has the user ID of the creator", func(t *testing.T) {
 		gameID := "thisistheid"
 		playerID := "i created it"
-		engine := NewGameEngine(GameEngineOpts{GameID: gameID, CreatorID: playerID, Players: SomePlayers()})
+		engine, err := NewGameEngine(GameEngineOpts{
+			GameID:    gameID,
+			CreatorID: playerID,
+			Players:   SomePlayers(),
+			Game:      &SpyGame{}})
+		utils.AssertNoError(t, err)
 
 		utils.AssertEqual(t, engine.CreatorID(), playerID)
 	})
@@ -129,9 +150,11 @@ func TestGameEngineInit(t *testing.T) {
 // might move to the Game, or possibly become obsolete
 func TestGameEngineSetupFn(t *testing.T) {
 	t.Run("does not error if no setup fn defined", func(t *testing.T) {
-		engine := NewGameEngine(GameEngineOpts{Players: SomePlayers()})
+		engine, err := NewGameEngine(GameEngineOpts{Players: SomePlayers(), Game: &SpyGame{}})
+		utils.AssertNotNil(t, engine)
+		utils.AssertNoError(t, err)
 
-		err := engine.Setup()
+		err = engine.Setup()
 		utils.AssertNoError(t, err)
 	})
 
@@ -139,9 +162,11 @@ func TestGameEngineSetupFn(t *testing.T) {
 		erroringSetupFn := func(ge GameEngine) error {
 			return errors.New("Whoops")
 		}
-		engine := NewGameEngine(GameEngineOpts{Players: SomePlayers(), SetupFn: erroringSetupFn})
+		engine, err := NewGameEngine(GameEngineOpts{Players: SomePlayers(), SetupFn: erroringSetupFn, Game: &SpyGame{}})
+		utils.AssertNoError(t, err)
+		utils.AssertNotNil(t, engine)
 
-		err := engine.Setup()
+		err = engine.Setup()
 		if err == nil {
 			t.Fatalf("Expected an error, but there was none")
 		}
@@ -166,48 +191,60 @@ func TestGameEngineStart(t *testing.T) {
 				namesToPlayers([]string{"Ada", "Katherine", "Grace", "Hedy", "Marlyn"}),
 				ErrTooManyPlayers,
 			},
+			{
+				"just right",
+				namesToPlayers([]string{"Ada", "Katherine", "Grace", "Hedy"}),
+				nil,
+			},
 		}
 
 		for _, et := range testsShouldError {
-			ge := NewGameEngine(GameEngineOpts{Players: et.input, Game: &SpyGame{}})
-			err := ge.Start()
-			utils.AssertEqual(t, err.Error(), et.want.Error())
+			ge, err := NewGameEngine(GameEngineOpts{Players: et.input, Game: NewShed()})
+			utils.AssertNoError(t, err)
+			utils.AssertNotNil(t, ge)
+			err = ge.Start()
+			utils.AssertDeepEqual(t, err, et.want)
 		}
 	})
 
 	t.Run("starting more than once is a no-op", func(t *testing.T) {
-		engine := NewGameEngine(GameEngineOpts{Players: SomePlayers()})
+		engine, err := NewGameEngine(GameEngineOpts{Players: SomePlayers(), Game: &SpyGame{}})
+		utils.AssertNoError(t, err)
+		utils.AssertNotNil(t, engine)
 
 		engine.playState = InProgress
-		err := engine.Start()
+		err = engine.Start()
 		utils.AssertNoError(t, err)
 	})
 
 	t.Run("calls the setup fn", func(t *testing.T) {
 		spy := spySetup{}
-		engine := NewGameEngine(GameEngineOpts{
+		engine, err := NewGameEngine(GameEngineOpts{
 			Players: SomePlayers(),
 			SetupFn: spy.setup,
 			Game:    &SpyGame{}})
+		utils.AssertNoError(t, err)
+		utils.AssertNotNil(t, engine)
 
-		err := engine.Start()
+		err = engine.Start()
 		utils.AssertNoError(t, err)
 
 		if spy.called != true {
 			t.Errorf("Expected spy setup fn to be called")
 		}
 	})
+
+	t.Run("calls the poll state fn", func(t *testing.T) {
+		// ???
+	})
 }
 
 func TestGameEngineReceiveMessage(t *testing.T) {
 	t.Run("performs correct action for start game command", func(t *testing.T) {
-		var called bool
-		setupFn := func(ge GameEngine) error {
-			called = true
-			return nil
-		}
-
-		engine := NewGameEngine(GameEngineOpts{Players: SomePlayers(), SetupFn: setupFn})
+		spy := &SpyGame{}
+		engine, err := NewGameEngine(GameEngineOpts{Players: SomePlayers(), Game: spy})
+		utils.AssertNoError(t, err)
+		utils.AssertNotNil(t, engine)
 
 		msg := InboundMessage{
 			PlayerID: "an-id",
@@ -216,7 +253,7 @@ func TestGameEngineReceiveMessage(t *testing.T) {
 		engine.Receive(msg)
 
 		utils.Within(t, gameEngineTestTimeout, func() {
-			utils.AssertTrue(t, called)
+			utils.AssertTrue(t, spy.startCalled)
 		})
 
 		utils.AssertEqual(t, engine.playState, InProgress)

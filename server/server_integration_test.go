@@ -116,7 +116,7 @@ func TestCreateAndJoinNewGame(t *testing.T) {
 
 func TestStartGame(t *testing.T) {
 	// given an inactive game and players with ws connections
-	server, gameID := newTestServerWithInactiveGame(nil)
+	server, gameID := newTestServerWithInactiveGame(t, nil)
 	creatorID, player2ID := "hersha-1", "pending-player-id"
 
 	url := makeWSUrl(server.URL, gameID, creatorID)
