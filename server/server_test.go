@@ -100,7 +100,7 @@ func TestGETGameWaitingRoom(t *testing.T) {
 		game, err := shed.NewGameEngine(shed.GameEngineOpts{
 			GameID:    gameID,
 			CreatorID: creatorID,
-			Game:      shed.NewShed(),
+			Game:      shed.NewShed(shed.ShedOpts{}),
 		})
 		utils.AssertNoError(t, err)
 		utils.AssertNotNil(t, game)
@@ -131,7 +131,7 @@ func TestGETGameWaitingRoom(t *testing.T) {
 		game, err := shed.NewGameEngine(shed.GameEngineOpts{
 			GameID:    gameID,
 			CreatorID: "i-am-the-creator",
-			Game:      shed.NewShed(),
+			Game:      shed.NewShed(shed.ShedOpts{}),
 		})
 		utils.AssertNoError(t, err)
 		utils.AssertNotNil(t, game)
@@ -188,7 +188,7 @@ func TestJoinGame(t *testing.T) {
 		response := httptest.NewRecorder()
 		request := newJoinGameRequest(nil)
 
-		game := newTestGame(t, shed.GameEngineOpts{GameID: "some-game-id", Players: shed.SomePlayers(), Game: shed.NewShed()})
+		game := newTestGame(t, shed.GameEngineOpts{GameID: "some-game-id", Players: shed.SomePlayers(), Game: shed.NewShed(shed.ShedOpts{})})
 		server := newServerWithGame(game)
 
 		server.ServeHTTP(response, request)
@@ -231,7 +231,7 @@ func TestServerGETGame(t *testing.T) {
 		server := newServerWithGame(newTestGame(t, shed.GameEngineOpts{
 			GameID:    testID,
 			PlayState: shed.InProgress,
-			Game:      shed.NewShed(),
+			Game:      shed.NewShed(shed.ShedOpts{}),
 		}))
 
 		request := newGetGameRequest(testID)
@@ -276,7 +276,7 @@ func TestServerGETGame(t *testing.T) {
 	t.Run("returns a 404 if game doesn't exist", func(t *testing.T) {
 		gameID := "12u34"
 		nonExistentID := "bad-game-id"
-		server := newServerWithGame(newTestGame(t, shed.GameEngineOpts{GameID: gameID, Game: shed.NewShed()}))
+		server := newServerWithGame(newTestGame(t, shed.GameEngineOpts{GameID: gameID, Game: shed.NewShed(shed.ShedOpts{})}))
 
 		request := newGetGameRequest(nonExistentID)
 		response := httptest.NewRecorder()
@@ -316,7 +316,7 @@ func TestWS(t *testing.T) {
 		gameID := "this-is-a-game-id"
 		name, playerID := "Delilah", "delilah1"
 
-		game := newTestGame(t, shed.GameEngineOpts{GameID: gameID, CreatorID: playerID, Game: shed.NewShed()})
+		game := newTestGame(t, shed.GameEngineOpts{GameID: gameID, CreatorID: playerID, Game: shed.NewShed(shed.ShedOpts{})})
 
 		store := NewBasicStore()
 		store.AddInactiveGame(game)

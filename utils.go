@@ -63,7 +63,7 @@ func gameEngineWithPlayers() GameEngine {
 		GameID:    "theid",
 		CreatorID: "some-user-id",
 		Players:   SomePlayers(),
-		Game:      NewShed(),
+		Game:      NewShed(ShedOpts{}),
 	})
 	return ge
 }

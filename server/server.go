@@ -124,7 +124,7 @@ func (g *GameServer) HandleNewGame(w http.ResponseWriter, r *http.Request) {
 	game, err := shed.NewGameEngine(shed.GameEngineOpts{
 		GameID:    gameID,
 		CreatorID: playerID,
-		Game:      shed.NewShed(),
+		Game:      shed.NewShed(shed.ShedOpts{}),
 	})
 	if err != nil {
 		log.Println(err.Error())
