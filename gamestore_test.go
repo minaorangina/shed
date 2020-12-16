@@ -123,7 +123,7 @@ func newActiveGame(gameID, playerID string, ps Players) map[string]GameEngine {
 		CreatorID: playerID,
 		Players:   ps,
 		PlayState: InProgress,
-		Game:      NewShed(),
+		Game:      NewShed(ShedOpts{}),
 	})
 	return map[string]GameEngine{gameID: game}
 }
@@ -133,7 +133,7 @@ func NewInactiveGame(gameID, playerID string, ps Players) map[string]GameEngine 
 		GameID:    gameID,
 		CreatorID: playerID,
 		Players:   ps,
-		Game:      NewShed(),
+		Game:      NewShed(ShedOpts{}),
 	})
 	return map[string]GameEngine{gameID: game}
 }

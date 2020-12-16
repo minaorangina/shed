@@ -23,12 +23,12 @@ type stubStore struct {
 
 func (s *stubStore) FindActiveGame(ID string) shed.GameEngine {
 	// allows any game
-	game, _ := shed.NewGameEngine(shed.GameEngineOpts{Game: shed.NewShed()})
+	game, _ := shed.NewGameEngine(shed.GameEngineOpts{Game: shed.NewShed(shed.ShedOpts{})})
 	return game
 }
 func (s *stubStore) FindInactiveGame(ID string) shed.GameEngine {
 	// allows any pending game
-	game, _ := shed.NewGameEngine(shed.GameEngineOpts{Game: shed.NewShed()})
+	game, _ := shed.NewGameEngine(shed.GameEngineOpts{Game: shed.NewShed(shed.ShedOpts{})})
 	return game
 }
 
@@ -58,12 +58,12 @@ func (s fakeStore) InactiveGames() map[string]shed.GameEngine {
 
 func (s fakeStore) FindActiveGame(ID string) shed.GameEngine {
 	// allows any game
-	game, _ := shed.NewGameEngine(shed.GameEngineOpts{Game: shed.NewShed()})
+	game, _ := shed.NewGameEngine(shed.GameEngineOpts{Game: shed.NewShed(shed.ShedOpts{})})
 	return game
 }
 func (s fakeStore) FindInactiveGame(ID string) shed.GameEngine {
 	// allows any pending game
-	game, _ := shed.NewGameEngine(shed.GameEngineOpts{Game: shed.NewShed()})
+	game, _ := shed.NewGameEngine(shed.GameEngineOpts{Game: shed.NewShed(shed.ShedOpts{})})
 	return game
 }
 
@@ -154,7 +154,7 @@ func newServerWithInactiveGame(t *testing.T, ps shed.Players) (*GameServer, stri
 		GameID:    gameID,
 		CreatorID: "hersha-1",
 		Players:   ps,
-		Game:      shed.NewShed(),
+		Game:      shed.NewShed(shed.ShedOpts{}),
 	})
 
 	if err != nil {
@@ -197,7 +197,7 @@ func newTestServerWithInactiveGame(t *testing.T, ps shed.Players) (*httptest.Ser
 		GameID:    gameID,
 		CreatorID: "hersha-1",
 		Players:   ps,
-		Game:      shed.NewShed(),
+		Game:      shed.NewShed(shed.ShedOpts{}),
 	})
 	if err != nil {
 		t.Fatal(err)

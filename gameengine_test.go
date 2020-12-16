@@ -199,7 +199,7 @@ func TestGameEngineStart(t *testing.T) {
 		}
 
 		for _, et := range testsShouldError {
-			ge, err := NewGameEngine(GameEngineOpts{Players: et.input, Game: NewShed()})
+			ge, err := NewGameEngine(GameEngineOpts{Players: et.input, Game: NewShed(ShedOpts{})})
 			utils.AssertNoError(t, err)
 			utils.AssertNotNil(t, ge)
 			err = ge.Start()

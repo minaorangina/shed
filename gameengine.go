@@ -3,7 +3,6 @@ package shed
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/minaorangina/shed/deck"
 	"github.com/minaorangina/shed/protocol"
