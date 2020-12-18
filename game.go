@@ -40,6 +40,22 @@ var cardValues = map[deck.Rank]int{
 	deck.Ten:   9,
 }
 
+var sevenBeaters = map[deck.Rank]bool{
+	deck.Four:  true,
+	deck.Five:  true,
+	deck.Six:   true,
+	deck.Eight: false,
+	deck.Nine:  false,
+	deck.Jack:  false,
+	deck.Queen: false,
+	deck.King:  false,
+	deck.Ace:   false,
+	// special powers
+	deck.Two:   true,
+	deck.Three: true,
+	deck.Seven: true,
+}
+
 type Game interface {
 	Start(playerIDs []string) error
 	Next() ([]OutboundMessage, error)
@@ -251,12 +267,31 @@ func (s *shed) buildEndOfTurnMessage(playerID string) OutboundMessage {
 	}
 }
 
-func legalMoves(toPlay, pile []deck.Card) []int {
+func legalMoves(pile, toPlay []deck.Card) []int {
 	moves := []int{}
 	// can play any card on an empty pile
 	if len(pile) == 0 {
 		for i := range toPlay {
 			moves = append(moves, i)
+		}
+		return moves
+	}
+
+	topmostCard := pile[0]
+	// two
+	if topmostCard.Rank == deck.Two {
+		for i := range toPlay {
+			moves = append(moves, i)
+		}
+		return moves
+	}
+
+	// seven
+	if topmostCard.Rank == deck.Seven {
+		for i, tp := range toPlay {
+			if wins := sevenBeaters[tp.Rank]; wins {
+				moves = append(moves, i)
+			}
 		}
 		return moves
 	}
