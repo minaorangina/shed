@@ -105,7 +105,7 @@ func TestGameTurn(t *testing.T) {
 }
 
 func TestGameStageOneLegalMoves(t *testing.T) {
-	// given a game with a low-value card on the pile
+	// Given a game with a low-value card on the pile
 	lowValueCard := deck.NewCard(deck.Four, deck.Hearts)
 	pile := []deck.Card{lowValueCard}
 
@@ -169,22 +169,23 @@ func TestGameStageOneLegalMoves(t *testing.T) {
 	// and the size of the player's hand remains the same
 	utils.AssertTrue(t, newHandSize == oldHandSize)
 
-	// but the player's hand cards remains the same size
+	// but the cards in the player's hand changed
 	utils.AssertEqual(t, reflect.DeepEqual(oldHand, newHand), false)
 
 	// and all cards are unique
 	utils.AssertTrue(t, cardsUnique(newHand))
 	utils.AssertTrue(t, cardsUnique(game.pile))
 
-	// and the game produces messages, expecting no response
+	// and the game produces messages to all players, expecting no response
 	utils.AssertNotNil(t, msgs)
+	utils.AssertEqual(t, len(msgs), len(game.playerIDs))
 	for _, m := range msgs {
 		utils.AssertEqual(t, m.ExpectResponse, false)
 	}
 	utils.AssertEqual(t, game.awaitingResponse, false)
 }
-func TestGameStageOneNoLegalMoves(t *testing.T) {
-	t.Run("no legal moves: player picks up pile", func(t *testing.T) {
+func TestGameNoLegalMoves(t *testing.T) {
+	t.Run("stage 1: player picks up pile", func(t *testing.T) {
 		t.Skip()
 		// Given a game with a high-value card on the pile
 		highValueCard := deck.NewCard(deck.Ace, deck.Clubs) // Ace of Clubs
@@ -239,6 +240,77 @@ func TestGameInput(t *testing.T) {
 	// test that the game won't proceed if it's expecting a response
 
 	// test the game won't allow .Next() to be called if someone's turn is incomplete
+}
+
+func TestLegalMoves(t *testing.T) {
+	t.Run("fours", func(t *testing.T) {
+		tt := []struct {
+			name         string
+			pile, toPlay []deck.Card
+			moves        []int
+		}{
+			{
+				name:   "four of ♠ vs five of ♣",
+				pile:   []deck.Card{deck.NewCard(deck.Five, deck.Clubs)},
+				toPlay: []deck.Card{deck.NewCard(deck.Four, deck.Spades)},
+				moves:  []int{},
+			},
+			{
+				name:   "four of ♥ vs King of ♣",
+				pile:   []deck.Card{deck.NewCard(deck.King, deck.Clubs)},
+				toPlay: []deck.Card{deck.NewCard(deck.Four, deck.Hearts)},
+				moves:  []int{},
+			},
+			{
+				name:   "four of ♦ vs Seven of ♥",
+				pile:   []deck.Card{deck.NewCard(deck.Seven, deck.Hearts)},
+				toPlay: []deck.Card{deck.NewCard(deck.Four, deck.Diamonds)},
+				moves:  []int{},
+			},
+			{
+				name:   "four of ♣ vs Ace of ♠",
+				pile:   []deck.Card{deck.NewCard(deck.Ace, deck.Spades)},
+				toPlay: []deck.Card{deck.NewCard(deck.Four, deck.Clubs)},
+				moves:  []int{},
+			},
+			{
+				name:   "four of ♣ vs Two of ♦",
+				pile:   []deck.Card{deck.NewCard(deck.Two, deck.Diamonds)},
+				toPlay: []deck.Card{deck.NewCard(deck.Four, deck.Clubs)},
+				moves:  []int{},
+			},
+			{
+				name:   "four of ♣ vs four of ♠",
+				pile:   []deck.Card{deck.NewCard(deck.Four, deck.Spades)},
+				toPlay: []deck.Card{deck.NewCard(deck.Four, deck.Clubs)},
+				moves:  []int{0},
+			},
+			{
+				name:   "four of ♥ vs four of ♦",
+				pile:   []deck.Card{deck.NewCard(deck.Four, deck.Diamonds)},
+				toPlay: []deck.Card{deck.NewCard(deck.Four, deck.Hearts)},
+				moves:  []int{0},
+			},
+			{
+				name:   "four of ♣ vs four of ♦",
+				toPlay: []deck.Card{deck.NewCard(deck.Four, deck.Clubs)},
+				pile:   []deck.Card{deck.NewCard(deck.Four, deck.Diamonds)},
+				moves:  []int{0},
+			},
+			{
+				name:   "four of ♣ vs four of ♥",
+				toPlay: []deck.Card{deck.NewCard(deck.Four, deck.Clubs)},
+				pile:   []deck.Card{deck.NewCard(deck.Four, deck.Hearts)},
+				moves:  []int{0},
+			},
+		}
+
+		for _, tc := range tt {
+			t.Run(tc.name, func(t *testing.T) {
+				utils.AssertDeepEqual(t, legalMoves(tc.toPlay, tc.pile), tc.moves)
+			})
+		}
+	})
 }
 
 func someDeck(num int) deck.Deck {

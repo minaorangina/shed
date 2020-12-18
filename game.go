@@ -23,6 +23,23 @@ const (
 	maxPlayers = 4
 )
 
+var cardValues = map[deck.Rank]int{
+	deck.Four:  0,
+	deck.Five:  1,
+	deck.Six:   2,
+	deck.Eight: 4,
+	deck.Nine:  5,
+	deck.Jack:  6,
+	deck.Queen: 7,
+	deck.King:  8,
+	deck.Ace:   9,
+	// special powers
+	deck.Two:   9,
+	deck.Three: 9,
+	deck.Seven: 3,
+	deck.Ten:   9,
+}
+
 type Game interface {
 	Start(playerIDs []string) error
 	Next() ([]OutboundMessage, error)
@@ -232,6 +249,28 @@ func (s *shed) buildEndOfTurnMessage(playerID string) OutboundMessage {
 		Command:  protocol.Replenish,
 		Pile:     s.pile,
 	}
+}
+
+func legalMoves(toPlay, pile []deck.Card) []int {
+	moves := []int{}
+	// can play any card on an empty pile
+	if len(pile) == 0 {
+		for i := range toPlay {
+			moves = append(moves, i)
+		}
+		return moves
+	}
+
+	for i, tp := range toPlay {
+		tpValue := cardValues[tp.Rank]
+		pileValue := cardValues[pile[0].Rank]
+
+		if tpValue >= pileValue {
+			moves = append(moves, i)
+		}
+	}
+
+	return moves
 }
 
 func cardsUnique(cards []deck.Card) bool {
