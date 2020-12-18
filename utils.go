@@ -17,6 +17,10 @@ func (g *SpyGame) Next() ([]OutboundMessage, error) {
 	return nil, nil
 }
 
+func (g *SpyGame) ReceiveResponse(messages []InboundMessage) ([]OutboundMessage, error) {
+	return nil, nil
+}
+
 func messagesToInitialCards(messages []InboundMessage) map[string]InitialCards {
 	reorganised := map[string]InitialCards{}
 

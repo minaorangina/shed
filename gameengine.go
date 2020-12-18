@@ -12,6 +12,7 @@ var (
 	ErrNilGame        = errors.New("game is nil")
 	ErrTooFewPlayers  = errors.New("minimum of 2 players required")
 	ErrTooManyPlayers = errors.New("maximum of 4 players allowed")
+	ErrNoPlayers      = errors.New("game has no players")
 )
 
 // PlayState represents the state of the current game
@@ -142,8 +143,13 @@ func (ge *gameEngine) Start() error {
 		return errors.New("cannot start nil game")
 	}
 
-	// should return error
-	err := ge.game.Start(ge.players.IDs())
+	// until there's a proper way to get ids
+	ids := []string{}
+	for _, p := range ge.players {
+		ids = append(ids, p.ID())
+	}
+
+	err := ge.game.Start(ids)
 	if err != nil {
 		return err
 	}
