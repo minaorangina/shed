@@ -268,44 +268,59 @@ func (s *shed) buildEndOfTurnMessage(playerID string) OutboundMessage {
 }
 
 func legalMoves(pile, toPlay []deck.Card) []int {
-	moves := []int{}
+	moves := map[int]struct{}{}
+
 	// can play any card on an empty pile
 	if len(pile) == 0 {
 		for i := range toPlay {
-			moves = append(moves, i)
+			moves[i] = struct{}{}
 		}
-		return moves
+
+		return setToSlice(moves)
+	}
+
+	// tens (and twos and threes) beat anything
+	for i, tp := range toPlay {
+		if tp.Rank == deck.Ten {
+			moves[i] = struct{}{}
+			continue
+		}
 	}
 
 	topmostCard := pile[0]
 	// two
 	if topmostCard.Rank == deck.Two {
 		for i := range toPlay {
-			moves = append(moves, i)
+			moves[i] = struct{}{}
 		}
-		return moves
+		return setToSlice(moves)
 	}
 
 	// seven
 	if topmostCard.Rank == deck.Seven {
 		for i, tp := range toPlay {
 			if wins := sevenBeaters[tp.Rank]; wins {
-				moves = append(moves, i)
+				moves[i] = struct{}{}
 			}
 		}
-		return moves
+		return setToSlice(moves)
 	}
 
 	for i, tp := range toPlay {
+		// skip tens (and twos and threes)
+		if tp.Rank == deck.Ten {
+			continue
+		}
+
 		tpValue := cardValues[tp.Rank]
 		pileValue := cardValues[pile[0].Rank]
 
 		if tpValue >= pileValue {
-			moves = append(moves, i)
+			moves[i] = struct{}{}
 		}
 	}
 
-	return moves
+	return setToSlice(moves)
 }
 
 func cardsUnique(cards []deck.Card) bool {
@@ -317,4 +332,13 @@ func cardsUnique(cards []deck.Card) bool {
 		seen[c] = struct{}{}
 	}
 	return true
+}
+
+func setToSlice(set map[int]struct{}) []int {
+	s := []int{}
+	for key := range set {
+		s = append(s, key)
+	}
+
+	return s
 }
