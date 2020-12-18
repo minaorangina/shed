@@ -278,62 +278,72 @@ func TestGameInput(t *testing.T) {
 }
 
 func TestLegalMoves(t *testing.T) {
-	t.Run("fours", func(t *testing.T) {
-		tt := []struct {
-			name         string
-			pile, toPlay []deck.Card
-			moves        []int
-		}{
+	type legalMoveTest struct {
+		name         string
+		pile, toPlay []deck.Card
+		moves        []int
+	}
+
+	t.Run("four", func(t *testing.T) {
+		tt := []legalMoveTest{
 			{
-				name:   "four of ♠ vs five of ♣",
-				pile:   []deck.Card{deck.NewCard(deck.Five, deck.Clubs)},
-				toPlay: []deck.Card{deck.NewCard(deck.Four, deck.Spades)},
-				moves:  []int{},
+				name:   "four of ♣ beats two of ♦",
+				pile:   []deck.Card{deck.NewCard(deck.Two, deck.Diamonds)},
+				toPlay: []deck.Card{deck.NewCard(deck.Four, deck.Clubs)},
+				moves:  []int{0},
 			},
 			{
-				name:   "four of ♥ vs King of ♣",
+				name: "four of ♠ does not beat five of ♣",
+				pile: []deck.Card{deck.NewCard(deck.Five, deck.Clubs)},
+				toPlay: []deck.Card{
+					deck.NewCard(deck.Four, deck.Spades),
+					deck.NewCard(deck.Six, deck.Spades),
+					deck.NewCard(deck.Nine, deck.Hearts),
+				},
+				moves: []int{1, 2},
+			},
+			{
+				name:   "four of ♥ does not beat King of ♣",
 				pile:   []deck.Card{deck.NewCard(deck.King, deck.Clubs)},
 				toPlay: []deck.Card{deck.NewCard(deck.Four, deck.Hearts)},
 				moves:  []int{},
 			},
 			{
-				name:   "four of ♦ vs Seven of ♥",
-				pile:   []deck.Card{deck.NewCard(deck.Seven, deck.Hearts)},
-				toPlay: []deck.Card{deck.NewCard(deck.Four, deck.Diamonds)},
-				moves:  []int{},
+				name: "four of ♦ beats Seven of ♥",
+				pile: []deck.Card{deck.NewCard(deck.Seven, deck.Hearts)},
+				toPlay: []deck.Card{
+					deck.NewCard(deck.Four, deck.Diamonds),
+					deck.NewCard(deck.Five, deck.Clubs),
+					deck.NewCard(deck.Ace, deck.Diamonds),
+				},
+				moves: []int{0, 1},
 			},
 			{
-				name:   "four of ♣ vs Ace of ♠",
+				name:   "four of ♣ does not beat Ace of ♠",
 				pile:   []deck.Card{deck.NewCard(deck.Ace, deck.Spades)},
 				toPlay: []deck.Card{deck.NewCard(deck.Four, deck.Clubs)},
 				moves:  []int{},
 			},
 			{
-				name:   "four of ♣ vs Two of ♦",
-				pile:   []deck.Card{deck.NewCard(deck.Two, deck.Diamonds)},
-				toPlay: []deck.Card{deck.NewCard(deck.Four, deck.Clubs)},
-				moves:  []int{},
-			},
-			{
-				name:   "four of ♣ vs four of ♠",
+				name:   "four of ♣ beats four of ♠",
 				pile:   []deck.Card{deck.NewCard(deck.Four, deck.Spades)},
 				toPlay: []deck.Card{deck.NewCard(deck.Four, deck.Clubs)},
 				moves:  []int{0},
 			},
 			{
-				name:   "four of ♥ vs four of ♦",
+				name:   "four of ♥ beats four of ♦",
 				pile:   []deck.Card{deck.NewCard(deck.Four, deck.Diamonds)},
 				toPlay: []deck.Card{deck.NewCard(deck.Four, deck.Hearts)},
 				moves:  []int{0},
 			},
 			{
-				name:   "four of ♣ vs four of ♦",
+				name:   "four of ♣ beats four of ♦",
 				toPlay: []deck.Card{deck.NewCard(deck.Four, deck.Clubs)},
 				pile:   []deck.Card{deck.NewCard(deck.Four, deck.Diamonds)},
 				moves:  []int{0},
 			},
 			{
-				name:   "four of ♣ vs four of ♥",
+				name:   "four of ♣ beats four of ♥",
 				toPlay: []deck.Card{deck.NewCard(deck.Four, deck.Clubs)},
 				pile:   []deck.Card{deck.NewCard(deck.Four, deck.Hearts)},
 				moves:  []int{0},
@@ -342,7 +352,209 @@ func TestLegalMoves(t *testing.T) {
 
 		for _, tc := range tt {
 			t.Run(tc.name, func(t *testing.T) {
-				utils.AssertDeepEqual(t, legalMoves(tc.toPlay, tc.pile), tc.moves)
+				utils.AssertDeepEqual(t, legalMoves(tc.pile, tc.toPlay), tc.moves)
+			})
+		}
+	})
+
+	t.Run("ace", func(t *testing.T) {
+		tt := []legalMoveTest{
+			{
+				name:   "ace of ♠ does not beat seven of ♦",
+				toPlay: []deck.Card{deck.NewCard(deck.Ace, deck.Spades)},
+				pile:   []deck.Card{deck.NewCard(deck.Seven, deck.Diamonds)},
+				moves:  []int{},
+			},
+			{
+				name:   "ace of ♠ beats king of ♦",
+				toPlay: []deck.Card{deck.NewCard(deck.Ace, deck.Spades)},
+				pile:   []deck.Card{deck.NewCard(deck.King, deck.Diamonds)},
+				moves:  []int{0},
+			},
+			{
+				name:   "ace of ♦ beats Four of ♦",
+				toPlay: []deck.Card{deck.NewCard(deck.Ace, deck.Diamonds)},
+				pile:   []deck.Card{deck.NewCard(deck.Four, deck.Diamonds)},
+				moves:  []int{0},
+			},
+		}
+
+		for _, tc := range tt {
+			t.Run(tc.name, func(t *testing.T) {
+				utils.AssertDeepEqual(t, legalMoves(tc.pile, tc.toPlay), tc.moves)
+			})
+		}
+	})
+	t.Run("seven", func(t *testing.T) {
+		t.Run("to play", func(t *testing.T) {
+			tt := []legalMoveTest{
+				{
+					name:   "seven of ♠ beats four of ♣",
+					pile:   []deck.Card{deck.NewCard(deck.Four, deck.Clubs)},
+					toPlay: []deck.Card{deck.NewCard(deck.Seven, deck.Spades)},
+					moves:  []int{0},
+				},
+				{
+					name:   "seven of ♠ beats five of ♣",
+					pile:   []deck.Card{deck.NewCard(deck.Five, deck.Clubs)},
+					toPlay: []deck.Card{deck.NewCard(deck.Seven, deck.Spades)},
+					moves:  []int{0},
+				},
+				{
+					name:   "seven of ♠ beats six of ♣",
+					pile:   []deck.Card{deck.NewCard(deck.Six, deck.Clubs)},
+					toPlay: []deck.Card{deck.NewCard(deck.Seven, deck.Spades)},
+					moves:  []int{0},
+				},
+				{
+					name:   "seven of ♠ beats seven of ♣",
+					pile:   []deck.Card{deck.NewCard(deck.Seven, deck.Clubs)},
+					toPlay: []deck.Card{deck.NewCard(deck.Seven, deck.Spades)},
+					moves:  []int{0},
+				},
+				{
+					name:   "seven of ♠ beats two of ♣",
+					pile:   []deck.Card{deck.NewCard(deck.Two, deck.Clubs)},
+					toPlay: []deck.Card{deck.NewCard(deck.Seven, deck.Spades)},
+					moves:  []int{0},
+				},
+				{
+					name:   "seven of ♠ does not beat eight of ♣",
+					pile:   []deck.Card{deck.NewCard(deck.Eight, deck.Clubs)},
+					toPlay: []deck.Card{deck.NewCard(deck.Seven, deck.Spades)},
+					moves:  []int{},
+				},
+				{
+					name:   "seven of ♠ does not beat ace of ♣",
+					pile:   []deck.Card{deck.NewCard(deck.Ace, deck.Clubs)},
+					toPlay: []deck.Card{deck.NewCard(deck.Seven, deck.Spades)},
+					moves:  []int{},
+				},
+			}
+
+			for _, tc := range tt {
+				t.Run(tc.name, func(t *testing.T) {
+					utils.AssertDeepEqual(t, legalMoves(tc.pile, tc.toPlay), tc.moves)
+				})
+			}
+		})
+		t.Run("to beat", func(t *testing.T) {
+			tt := []legalMoveTest{
+				{
+					name:   "four of ♣ beats seven of ♠",
+					toPlay: []deck.Card{deck.NewCard(deck.Four, deck.Clubs)},
+					pile:   []deck.Card{deck.NewCard(deck.Seven, deck.Spades)},
+					moves:  []int{0},
+				},
+				{
+					name:   "five of ♣ beats seven of ♠",
+					toPlay: []deck.Card{deck.NewCard(deck.Five, deck.Clubs)},
+					pile:   []deck.Card{deck.NewCard(deck.Seven, deck.Spades)},
+					moves:  []int{0},
+				},
+				{
+					name:   "six of ♣ beats seven of ♠",
+					toPlay: []deck.Card{deck.NewCard(deck.Six, deck.Clubs)},
+					pile:   []deck.Card{deck.NewCard(deck.Seven, deck.Spades)},
+					moves:  []int{0},
+				},
+				{
+					name:   "seven of ♣ beats seven of ♠",
+					toPlay: []deck.Card{deck.NewCard(deck.Seven, deck.Clubs)},
+					pile:   []deck.Card{deck.NewCard(deck.Seven, deck.Spades)},
+					moves:  []int{0},
+				},
+				{
+					name:   "Two of ♣ on seven of ♠",
+					toPlay: []deck.Card{deck.NewCard(deck.Two, deck.Clubs)},
+					pile:   []deck.Card{deck.NewCard(deck.Seven, deck.Spades)},
+					moves:  []int{0},
+				},
+				{
+					name:   "eight of ♣ does not beat seven of ♠",
+					toPlay: []deck.Card{deck.NewCard(deck.Eight, deck.Clubs)},
+					pile:   []deck.Card{deck.NewCard(deck.Seven, deck.Spades)},
+					moves:  []int{},
+				},
+				{
+					name:   "ace of ♣ does not beat seven of ♠",
+					toPlay: []deck.Card{deck.NewCard(deck.Ace, deck.Clubs)},
+					pile:   []deck.Card{deck.NewCard(deck.Seven, deck.Spades)},
+					moves:  []int{},
+				},
+			}
+
+			for _, tc := range tt {
+				t.Run(tc.name, func(t *testing.T) {
+					utils.AssertDeepEqual(t, legalMoves(tc.pile, tc.toPlay), tc.moves)
+				})
+			}
+		})
+	})
+	t.Run("two beats anything; anything beats a two", func(t *testing.T) {
+		tt := []legalMoveTest{
+			{
+				name:   "two of ♣ beats two of ♦",
+				toPlay: []deck.Card{deck.NewCard(deck.Two, deck.Clubs)},
+				pile:   []deck.Card{deck.NewCard(deck.Two, deck.Diamonds)},
+				moves:  []int{0},
+			},
+			{
+				name:   "two of ♠ beats five of ♣",
+				toPlay: []deck.Card{deck.NewCard(deck.Two, deck.Spades)},
+				pile:   []deck.Card{deck.NewCard(deck.Five, deck.Clubs)},
+				moves:  []int{0},
+			},
+			{
+				name:   "two of ♥ beats King of ♣",
+				toPlay: []deck.Card{deck.NewCard(deck.Two, deck.Hearts)},
+				pile:   []deck.Card{deck.NewCard(deck.King, deck.Clubs)},
+				moves:  []int{0},
+			},
+			{
+				name: "two of ♦ beats Seven of ♥",
+				toPlay: []deck.Card{
+					deck.NewCard(deck.Two, deck.Diamonds),
+					deck.NewCard(deck.Five, deck.Clubs),
+				},
+				pile:  []deck.Card{deck.NewCard(deck.Seven, deck.Hearts)},
+				moves: []int{0, 1},
+			},
+			{
+				name:   "two of ♣ does not beat Ace of ♠",
+				toPlay: []deck.Card{deck.NewCard(deck.Two, deck.Clubs)},
+				pile:   []deck.Card{deck.NewCard(deck.Ace, deck.Spades)},
+				moves:  []int{0},
+			},
+			{
+				name:   "two of ♣ beats four of ♠",
+				toPlay: []deck.Card{deck.NewCard(deck.Two, deck.Clubs)},
+				pile:   []deck.Card{deck.NewCard(deck.Four, deck.Spades)},
+				moves:  []int{0},
+			},
+			{
+				name:   "two of ♥ beats four of ♦",
+				toPlay: []deck.Card{deck.NewCard(deck.Two, deck.Hearts)},
+				pile:   []deck.Card{deck.NewCard(deck.Four, deck.Diamonds)},
+				moves:  []int{0},
+			},
+			{
+				name:   "two of ♣ beats four of ♦",
+				toPlay: []deck.Card{deck.NewCard(deck.Two, deck.Clubs)},
+				pile:   []deck.Card{deck.NewCard(deck.Four, deck.Diamonds)},
+				moves:  []int{0},
+			},
+			{
+				name:   "two of ♣ beats four of ♥",
+				toPlay: []deck.Card{deck.NewCard(deck.Two, deck.Clubs)},
+				pile:   []deck.Card{deck.NewCard(deck.Four, deck.Hearts)},
+				moves:  []int{0},
+			},
+		}
+
+		for _, tc := range tt {
+			t.Run(tc.name, func(t *testing.T) {
+				utils.AssertDeepEqual(t, legalMoves(tc.pile, tc.toPlay), tc.moves)
 			})
 		}
 	})
