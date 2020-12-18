@@ -3,6 +3,7 @@ package shed
 import (
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/minaorangina/shed/protocol"
 
@@ -268,10 +269,17 @@ func (s *shed) buildEndOfTurnMessage(playerID string) OutboundMessage {
 }
 
 func legalMoves(pile, toPlay []deck.Card) []int {
+	candidates := []deck.Card{}
+	for _, c := range pile {
+		if c.Rank != deck.Three {
+			candidates = append(candidates, c)
+		}
+	}
+
 	moves := map[int]struct{}{}
 
 	// can play any card on an empty pile
-	if len(pile) == 0 {
+	if len(candidates) == 0 {
 		for i := range toPlay {
 			moves[i] = struct{}{}
 		}
@@ -287,7 +295,7 @@ func legalMoves(pile, toPlay []deck.Card) []int {
 		}
 	}
 
-	topmostCard := pile[0]
+	topmostCard := candidates[0]
 	// two
 	if topmostCard.Rank == deck.Two {
 		for i := range toPlay {
@@ -313,7 +321,7 @@ func legalMoves(pile, toPlay []deck.Card) []int {
 		}
 
 		tpValue := cardValues[tp.Rank]
-		pileValue := cardValues[pile[0].Rank]
+		pileValue := cardValues[topmostCard.Rank]
 
 		if tpValue >= pileValue {
 			moves[i] = struct{}{}
@@ -339,6 +347,8 @@ func setToSlice(set map[int]struct{}) []int {
 	for key := range set {
 		s = append(s, key)
 	}
+
+	sort.Ints(s)
 
 	return s
 }
