@@ -11,18 +11,21 @@ type InboundMessage struct {
 	Command  protocol.Cmd `json:"command"`
 	Hand     []deck.Card  `json:"hand",omitempty`
 	Seen     []deck.Card  `json:"seen",omitempty`
+	Decision []int        `json:"decision,omitempty"`
 }
 
 // OutboundMessage is a message from GameEngine to Player
 type OutboundMessage struct {
-	PlayerID  string       `json:"player_id"`
-	Name      string       `json:"name"` // pointless?
-	Message   string       `json:"message"`
-	Hand      []deck.Card  `json:"hand"`
-	Seen      []deck.Card  `json:"seen"`
-	Opponents []Opponent   `json:"opponents"`
-	Command   protocol.Cmd `json:"command"`
-	Broadcast bool
+	PlayerID       string       `json:"player_id"`
+	Name           string       `json:"name"` // pointless?
+	Message        string       `json:"message"`
+	Hand           []deck.Card  `json:"hand"`
+	Seen           []deck.Card  `json:"seen"`
+	Pile           []deck.Card  `json:"pile"`
+	Opponents      []Opponent   `json:"opponents"`
+	Command        protocol.Cmd `json:"command"`
+	ExpectResponse bool         `json:"expect_response"`
+	Broadcast      bool
 }
 
 // InitialCards represent the default cards dealt to a Player

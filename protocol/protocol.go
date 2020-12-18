@@ -8,4 +8,9 @@ const (
 	Reorg
 	Start
 	HasStarted
+	// combining game-specific and internal protocol messages.
+	// will split later if necessary
+	NoLegalMoves
+	PlayHand
+	Replenish
 )
