@@ -14,7 +14,7 @@ func New() Deck {
 	cards := []Card{}
 	for suit := range suitNames {
 		for rank := range rankNames {
-			c := NewCard(rank, suit)
+			c := NewCard(Rank(rank), Suit(suit))
 			cards = append(cards, c)
 		}
 	}
