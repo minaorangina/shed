@@ -221,7 +221,6 @@ func TestGameStageOneLegalMoves(t *testing.T) {
 }
 func TestGameNoLegalMoves(t *testing.T) {
 	t.Run("stage 1: player picks up pile", func(t *testing.T) {
-		t.Skip()
 		// Given a game with a high-value card on the pile
 		highValueCard := deck.NewCard(deck.Ace, deck.Clubs) // Ace of Clubs
 
@@ -232,15 +231,13 @@ func TestGameNoLegalMoves(t *testing.T) {
 			deck.NewCard(deck.Six, deck.Diamonds),
 		}
 
-		pc := &PlayerCards{Hand: deck.Deck(lowValueCards)}
-
 		game := NewShed(ShedOpts{
 			stage:     clearDeck,
 			deck:      someDeck(4),
 			pile:      []deck.Card{highValueCard},
 			playerIDs: []string{"player-1", "player-2"},
 			playerCards: map[string]*PlayerCards{
-				"player-1": pc,
+				"player-1": &PlayerCards{Hand: deck.Deck(lowValueCards)},
 			},
 		})
 
@@ -352,7 +349,7 @@ func TestLegalMoves(t *testing.T) {
 
 		for _, tc := range tt {
 			t.Run(tc.name, func(t *testing.T) {
-				utils.AssertDeepEqual(t, legalMoves(tc.pile, tc.toPlay), tc.moves)
+				utils.AssertDeepEqual(t, getLegalMoves(tc.pile, tc.toPlay), tc.moves)
 			})
 		}
 	})
@@ -377,11 +374,17 @@ func TestLegalMoves(t *testing.T) {
 				pile:   []deck.Card{deck.NewCard(deck.Four, deck.Diamonds)},
 				moves:  []int{0},
 			},
+			{
+				name:   "ace of ♦ beats Ace of ♥",
+				toPlay: []deck.Card{deck.NewCard(deck.Ace, deck.Diamonds)},
+				pile:   []deck.Card{deck.NewCard(deck.Ace, deck.Hearts)},
+				moves:  []int{0},
+			},
 		}
 
 		for _, tc := range tt {
 			t.Run(tc.name, func(t *testing.T) {
-				utils.AssertDeepEqual(t, legalMoves(tc.pile, tc.toPlay), tc.moves)
+				utils.AssertDeepEqual(t, getLegalMoves(tc.pile, tc.toPlay), tc.moves)
 			})
 		}
 	})
@@ -389,7 +392,7 @@ func TestLegalMoves(t *testing.T) {
 		t.Run("to play", func(t *testing.T) {
 			tt := []legalMoveTest{
 				{
-					name:   "three of ♠ beats four of ♣",
+					name:   "Seven of ♠ beats Four of ♣",
 					pile:   []deck.Card{deck.NewCard(deck.Four, deck.Clubs)},
 					toPlay: []deck.Card{deck.NewCard(deck.Seven, deck.Spades)},
 					moves:  []int{0},
@@ -434,7 +437,7 @@ func TestLegalMoves(t *testing.T) {
 
 			for _, tc := range tt {
 				t.Run(tc.name, func(t *testing.T) {
-					utils.AssertDeepEqual(t, legalMoves(tc.pile, tc.toPlay), tc.moves)
+					utils.AssertDeepEqual(t, getLegalMoves(tc.pile, tc.toPlay), tc.moves)
 				})
 			}
 		})
@@ -465,7 +468,7 @@ func TestLegalMoves(t *testing.T) {
 					moves:  []int{0},
 				},
 				{
-					name:   "Two of ♣ on seven of ♠",
+					name:   "Two of ♣ beats Seven of ♠",
 					toPlay: []deck.Card{deck.NewCard(deck.Two, deck.Clubs)},
 					pile:   []deck.Card{deck.NewCard(deck.Seven, deck.Spades)},
 					moves:  []int{0},
@@ -486,7 +489,7 @@ func TestLegalMoves(t *testing.T) {
 
 			for _, tc := range tt {
 				t.Run(tc.name, func(t *testing.T) {
-					utils.AssertDeepEqual(t, legalMoves(tc.pile, tc.toPlay), tc.moves)
+					utils.AssertDeepEqual(t, getLegalMoves(tc.pile, tc.toPlay), tc.moves)
 				})
 			}
 		})
@@ -537,7 +540,7 @@ func TestLegalMoves(t *testing.T) {
 
 			for _, tc := range tt {
 				t.Run(tc.name, func(t *testing.T) {
-					utils.AssertDeepEqual(t, legalMoves(tc.pile, tc.toPlay), tc.moves)
+					utils.AssertDeepEqual(t, getLegalMoves(tc.pile, tc.toPlay), tc.moves)
 				})
 			}
 		})
@@ -620,7 +623,7 @@ func TestLegalMoves(t *testing.T) {
 
 			for _, tc := range tt {
 				t.Run(tc.name, func(t *testing.T) {
-					utils.AssertDeepEqual(t, legalMoves(tc.pile, tc.toPlay), tc.moves)
+					utils.AssertDeepEqual(t, getLegalMoves(tc.pile, tc.toPlay), tc.moves)
 				})
 			}
 		})
@@ -688,7 +691,7 @@ func TestLegalMoves(t *testing.T) {
 
 		for _, tc := range tt {
 			t.Run(tc.name, func(t *testing.T) {
-				utils.AssertDeepEqual(t, legalMoves(tc.pile, tc.toPlay), tc.moves)
+				utils.AssertDeepEqual(t, getLegalMoves(tc.pile, tc.toPlay), tc.moves)
 			})
 		}
 	})
@@ -750,6 +753,103 @@ func TestLegalMoves(t *testing.T) {
 				toPlay: []deck.Card{deck.NewCard(deck.Ten, deck.Clubs)},
 				pile:   []deck.Card{deck.NewCard(deck.Four, deck.Hearts)},
 				moves:  []int{0},
+			},
+		}
+
+		for _, tc := range tt {
+			t.Run(tc.name, func(t *testing.T) {
+				utils.AssertDeepEqual(t, getLegalMoves(tc.pile, tc.toPlay), tc.moves)
+			})
+		}
+	})
+
+	t.Run("mixture", func(t *testing.T) {
+		tt := []legalMoveTest{
+			{
+				name: "Three, Queen and King all beat an Eight",
+				pile: []deck.Card{deck.NewCard(deck.Eight, deck.Spades)},
+				toPlay: []deck.Card{
+					deck.NewCard(deck.Three, deck.Clubs),
+					deck.NewCard(deck.Queen, deck.Diamonds),
+					deck.NewCard(deck.King, deck.Diamonds),
+				},
+				moves: []int{0, 1, 2},
+			},
+			{
+				name: "Three and Ten beat a King; Queen does not",
+				pile: []deck.Card{
+					deck.NewCard(deck.King, deck.Diamonds),
+					deck.NewCard(deck.Eight, deck.Spades),
+				},
+				toPlay: []deck.Card{
+					deck.NewCard(deck.Three, deck.Clubs),
+					deck.NewCard(deck.Queen, deck.Diamonds),
+					deck.NewCard(deck.Ten, deck.Diamonds),
+				},
+				moves: []int{0, 2},
+			},
+			{
+				name: "Ten beats a King hidden by a Three; Jack and Queen do not",
+				pile: []deck.Card{
+					deck.NewCard(deck.Three, deck.Clubs),
+					deck.NewCard(deck.King, deck.Diamonds),
+					deck.NewCard(deck.Eight, deck.Spades),
+				},
+				toPlay: []deck.Card{
+					deck.NewCard(deck.Queen, deck.Diamonds),
+					deck.NewCard(deck.Jack, deck.Diamonds),
+					deck.NewCard(deck.Ten, deck.Diamonds),
+				},
+				moves: []int{2},
+			},
+			{
+				name: "Jack, Three and Queen all beat an empty pile",
+				pile: []deck.Card{},
+				toPlay: []deck.Card{
+					deck.NewCard(deck.Queen, deck.Diamonds),
+					deck.NewCard(deck.Jack, deck.Diamonds),
+					deck.NewCard(deck.Three, deck.Spades),
+				},
+				moves: []int{0, 1, 2},
+			},
+			{
+				name: "Three and Three beat a Queen; Jack does not",
+				pile: []deck.Card{
+					deck.NewCard(deck.Queen, deck.Diamonds),
+				},
+				toPlay: []deck.Card{
+					deck.NewCard(deck.Jack, deck.Diamonds),
+					deck.NewCard(deck.Three, deck.Spades),
+					deck.NewCard(deck.Three, deck.Hearts),
+				},
+				moves: []int{1, 2},
+			},
+			{
+				name: "Three beats a Queen (under a Three); Seven and Jack do not",
+				pile: []deck.Card{
+					deck.NewCard(deck.Three, deck.Spades),
+					deck.NewCard(deck.Queen, deck.Diamonds),
+				},
+				toPlay: []deck.Card{
+					deck.NewCard(deck.Jack, deck.Diamonds),
+					deck.NewCard(deck.Seven, deck.Diamonds),
+					deck.NewCard(deck.Three, deck.Hearts),
+				},
+				moves: []int{2},
+			},
+			{
+				name: "Jack, Jack and Seven cannot beat a Queen (hidden by 2 Threes)",
+				pile: []deck.Card{
+					deck.NewCard(deck.Three, deck.Hearts),
+					deck.NewCard(deck.Three, deck.Spades),
+					deck.NewCard(deck.Queen, deck.Diamonds),
+				},
+				toPlay: []deck.Card{
+					deck.NewCard(deck.Jack, deck.Diamonds),
+					deck.NewCard(deck.Seven, deck.Diamonds),
+					deck.NewCard(deck.Jack, deck.Spades),
+				},
+				moves: []int{},
 			},
 		}
 

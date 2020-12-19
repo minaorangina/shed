@@ -36,12 +36,12 @@ func TestCard(t *testing.T) {
 	})
 
 	t.Run("get rank", func(t *testing.T) {
-		six := NewCard(5, rand.Intn(4))
+		six := NewCard(Rank(5), Suit(rand.Intn(4)))
 		utils.AssertEqual(t, six.Rank.String(), "Six")
 	})
 
 	t.Run("get suit", func(t *testing.T) {
-		spade := NewCard(rand.Intn(13), 3)
+		spade := NewCard(Rank(rand.Intn(13)), Suit(3))
 		utils.AssertEqual(t, spade.Suit.String(), "Spades")
 	})
 }

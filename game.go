@@ -150,8 +150,8 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 		playerID := s.playerIDs[s.currentTurn]
 		playerCards := s.playerCards[playerID]
 
-		// can player play? if so, emit event and await response
-		if true {
+		legalMoves := getLegalMoves(s.pile, playerCards.Hand)
+		if len(legalMoves) > 0 {
 			s.awaitingResponse = true
 
 			return []OutboundMessage{{
@@ -162,8 +162,8 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 				ExpectResponse: true,
 			}}, nil
 		}
-		// if not, collect pile and move on
 
+		// no legal moves
 		playerCards.Hand = append(s.playerCards[playerID].Hand, s.pile...)
 
 		s.pile = []deck.Card{}
@@ -197,7 +197,7 @@ func (s *shed) ReceiveResponse(msgs []InboundMessage) ([]OutboundMessage, error)
 		}
 
 		msg := msgs[0]
-		playerID := msg.PlayerID // check it's an id we recognise
+		playerID := msg.PlayerID // check it's an id we recognise (gameengine responsibility?)
 
 		switch msg.Command {
 		case protocol.PlayHand:
@@ -268,7 +268,7 @@ func (s *shed) buildEndOfTurnMessage(playerID string) OutboundMessage {
 	}
 }
 
-func legalMoves(pile, toPlay []deck.Card) []int {
+func getLegalMoves(pile, toPlay []deck.Card) []int {
 	candidates := []deck.Card{}
 	for _, c := range pile {
 		if c.Rank != deck.Three {
