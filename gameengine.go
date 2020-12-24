@@ -9,10 +9,12 @@ import (
 )
 
 var (
-	ErrNilGame        = errors.New("game is nil")
-	ErrTooFewPlayers  = errors.New("minimum of 2 players required")
-	ErrTooManyPlayers = errors.New("maximum of 4 players allowed")
-	ErrNoPlayers      = errors.New("game has no players")
+	ErrNilGame                = errors.New("game is nil")
+	ErrTooFewPlayers          = errors.New("minimum of 2 players required")
+	ErrTooManyPlayers         = errors.New("maximum of 4 players allowed")
+	ErrNoPlayers              = errors.New("game has no players")
+	ErrGameUnexpectedResponse = errors.New("game received unexpected response")
+	ErrGameAwaitingResponse   = errors.New("game is awaiting a response")
 )
 
 // PlayState represents the state of the current game

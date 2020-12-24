@@ -11,6 +11,22 @@ const (
 	// combining game-specific and internal protocol messages.
 	// will split later if necessary
 	NoLegalMoves
-	PlayHand
-	Replenish
+	PlayHand // when a player plays cards from their hand
+	ReplenishHand
+	Turn
 )
+
+var cmdNames = []string{
+	"NewJoiner",
+	"Reorg",
+	"Start",
+	"HasStarted",
+	"NoLegalMoves",
+	"PlayHand",
+	"ReplenishHand",
+	"Turn",
+}
+
+func (c Cmd) String() string {
+	return cmdNames[c]
+}

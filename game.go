@@ -3,7 +3,9 @@ package shed
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 	"sort"
+	"time"
 
 	"github.com/minaorangina/shed/protocol"
 
@@ -86,13 +88,15 @@ type ShedOpts struct {
 // NewShed constructs a new game of Shed
 func NewShed(opts ShedOpts) *shed {
 	s := &shed{
-		deck:        opts.deck,
-		pile:        opts.pile,
-		playerCards: opts.playerCards,
-		playerIDs:   opts.playerIDs,
-		currentTurn: opts.currentTurn,
-		stage:       opts.stage,
+		deck:             opts.deck,
+		pile:             opts.pile,
+		playerCards:      opts.playerCards,
+		playerIDs:        opts.playerIDs,
+		currentTurn:      opts.currentTurn,
+		stage:            opts.stage,
+		awaitingResponse: opts.awaitingResponse,
 	}
+
 	if s.deck == nil {
 		s.deck = deck.New()
 	}
@@ -120,19 +124,23 @@ func (s *shed) Start(playerIDs []string) error {
 		return ErrTooManyPlayers
 	}
 
-	// deal cards etc
+	s.playerIDs = playerIDs
 
-	cards := map[string]*PlayerCards{}
+	s.deck.Shuffle()
+
 	for _, id := range playerIDs {
-		cards[id] = &PlayerCards{
-			Hand: []deck.Card{},
-			Seen: []deck.Card{},
+		playerCards := &PlayerCards{
+			Hand:   s.deck.Deal(3),
+			Seen:   s.deck.Deal(3),
+			Unseen: s.deck.Deal(3),
 		}
+		s.playerCards[id] = playerCards
 	}
 
-	s.playerIDs = playerIDs
-	s.playerCards = cards
-	s.stage = clearDeck
+	rand.Seed(time.Now().UnixNano())
+	s.currentTurn = rand.Intn(len(s.playerIDs) - 1)
+
+	s.stage = clearDeck // possibly change to stage 0
 
 	return nil
 }
@@ -141,11 +149,15 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 	if s == nil {
 		return nil, ErrNilGame
 	}
-	if s.playerCards == nil {
+	if s.playerCards == nil || len(s.playerCards) == 0 {
 		return nil, ErrNoPlayers
+	}
+	if s.awaitingResponse {
+		return nil, ErrGameAwaitingResponse
 	}
 
 	switch s.stage {
+	// case reorganisingHand
 	case clearDeck:
 		playerID := s.playerIDs[s.currentTurn]
 		playerCards := s.playerCards[playerID]
@@ -155,24 +167,27 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 			s.awaitingResponse = true
 
 			return []OutboundMessage{{
-				PlayerID:       playerID,
-				Command:        protocol.PlayHand,
-				Hand:           s.playerCards[playerID].Hand,
-				Seen:           s.playerCards[playerID].Seen,
-				ExpectResponse: true,
+				PlayerID:         playerID,
+				Command:          protocol.Turn,
+				Hand:             s.playerCards[playerID].Hand,
+				Seen:             s.playerCards[playerID].Seen,
+				Opponents:        buildOpponents(playerID, s.playerCards),
+				AwaitingResponse: true,
 			}}, nil
 		}
 
 		// no legal moves
 		playerCards.Hand = append(s.playerCards[playerID].Hand, s.pile...)
-
 		s.pile = []deck.Card{}
+		// still want an ack from the player
+		s.awaitingResponse = true
 
 		return []OutboundMessage{{
-			PlayerID: playerID,
-			Command:  protocol.NoLegalMoves,
-			Hand:     s.playerCards[playerID].Hand,
-			Seen:     s.playerCards[playerID].Seen,
+			PlayerID:         playerID,
+			Command:          protocol.NoLegalMoves,
+			Hand:             s.playerCards[playerID].Hand,
+			Seen:             s.playerCards[playerID].Seen,
+			AwaitingResponse: true,
 		}}, nil
 	}
 
@@ -186,11 +201,16 @@ func (s *shed) ReceiveResponse(msgs []InboundMessage) ([]OutboundMessage, error)
 	if s.playerCards == nil {
 		return nil, ErrNoPlayers
 	}
+	if !s.awaitingResponse {
+		return nil, ErrGameUnexpectedResponse
+	}
 
+	// stage 0
 	if s.stage == preGame {
 
 	}
 
+	// stage 1
 	if s.stage == clearDeck {
 		if len(msgs) != 1 {
 			return nil, fmt.Errorf("expected one message, got %d", len(msgs))
@@ -200,6 +220,13 @@ func (s *shed) ReceiveResponse(msgs []InboundMessage) ([]OutboundMessage, error)
 		playerID := msg.PlayerID // check it's an id we recognise (gameengine responsibility?)
 
 		switch msg.Command {
+		case protocol.NoLegalMoves:
+			s.awaitingResponse = false
+			s.turn()
+			// panic("!")
+			// return []OutboundMessage{{PlayerID: "lolol"}}, nil
+			return nil, nil
+
 		case protocol.PlayHand:
 			// check this is a legal move. this has already been done, but worth
 			// double checking in case of client tampering.
@@ -232,7 +259,7 @@ func (s *shed) ReceiveResponse(msgs []InboundMessage) ([]OutboundMessage, error)
 			// return messages with no response expected.
 			toSend := []OutboundMessage{{
 				PlayerID: playerID,
-				Command:  protocol.Replenish,
+				Command:  protocol.ReplenishHand,
 				Hand:     newHand,
 				Pile:     s.pile,
 			}}
@@ -244,6 +271,7 @@ func (s *shed) ReceiveResponse(msgs []InboundMessage) ([]OutboundMessage, error)
 			}
 
 			s.awaitingResponse = false
+			s.turn()
 			return toSend, nil
 		}
 
@@ -263,7 +291,7 @@ func (s *shed) turn() {
 func (s *shed) buildEndOfTurnMessage(playerID string) OutboundMessage {
 	return OutboundMessage{
 		PlayerID: playerID,
-		Command:  protocol.Replenish,
+		Command:  protocol.ReplenishHand,
 		Pile:     s.pile,
 	}
 }

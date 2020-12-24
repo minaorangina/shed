@@ -9,97 +9,8 @@ import (
 
 	"github.com/minaorangina/shed/deck"
 	utils "github.com/minaorangina/shed/internal"
+	"github.com/minaorangina/shed/protocol"
 )
-
-func TestShedStart(t *testing.T) {
-	t.Run("only starts with legal number of players", func(t *testing.T) {
-
-		tt := []struct {
-			name      string
-			playerIDs []string
-			err       error
-		}{
-			{
-				"too few players",
-				[]string{"Grace"},
-				ErrTooFewPlayers,
-			},
-			{
-				"too many players",
-				[]string{"Ada", "Katherine", "Grace", "Hedy", "Marlyn"},
-				ErrTooManyPlayers,
-			},
-			{
-				"just right",
-				[]string{"Ada", "Katherine", "Grace", "Hedy"},
-				nil,
-			},
-		}
-
-		for _, tc := range tt {
-			t.Run(tc.name, func(t *testing.T) {
-				game := NewShed()
-				err := game.Start(tc.playerIDs)
-
-				utils.AssertDeepEqual(t, err, tc.err)
-			})
-		}
-	})
-}
-
-func TestBuildMessageToPlayer(t *testing.T) {
-	ge := gameEngineWithPlayers()
-	ps := ge.Players()
-	var opponents []Opponent
-	var id string
-	for _, p := range ps {
-		id = p.ID()
-		opponents = buildOpponents(id, ps)
-		break
-	}
-
-	playerToContact, _ := ps.Find(id)
-	message := buildReorgMessage(playerToContact, opponents, InitialCards{})
-	expectedMessage := OutboundMessage{
-		PlayerID:  playerToContact.ID(),
-		Name:      playerToContact.Name(),
-		Hand:      playerToContact.Cards().Hand,
-		Seen:      playerToContact.Cards().Seen,
-		Opponents: opponents,
-		Command:   protocol.Reorg,
-	}
-	utils.AssertDeepEqual(t, message, expectedMessage)
-}
-
-func TestGameEngineMsgFromGame(t *testing.T) {
-	// update when GameEngine forwards messages from players
-
-	t.Skip("do not run TestGameEngineMsgFromGame")
-	ge := gameEngineWithPlayers()
-	ge.Start() // mock required
-
-	messages := []OutboundMessage{}
-	want := []InboundMessage{}
-	initialCards := InitialCards{}
-	for _, p := range ge.Players() {
-		o := buildOpponents(p.ID(), ge.Players())
-		m := buildReorgMessage(p, o, initialCards)
-		messages = append(messages, m)
-
-		cards := p.Cards()
-
-		want = append(want, InboundMessage{
-			PlayerID: p.ID(),
-			Hand:     cards.Hand,
-			Seen:     cards.Seen,
-		})
-	}
-
-	err := ge.MessagePlayers(messages)
-	if err != nil {
-		t.Fail()
-	}
-}
 
 func TestGameTurn(t *testing.T) {
 	gameWithRandomPlayers := func() (int, *shed) {
@@ -176,12 +87,13 @@ func TestGameStageOneLegalMoves(t *testing.T) {
 
 	// then the player is asked to make a choice
 	utils.AssertNotNil(t, msg)
-	utils.AssertTrue(t, msg[0].ExpectResponse)
+	utils.AssertTrue(t, msg[0].AwaitingResponse)
 
 	// and the game expects a response
 	utils.AssertTrue(t, game.awaitingResponse)
 
 	// and when player response is received
+	previousTurn := game.currentTurn
 	msgs, err := game.ReceiveResponse([]InboundMessage{{
 		PlayerID: playerID,
 		Command:  protocol.PlayHand,
@@ -215,9 +127,12 @@ func TestGameStageOneLegalMoves(t *testing.T) {
 	utils.AssertNotNil(t, msgs)
 	utils.AssertEqual(t, len(msgs), len(game.playerIDs))
 	for _, m := range msgs {
-		utils.AssertEqual(t, m.ExpectResponse, false)
+		utils.AssertEqual(t, m.AwaitingResponse, false)
 	}
 	utils.AssertEqual(t, game.awaitingResponse, false)
+
+	// and the next player is up
+	utils.AssertTrue(t, game.currentTurn != previousTurn)
 }
 func TestGameNoLegalMoves(t *testing.T) {
 	t.Run("stage 1: player picks up pile", func(t *testing.T) {
@@ -262,16 +177,44 @@ func TestGameNoLegalMoves(t *testing.T) {
 		// and the deck is unchanged
 		utils.AssertEqual(t, newDeckSize, oldDeckSize)
 
-		// and the []OutboundMessage does not require a response
+		// and the []OutboundMessage requires a response (ack)
 		utils.AssertNotNil(t, msg)
-		utils.AssertEqual(t, msg[0].ExpectResponse, false)
+		utils.AssertTrue(t, msg[0].AwaitingResponse)
+
+		previousTurn := game.currentTurn
+		// and the response is handled correctly
+		response, err := game.ReceiveResponse([]InboundMessage{{
+			PlayerID: playerID,
+			Command:  protocol.NoLegalMoves,
+		}})
+		utils.AssertNoError(t, err)
+		utils.AssertDeepEqual(t, response, []OutboundMessage(nil))
+		utils.AssertEqual(t, game.awaitingResponse, false)
+
+		// and the next player is up
+		utils.AssertTrue(t, game.currentTurn != previousTurn)
+	})
+}
+func TestGameOutput(t *testing.T) {
+	t.Run("game won't progress if waiting for a response", func(t *testing.T) {
+		game := NewShed(ShedOpts{awaitingResponse: true})
+		err := game.Start([]string{"p1", "p2", "p3"})
+		utils.AssertNoError(t, err)
+
+		_, err = game.Next()
+		utils.AssertErrored(t, err)
 	})
 }
 
-func TestGameInput(t *testing.T) {
-	// test that the game won't proceed if it's expecting a response
+func TestGameReceiveResponse(t *testing.T) {
+	t.Run("unexpected response", func(t *testing.T) {
+		game := NewShed(ShedOpts{})
+		err := game.Start([]string{"p1", "p2", "p3"})
+		utils.AssertNoError(t, err)
 
-	// test the game won't allow .Next() to be called if someone's turn is incomplete
+		_, err = game.ReceiveResponse([]InboundMessage{{PlayerID: "p1", Command: protocol.PlayHand}})
+		utils.AssertErrored(t, err)
+	})
 }
 
 func TestLegalMoves(t *testing.T) {
@@ -855,8 +798,81 @@ func TestLegalMoves(t *testing.T) {
 
 		for _, tc := range tt {
 			t.Run(tc.name, func(t *testing.T) {
-				utils.AssertDeepEqual(t, legalMoves(tc.pile, tc.toPlay), tc.moves)
+				utils.AssertDeepEqual(t, getLegalMoves(tc.pile, tc.toPlay), tc.moves)
 			})
+		}
+	})
+}
+
+func TestGameStart(t *testing.T) {
+	t.Run("game with no options sets up correctly", func(t *testing.T) {
+
+		game := NewShed(ShedOpts{})
+		playerIDs := []string{
+			"player-1",
+			"player-2",
+			"player-3",
+			"player-4",
+		}
+
+		err := game.Start(playerIDs)
+
+		utils.AssertNoError(t, err)
+		utils.AssertTrue(t, len(game.playerIDs) > 1)
+
+		for _, id := range playerIDs {
+			playerCards := game.playerCards[id]
+			utils.AssertEqual(t, len(playerCards.Hand), 3)
+			utils.AssertEqual(t, len(playerCards.Seen), 3)
+			utils.AssertEqual(t, len(playerCards.Unseen), 3)
+		}
+	})
+}
+
+func TestGameNext(t *testing.T) {
+	t.Run("game must have started", func(t *testing.T) {
+		game := NewShed(ShedOpts{})
+		_, err := game.Next()
+		utils.AssertErrored(t, err)
+	})
+
+	t.Run("game must not be waiting for a response", func(t *testing.T) {
+		game := NewShed(ShedOpts{awaitingResponse: true})
+		err := game.Start([]string{"p1", "p2", "p3"})
+		utils.AssertNoError(t, err)
+
+		_, err = game.Next()
+		utils.AssertErrored(t, err)
+	})
+
+	t.Run("after game has started (after reorganising hands), players are informed of the turn and the card situation", func(t *testing.T) {
+		// this doesn't account for hand reorganisation just yet
+		game := NewShed(ShedOpts{})
+		playerIDs := []string{
+			"player-1",
+			"player-2",
+			"player-3",
+			"player-4",
+		}
+
+		err := game.Start(playerIDs)
+		utils.AssertNoError(t, err)
+
+		msgs, err := game.Next()
+		utils.AssertNoError(t, err)
+
+		for playerIdx, m := range msgs {
+			playerID := game.playerIDs[playerIdx]
+			utils.AssertEqual(t, m.PlayerID, playerID)
+			fmt.Printf("%#v\n", m)
+			if playerIdx == game.currentTurn {
+				utils.AssertTrue(t, m.AwaitingResponse)
+			} else {
+				utils.AssertEqual(t, m.AwaitingResponse, false)
+			}
+			utils.AssertDeepEqual(t, m.Hand, game.playerCards[playerID].Hand)
+			utils.AssertDeepEqual(t, m.Seen, game.playerCards[playerID].Seen)
+			utils.AssertEqual(t, m.Command, protocol.Turn)
 		}
 	})
 }

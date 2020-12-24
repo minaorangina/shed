@@ -72,15 +72,14 @@ func gameEngineWithPlayers() GameEngine {
 	return ge
 }
 
-func buildOpponents(playerID string, ps Players) []Opponent {
+func buildOpponents(playerID string, playerCards map[string]*PlayerCards) []Opponent {
 	opponents := []Opponent{}
-	for _, p := range ps {
-		if p.ID() == playerID {
-			continue
+	for id, pc := range playerCards {
+		if id != playerID {
+			opponents = append(opponents, Opponent{
+				ID: id, Seen: pc.Seen,
+			})
 		}
-		opponents = append(opponents, Opponent{
-			ID: p.ID(), Seen: p.Cards().Seen, Name: p.Name(),
-		})
 	}
 	return opponents
 }

@@ -99,7 +99,7 @@ func TestCreateAndJoinNewGame(t *testing.T) {
 	// a Player was created
 	ps = game.Players()
 	_, ok = ps.Find(joinPayload.PlayerID)
-	utils.AssertTrue(t, ok)
+	utils.AssertTrue(t, ok) // flaky...
 
 	// and the pending player entry is NOT removed
 	// (placeholder for real auth)
