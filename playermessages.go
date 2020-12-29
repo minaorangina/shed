@@ -11,7 +11,7 @@ type InboundMessage struct {
 	Command  protocol.Cmd `json:"command"`
 	Hand     []deck.Card  `json:"hand",omitempty`
 	Seen     []deck.Card  `json:"seen",omitempty`
-	Decision []int        `json:"decision,omitempty"`
+	Decision []int        `json:"decision,omitempty"` // not used in stage 0
 }
 
 // OutboundMessage is a message from GameEngine to Player
@@ -22,7 +22,9 @@ type OutboundMessage struct {
 	Hand             []deck.Card  `json:"hand"`
 	Seen             []deck.Card  `json:"seen"`
 	Pile             []deck.Card  `json:"pile"`
-	Opponents        []Opponent   `json:"opponents"`
+	CurrentTurn      string       `json:"current_turn",omitempty`
+	Moves            []int        `json:"moves",omitempty`
+	Opponents        []Opponent   `json:"opponents",omitempty`
 	Command          protocol.Cmd `json:"command"`
 	AwaitingResponse bool         `json:"awaiting_response"`
 	Broadcast        bool

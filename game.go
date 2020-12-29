@@ -140,8 +140,6 @@ func (s *shed) Start(playerIDs []string) error {
 	rand.Seed(time.Now().UnixNano())
 	s.currentTurn = rand.Intn(len(s.playerIDs) - 1)
 
-	s.stage = clearDeck // possibly change to stage 0
-
 	return nil
 }
 
@@ -156,8 +154,25 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 		return nil, ErrGameAwaitingResponse
 	}
 
+	msgs := []OutboundMessage{}
+
 	switch s.stage {
-	// case reorganisingHand
+	case preGame:
+		s.awaitingResponse = true
+
+		for _, id := range s.playerIDs {
+			m := OutboundMessage{
+				PlayerID:         id,
+				Command:          protocol.Reorg,
+				Hand:             s.playerCards[id].Hand,
+				Seen:             s.playerCards[id].Seen,
+				AwaitingResponse: true,
+			}
+			msgs = append(msgs, m)
+		}
+
+		return msgs, nil
+
 	case clearDeck:
 		playerID := s.playerIDs[s.currentTurn]
 		playerCards := s.playerCards[playerID]
@@ -166,14 +181,26 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 		if len(legalMoves) > 0 {
 			s.awaitingResponse = true
 
-			return []OutboundMessage{{
-				PlayerID:         playerID,
-				Command:          protocol.Turn,
-				Hand:             s.playerCards[playerID].Hand,
-				Seen:             s.playerCards[playerID].Seen,
-				Opponents:        buildOpponents(playerID, s.playerCards),
-				AwaitingResponse: true,
-			}}, nil
+			for _, recipientID := range s.playerIDs {
+				message := OutboundMessage{
+					PlayerID:    recipientID,
+					CurrentTurn: playerID,
+					Command:     protocol.Turn,
+					Hand:        s.playerCards[recipientID].Hand,
+					Seen:        s.playerCards[recipientID].Seen,
+					Opponents:   buildOpponents(recipientID, s.playerCards),
+				}
+				if recipientID == playerID {
+					message.Command = protocol.PlayHand
+					message.Moves = legalMoves
+					message.AwaitingResponse = true
+				}
+
+				msgs = append(msgs, message)
+
+			}
+
+			return msgs, nil
 		}
 
 		// no legal moves
@@ -182,19 +209,30 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 		// still want an ack from the player
 		s.awaitingResponse = true
 
-		return []OutboundMessage{{
-			PlayerID:         playerID,
-			Command:          protocol.NoLegalMoves,
-			Hand:             s.playerCards[playerID].Hand,
-			Seen:             s.playerCards[playerID].Seen,
-			AwaitingResponse: true,
-		}}, nil
+		for _, recipientID := range s.playerIDs {
+			message := OutboundMessage{
+				PlayerID:    playerID,
+				Command:     protocol.Turn,
+				CurrentTurn: playerID,
+				Hand:        s.playerCards[playerID].Hand,
+				Seen:        s.playerCards[playerID].Seen,
+			}
+			if recipientID == playerID {
+				message.Command = protocol.NoLegalMoves
+				message.AwaitingResponse = true
+			}
+
+			msgs = append(msgs, message)
+		}
+
+		return msgs, nil
 	}
 
-	return nil, nil
+	// this shouldn't happen
+	return nil, fmt.Errorf("could not match game stage %d", s.stage)
 }
 
-func (s *shed) ReceiveResponse(msgs []InboundMessage) ([]OutboundMessage, error) {
+func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage, error) {
 	if s == nil {
 		return nil, ErrNilGame
 	}
@@ -207,24 +245,34 @@ func (s *shed) ReceiveResponse(msgs []InboundMessage) ([]OutboundMessage, error)
 
 	// stage 0
 	if s.stage == preGame {
+		numPlayers, numMessages := len(s.playerIDs), len(inboundMsgs)
+		if numPlayers != numMessages {
+			return nil, fmt.Errorf("expected %d messages, got %d", numMessages, numPlayers)
+		}
 
+		for _, m := range inboundMsgs {
+			s.playerCards[m.PlayerID].Hand = m.Hand
+			s.playerCards[m.PlayerID].Seen = m.Seen
+		}
+
+		s.awaitingResponse = false
+
+		return nil, nil
 	}
 
 	// stage 1
 	if s.stage == clearDeck {
-		if len(msgs) != 1 {
-			return nil, fmt.Errorf("expected one message, got %d", len(msgs))
+		if len(inboundMsgs) != 1 {
+			return nil, fmt.Errorf("expected one message, got %d", len(inboundMsgs))
 		}
 
-		msg := msgs[0]
+		msg := inboundMsgs[0]
 		playerID := msg.PlayerID // check it's an id we recognise (gameengine responsibility?)
 
 		switch msg.Command {
-		case protocol.NoLegalMoves:
+		case protocol.NoLegalMoves: // ack
 			s.awaitingResponse = false
 			s.turn()
-			// panic("!")
-			// return []OutboundMessage{{PlayerID: "lolol"}}, nil
 			return nil, nil
 
 		case protocol.PlayHand:
