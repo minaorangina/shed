@@ -32,11 +32,16 @@ func (d *Deck) Shuffle() {
 }
 
 // Deal deals n number of cards from the deck, until it is empty
+// If more cards than exist are requested, Deal returns all the remaining cards
 func (d *Deck) Deal(n int) []Card {
 	numCardsInDeck := len(*d)
-	if n < 0 || n > numCardsInDeck {
+	if n < 0 {
 		return []Card{}
 	}
+	if n > numCardsInDeck {
+		n = numCardsInDeck
+	}
+
 	startingIndex := numCardsInDeck - n
 	subSlice := (*d)[startingIndex:numCardsInDeck]
 	*d = (*d)[:startingIndex]

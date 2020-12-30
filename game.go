@@ -237,10 +237,8 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 		case protocol.PlayHand:
 			// check this is a legal move. this has already been done, but worth
 			// double checking in case of client tampering.
-
 			s.playHand(msg)
-			ok := s.pluckFromDeck(msg)
-			_ = ok
+			s.pluckFromDeck(msg)
 
 			// return messages with no response expected.
 			toSend := []OutboundMessage{{
@@ -274,8 +272,7 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 		case protocol.PlayHand:
 
 			s.playHand(msg)
-			ok := s.pluckFromDeck(msg)
-			_ = ok
+			s.pluckFromDeck(msg)
 
 			toSend := []OutboundMessage{}
 			for _, id := range s.playerIDs {
@@ -319,7 +316,7 @@ func getLegalMoves(pile, toPlay []deck.Card) []int {
 			moves[i] = struct{}{}
 		}
 
-		return setToSlice(moves)
+		return setToIntSlice(moves)
 	}
 
 	// tens (and twos and threes) beat anything
@@ -336,7 +333,7 @@ func getLegalMoves(pile, toPlay []deck.Card) []int {
 		for i := range toPlay {
 			moves[i] = struct{}{}
 		}
-		return setToSlice(moves)
+		return setToIntSlice(moves)
 	}
 
 	// seven
@@ -346,7 +343,7 @@ func getLegalMoves(pile, toPlay []deck.Card) []int {
 				moves[i] = struct{}{}
 			}
 		}
-		return setToSlice(moves)
+		return setToIntSlice(moves)
 	}
 
 	for i, tp := range toPlay {
@@ -363,7 +360,7 @@ func getLegalMoves(pile, toPlay []deck.Card) []int {
 		}
 	}
 
-	return setToSlice(moves)
+	return setToIntSlice(moves)
 }
 
 func cardsUnique(cards []deck.Card) bool {
@@ -375,17 +372,6 @@ func cardsUnique(cards []deck.Card) bool {
 		seen[c] = struct{}{}
 	}
 	return true
-}
-
-func setToSlice(set map[int]struct{}) []int {
-	s := []int{}
-	for key := range set {
-		s = append(s, key)
-	}
-
-	sort.Ints(s)
-
-	return s
 }
 
 // step 1 of 2 in a player playing their hand
@@ -451,35 +437,50 @@ func (s *shed) playHand(msg InboundMessage) {
 	playerID := msg.PlayerID
 	// add cards to pile
 	toPile := []deck.Card{}
+	newHand := cardSliceToSet(s.playerCards[playerID].Hand)
+
 	for _, cardIdx := range msg.Decision {
-		// copy card from Hand
 		toPile = append(toPile, s.playerCards[playerID].Hand[cardIdx])
+		delete(newHand, s.playerCards[playerID].Hand[cardIdx])
 	}
 
 	s.pile = append(s.pile, toPile...)
-
-	// remove selected cards from hand
-	newHand := []deck.Card{}
-	for _, hc := range s.playerCards[playerID].Hand {
-		for _, pc := range toPile {
-			if hc != pc {
-				newHand = append(newHand, hc)
-			}
-		}
-	}
-
-	s.playerCards[playerID].Hand = newHand
+	s.playerCards[playerID].Hand = setToCardSlice(newHand)
 }
 
-func (s *shed) pluckFromDeck(msg InboundMessage) bool {
+func (s *shed) pluckFromDeck(msg InboundMessage) {
 	if len(s.deck) == 0 {
-		return false
+		return
 	}
-
 	playerID := msg.PlayerID
 	// pluck from deck
 	fromDeck := s.deck.Deal(len(msg.Decision))
 	s.playerCards[playerID].Hand = append(s.playerCards[playerID].Hand, fromDeck...)
+}
 
-	return true
+func setToIntSlice(set map[int]struct{}) []int {
+	s := []int{}
+	for key := range set {
+		s = append(s, key)
+	}
+
+	sort.Ints(s)
+
+	return s
+}
+
+func setToCardSlice(set map[deck.Card]struct{}) []deck.Card {
+	s := []deck.Card{}
+	for key := range set {
+		s = append(s, key)
+	}
+	return s
+}
+
+func cardSliceToSet(s []deck.Card) map[deck.Card]struct{} {
+	set := map[deck.Card]struct{}{}
+	for _, key := range s {
+		set[key] = struct{}{}
+	}
+	return set
 }

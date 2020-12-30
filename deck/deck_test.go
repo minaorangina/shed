@@ -76,4 +76,11 @@ func TestDeckRemoveCards(t *testing.T) {
 			utils.TableFailureMessage(t, dt.testName, len(deckToRemoveFrom), dt.expectedNumRemaining)
 		}
 	}
+
+	t.Run("handles requests for more cards than exist", func(t *testing.T) {
+		d := New()
+
+		removedCards := d.Deal(53)
+		utils.AssertEqual(t, len(removedCards), 52)
+	})
 }

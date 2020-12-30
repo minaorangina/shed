@@ -130,7 +130,6 @@ func TestGameStageZero(t *testing.T) {
 
 func TestGameStageOne(t *testing.T) {
 	t.Run("stage 1: player has legal moves", func(t *testing.T) {
-
 		// Given a game in stage 1, with a low-value card on the pile
 		lowValueCard := deck.NewCard(deck.Four, deck.Hearts)
 		pile := []deck.Card{lowValueCard}
@@ -184,7 +183,6 @@ func TestGameStageOne(t *testing.T) {
 				utils.AssertTrue(t, len(m.Moves) > 0)
 				moves = m.Moves
 			} else {
-
 				utils.AssertEqual(t, m.Command, protocol.Turn)
 				utils.AssertEqual(t, m.AwaitingResponse, false)
 			}
@@ -198,7 +196,7 @@ func TestGameStageOne(t *testing.T) {
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
 			PlayerID: playerID,
 			Command:  protocol.PlayHand,
-			Decision: []int{moves[0]},
+			Decision: []int{moves[1]}, // target card is the second one
 		}})
 		utils.AssertNoError(t, err)
 
@@ -237,11 +235,127 @@ func TestGameStageOne(t *testing.T) {
 	})
 
 	t.Run("stage 1: player plays multiple cards from their hand", func(t *testing.T) {
-		// need to test when player has 0 or 1 card in their hand
+		// Given a game in stage 1
+		lowValueCard := deck.NewCard(deck.Four, deck.Hearts)
+		pile := []deck.Card{lowValueCard}
+		targetCards := []deck.Card{
+			deck.NewCard(deck.Nine, deck.Clubs),
+			deck.NewCard(deck.Nine, deck.Diamonds),
+		}
+		// And a player with two cards of the same value in their hand
+		pc := &PlayerCards{Hand: append(targetCards, deck.NewCard(deck.Eight, deck.Hearts))}
+
+		game := NewShed(ShedOpts{
+			stage:     clearDeck,
+			deck:      someDeck(4),
+			pile:      pile,
+			playerIDs: []string{"player-1", "player-2"},
+			playerCards: map[string]*PlayerCards{
+				"player-1": pc,
+				"player-2": somePlayerCards(3),
+			},
+		})
+
+		playerID := "player-1"
+		oldHand := game.playerCards[playerID].Hand
+		oldHandSize := len(oldHand)
+		oldPileSize := len(game.pile)
+		oldDeckSize := len(game.deck)
+
+		// When the player takes their turn
+		msgs, err := game.Next()
+		utils.AssertNoError(t, err)
+		utils.AssertNotNil(t, msgs)
+
+		moves := msgs[0].Moves
+		utils.AssertTrue(t, len(moves) > 1)
+
+		// And chooses to play two of the same card
+		_, err = game.ReceiveResponse([]InboundMessage{{
+			PlayerID: playerID,
+			Command:  protocol.PlayHand,
+			Decision: []int{0, 1},
+		}})
+		utils.AssertNoError(t, err)
+		newHand := game.playerCards[playerID].Hand
+		newHandSize := len(newHand)
+		newPileSize := len(game.pile)
+		newDeckSize := len(game.deck)
+
+		// Then the hand size remains the same, but the cards have changed
+		utils.AssertEqual(t, newHandSize, oldHandSize)
+		utils.AssertEqual(t, containsCard(newHand, targetCards...), false)
+
+		// And the pile has two extra cards (from the hand)
+		utils.AssertTrue(t, newPileSize > oldPileSize)
+		utils.AssertTrue(t, containsCard(game.pile, targetCards...))
+
+		// And the deck has two fewer cards
+		utils.AssertTrue(t, newDeckSize == oldDeckSize-2)
+	})
+
+	t.Run("stage 1: not enough cards in deck", func(t *testing.T) {
+		// Given a game in stage 1 with one card left on the deck
+		lowValueCard := deck.NewCard(deck.Four, deck.Hearts)
+		pile := []deck.Card{lowValueCard}
+		targetCards := []deck.Card{
+			deck.NewCard(deck.Nine, deck.Clubs),
+			deck.NewCard(deck.Nine, deck.Diamonds),
+		}
+		// And a player with two cards of the same value in their hand
+		pc := &PlayerCards{Hand: append(targetCards, deck.NewCard(deck.Eight, deck.Hearts))}
+
+		game := NewShed(ShedOpts{
+			stage:     clearDeck,
+			deck:      someDeck(1),
+			pile:      pile,
+			playerIDs: []string{"player-1", "player-2"},
+			playerCards: map[string]*PlayerCards{
+				"player-1": pc,
+				"player-2": somePlayerCards(3),
+			},
+		})
+
+		playerID := "player-1"
+		oldHand := game.playerCards[playerID].Hand
+		oldHandSize := len(oldHand)
+		oldPileSize := len(game.pile)
+
+		// When the player takes their turn
+		msgs, err := game.Next()
+		utils.AssertNoError(t, err)
+		utils.AssertNotNil(t, msgs)
+
+		moves := msgs[0].Moves
+		utils.AssertTrue(t, len(moves) > 1)
+
+		// And chooses to play two cards of the same value
+		_, err = game.ReceiveResponse([]InboundMessage{{
+			PlayerID: playerID,
+			Command:  protocol.PlayHand,
+			Decision: []int{0, 1},
+		}})
+		utils.AssertNoError(t, err)
+		newHand := game.playerCards[playerID].Hand
+		newHandSize := len(newHand)
+		newPileSize := len(game.pile)
+		newDeckSize := len(game.deck)
+
+		// Then the hand size is smaller, and the cards have changed
+		utils.AssertEqual(t, newHandSize, oldHandSize-1)
+		utils.AssertEqual(t, containsCard(newHand, targetCards...), false)
+
+		// And the pile has two extra cards (from the hand)
+		utils.AssertTrue(t, newPileSize > oldPileSize)
+		utils.AssertTrue(t, containsCard(game.pile, targetCards...))
+
+		// And the deck is empty
+		utils.AssertEqual(t, newDeckSize, 0)
+		// And the game switches to stage 2
+		utils.AssertEqual(t, game.stage, clearCards)
 	})
 
 	t.Run("stage 1: player picks up pile", func(t *testing.T) {
-		t.Skip()
 		// Given a game with a high-value card on the pile
 		highValueCard := deck.NewCard(deck.Ace, deck.Clubs) // Ace of Clubs
 
@@ -1163,10 +1277,12 @@ func somePlayerCards(num int) *PlayerCards {
 	return &PlayerCards{Hand: someDeck(num), Seen: someDeck(num)}
 }
 
-func containsCard(s []deck.Card, target deck.Card) bool {
+func containsCard(s []deck.Card, targets ...deck.Card) bool {
 	for _, c := range s {
-		if c == target {
-			return true
+		for _, tg := range targets {
+			if c == tg {
+				return true
+			}
 		}
 	}
 	return false
