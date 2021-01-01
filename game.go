@@ -70,7 +70,8 @@ type shed struct {
 	pile             []deck.Card
 	playerCards      map[string]*PlayerCards
 	playerIDs        []string
-	currentTurn      int
+	currentPlayerID  string
+	currentTurnIdx   int
 	stage            Stage
 	awaitingResponse bool
 }
@@ -80,7 +81,7 @@ type ShedOpts struct {
 	pile             []deck.Card
 	playerCards      map[string]*PlayerCards
 	playerIDs        []string
-	currentTurn      int
+	currentPlayerID  string
 	stage            Stage
 	awaitingResponse bool
 }
@@ -92,9 +93,18 @@ func NewShed(opts ShedOpts) *shed {
 		pile:             opts.pile,
 		playerCards:      opts.playerCards,
 		playerIDs:        opts.playerIDs,
-		currentTurn:      opts.currentTurn,
+		currentPlayerID:  opts.currentPlayerID,
 		stage:            opts.stage,
 		awaitingResponse: opts.awaitingResponse,
+	}
+
+	if len(s.playerIDs) > 0 {
+		for i, id := range s.playerIDs {
+			if id == s.currentPlayerID {
+				s.currentTurnIdx = i
+				break
+			}
+		}
 	}
 
 	if s.deck == nil {
@@ -138,7 +148,7 @@ func (s *shed) Start(playerIDs []string) error {
 	}
 
 	rand.Seed(time.Now().UnixNano())
-	s.currentTurn = rand.Intn(len(s.playerIDs) - 1)
+	s.currentTurnIdx = rand.Intn(len(s.playerIDs) - 1)
 
 	return nil
 }
@@ -155,6 +165,7 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 	}
 
 	msgs := []OutboundMessage{}
+	currentPlayerCards := s.playerCards[s.currentPlayerID]
 
 	switch s.stage {
 	case preGame:
@@ -177,8 +188,7 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 		return s.attemptToPlayHand()
 
 	case clearCards:
-		currentPlayer := s.playerIDs[s.currentTurn]
-		if len(s.playerCards[currentPlayer].Hand) > 0 {
+		if len(s.playerCards[s.currentPlayerID].Hand) > 0 {
 			return s.attemptToPlayHand()
 		}
 		return nil, nil
@@ -218,7 +228,9 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 	}
 
 	msg := inboundMsgs[0]
-	playerID := msg.PlayerID // check it's an id we recognise (gameengine responsibility?)
+	if msg.PlayerID != s.currentPlayerID {
+		return nil, fmt.Errorf("unexpected message from player %s", msg.PlayerID)
+	}
 
 	if msg.Command == protocol.NoLegalMoves { // ack
 		s.awaitingResponse = false
@@ -242,14 +254,14 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 
 			// return messages with no response expected.
 			toSend := []OutboundMessage{{
-				PlayerID: playerID,
+				PlayerID: playerIDFromMsg,
 				Command:  protocol.ReplenishHand,
-				Hand:     s.playerCards[playerID].Hand,
+				Hand:     s.playerCards[playerIDFromMsg].Hand,
 				Pile:     s.pile,
 			}}
 
 			for _, id := range s.playerIDs {
-				if id != playerID {
+				if id != s.currentPlayerID {
 					toSend = append(toSend, s.buildEndOfTurnMessage(id))
 				}
 			}
@@ -289,7 +301,7 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 }
 
 func (s *shed) turn() {
-	s.currentTurn = (s.currentTurn + 1) % len(s.playerIDs)
+	s.currentTurnIdx = (s.currentTurnIdx + 1) % len(s.playerIDs)
 }
 
 func (s *shed) buildEndOfTurnMessage(playerID string) OutboundMessage {
@@ -377,9 +389,7 @@ func cardsUnique(cards []deck.Card) bool {
 // step 1 of 2 in a player playing their hand
 func (s *shed) attemptToPlayHand() ([]OutboundMessage, error) {
 	msgs := []OutboundMessage{}
-
-	playerID := s.playerIDs[s.currentTurn]
-	playerCards := s.playerCards[playerID]
+	playerCards := s.playerCards[s.currentPlayerID]
 
 	legalMoves := getLegalMoves(s.pile, playerCards.Hand)
 	if len(legalMoves) > 0 {
@@ -388,13 +398,13 @@ func (s *shed) attemptToPlayHand() ([]OutboundMessage, error) {
 		for _, recipientID := range s.playerIDs {
 			message := OutboundMessage{
 				PlayerID:    recipientID,
-				CurrentTurn: playerID,
+				CurrentTurn: s.currentPlayerID,
 				Command:     protocol.Turn,
 				Hand:        s.playerCards[recipientID].Hand,
 				Seen:        s.playerCards[recipientID].Seen,
 				Opponents:   buildOpponents(recipientID, s.playerCards),
 			}
-			if recipientID == playerID {
+			if recipientID == s.currentPlayerID {
 				message.Command = protocol.PlayHand
 				message.Moves = legalMoves
 				message.AwaitingResponse = true
@@ -408,20 +418,20 @@ func (s *shed) attemptToPlayHand() ([]OutboundMessage, error) {
 	}
 
 	// no legal moves
-	playerCards.Hand = append(s.playerCards[playerID].Hand, s.pile...)
+	playerCards.Hand = append(s.playerCards[s.currentPlayerID].Hand, s.pile...)
 	s.pile = []deck.Card{}
 	// still want an ack from the player
 	s.awaitingResponse = true
 
 	for _, recipientID := range s.playerIDs {
 		message := OutboundMessage{
-			PlayerID:    playerID,
+			PlayerID:    s.currentPlayerID,
 			Command:     protocol.Turn,
-			CurrentTurn: playerID,
-			Hand:        s.playerCards[playerID].Hand,
-			Seen:        s.playerCards[playerID].Seen,
+			CurrentTurn: s.currentPlayerID,
+			Hand:        s.playerCards[s.currentPlayerID].Hand,
+			Seen:        s.playerCards[s.currentPlayerID].Seen,
 		}
-		if recipientID == playerID {
+		if recipientID == s.currentPlayerID {
 			message.Command = protocol.NoLegalMoves
 			message.AwaitingResponse = true
 		}
@@ -434,28 +444,24 @@ func (s *shed) attemptToPlayHand() ([]OutboundMessage, error) {
 
 // step 2 of 2 of a player playing their hand
 func (s *shed) playHand(msg InboundMessage) {
-	playerID := msg.PlayerID
-	// add cards to pile
 	toPile := []deck.Card{}
-	newHand := cardSliceToSet(s.playerCards[playerID].Hand)
+	newHand := cardSliceToSet(s.playerCards[s.currentPlayerID].Hand)
 
 	for _, cardIdx := range msg.Decision {
-		toPile = append(toPile, s.playerCards[playerID].Hand[cardIdx])
-		delete(newHand, s.playerCards[playerID].Hand[cardIdx])
+		toPile = append(toPile, s.playerCards[s.currentPlayerID].Hand[cardIdx])
+		delete(newHand, s.playerCards[s.currentPlayerID].Hand[cardIdx])
 	}
 
 	s.pile = append(s.pile, toPile...)
-	s.playerCards[playerID].Hand = setToCardSlice(newHand)
+	s.playerCards[s.currentPlayerID].Hand = setToCardSlice(newHand)
 }
 
 func (s *shed) pluckFromDeck(msg InboundMessage) {
 	if len(s.deck) == 0 {
 		return
 	}
-	playerID := msg.PlayerID
-	// pluck from deck
 	fromDeck := s.deck.Deal(len(msg.Decision))
-	s.playerCards[playerID].Hand = append(s.playerCards[playerID].Hand, fromDeck...)
+	s.playerCards[s.currentPlayerID].Hand = append(s.playerCards[s.currentPlayerID].Hand, fromDeck...)
 }
 
 func setToIntSlice(set map[int]struct{}) []int {
