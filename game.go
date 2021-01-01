@@ -174,58 +174,14 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 		return msgs, nil
 
 	case clearDeck:
-		playerID := s.playerIDs[s.currentTurn]
-		playerCards := s.playerCards[playerID]
+		return s.attemptToPlayHand()
 
-		legalMoves := getLegalMoves(s.pile, playerCards.Hand)
-		if len(legalMoves) > 0 {
-			s.awaitingResponse = true
-
-			for _, recipientID := range s.playerIDs {
-				message := OutboundMessage{
-					PlayerID:    recipientID,
-					CurrentTurn: playerID,
-					Command:     protocol.Turn,
-					Hand:        s.playerCards[recipientID].Hand,
-					Seen:        s.playerCards[recipientID].Seen,
-					Opponents:   buildOpponents(recipientID, s.playerCards),
-				}
-				if recipientID == playerID {
-					message.Command = protocol.PlayHand
-					message.Moves = legalMoves
-					message.AwaitingResponse = true
-				}
-
-				msgs = append(msgs, message)
-
-			}
-
-			return msgs, nil
+	case clearCards:
+		currentPlayer := s.playerIDs[s.currentTurn]
+		if len(s.playerCards[currentPlayer].Hand) > 0 {
+			return s.attemptToPlayHand()
 		}
-
-		// no legal moves
-		playerCards.Hand = append(s.playerCards[playerID].Hand, s.pile...)
-		s.pile = []deck.Card{}
-		// still want an ack from the player
-		s.awaitingResponse = true
-
-		for _, recipientID := range s.playerIDs {
-			message := OutboundMessage{
-				PlayerID:    playerID,
-				Command:     protocol.Turn,
-				CurrentTurn: playerID,
-				Hand:        s.playerCards[playerID].Hand,
-				Seen:        s.playerCards[playerID].Seen,
-			}
-			if recipientID == playerID {
-				message.Command = protocol.NoLegalMoves
-				message.AwaitingResponse = true
-			}
-
-			msgs = append(msgs, message)
-		}
-
-		return msgs, nil
+		return nil, nil
 	}
 
 	// this shouldn't happen
@@ -255,8 +211,18 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 			s.playerCards[m.PlayerID].Seen = m.Seen
 		}
 
+		// switch to stage 1
+		s.stage = clearDeck
 		s.awaitingResponse = false
+		return nil, nil
+	}
 
+	msg := inboundMsgs[0]
+	playerID := msg.PlayerID // check it's an id we recognise (gameengine responsibility?)
+
+	if msg.Command == protocol.NoLegalMoves { // ack
+		s.awaitingResponse = false
+		s.turn()
 		return nil, nil
 	}
 
@@ -266,49 +232,21 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 			return nil, fmt.Errorf("expected one message, got %d", len(inboundMsgs))
 		}
 
-		msg := inboundMsgs[0]
-		playerID := msg.PlayerID // check it's an id we recognise (gameengine responsibility?)
-
 		switch msg.Command {
-		case protocol.NoLegalMoves: // ack
-			s.awaitingResponse = false
-			s.turn()
-			return nil, nil
 
 		case protocol.PlayHand:
 			// check this is a legal move. this has already been done, but worth
 			// double checking in case of client tampering.
 
-			// add cards to pile
-			toPile := []deck.Card{}
-			for _, cardIdx := range msg.Decision {
-				// copy card from Hand
-				toPile = append(toPile, s.playerCards[playerID].Hand[cardIdx])
-			}
-
-			s.pile = append(s.pile, toPile...)
-
-			// remove selected cards from hand
-			newHand := []deck.Card{}
-			for _, hc := range s.playerCards[playerID].Hand {
-				for _, pc := range toPile {
-					if hc != pc {
-						newHand = append(newHand, hc)
-					}
-				}
-			}
-
-			s.playerCards[playerID].Hand = newHand
-
-			// pluck from deck
-			fromDeck := s.deck.Deal(len(msg.Decision))
-			s.playerCards[playerID].Hand = append(s.playerCards[playerID].Hand, fromDeck...)
+			s.playHand(msg)
+			ok := s.pluckFromDeck(msg)
+			_ = ok
 
 			// return messages with no response expected.
 			toSend := []OutboundMessage{{
 				PlayerID: playerID,
 				Command:  protocol.ReplenishHand,
-				Hand:     newHand,
+				Hand:     s.playerCards[playerID].Hand,
 				Pile:     s.pile,
 			}}
 
@@ -318,15 +256,36 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 				}
 			}
 
+			// If deck is empty, switch to stage 2
+			if len(s.deck) == 0 {
+				s.stage = clearCards
+			}
+
 			s.awaitingResponse = false
 			s.turn()
 			return toSend, nil
 		}
 
 	}
+
 	// stage 2
 	if s.stage == clearCards {
+		switch msg.Command {
+		case protocol.PlayHand:
 
+			s.playHand(msg)
+			ok := s.pluckFromDeck(msg)
+			_ = ok
+
+			toSend := []OutboundMessage{}
+			for _, id := range s.playerIDs {
+				toSend = append(toSend, s.buildEndOfTurnMessage(id))
+			}
+
+			s.awaitingResponse = false
+			s.turn()
+			return toSend, nil
+		}
 	}
 
 	return nil, errors.New("invalid game state")
@@ -427,4 +386,100 @@ func setToSlice(set map[int]struct{}) []int {
 	sort.Ints(s)
 
 	return s
+}
+
+// step 1 of 2 in a player playing their hand
+func (s *shed) attemptToPlayHand() ([]OutboundMessage, error) {
+	msgs := []OutboundMessage{}
+
+	playerID := s.playerIDs[s.currentTurn]
+	playerCards := s.playerCards[playerID]
+
+	legalMoves := getLegalMoves(s.pile, playerCards.Hand)
+	if len(legalMoves) > 0 {
+		s.awaitingResponse = true
+
+		for _, recipientID := range s.playerIDs {
+			message := OutboundMessage{
+				PlayerID:    recipientID,
+				CurrentTurn: playerID,
+				Command:     protocol.Turn,
+				Hand:        s.playerCards[recipientID].Hand,
+				Seen:        s.playerCards[recipientID].Seen,
+				Opponents:   buildOpponents(recipientID, s.playerCards),
+			}
+			if recipientID == playerID {
+				message.Command = protocol.PlayHand
+				message.Moves = legalMoves
+				message.AwaitingResponse = true
+			}
+
+			msgs = append(msgs, message)
+
+		}
+
+		return msgs, nil
+	}
+
+	// no legal moves
+	playerCards.Hand = append(s.playerCards[playerID].Hand, s.pile...)
+	s.pile = []deck.Card{}
+	// still want an ack from the player
+	s.awaitingResponse = true
+
+	for _, recipientID := range s.playerIDs {
+		message := OutboundMessage{
+			PlayerID:    playerID,
+			Command:     protocol.Turn,
+			CurrentTurn: playerID,
+			Hand:        s.playerCards[playerID].Hand,
+			Seen:        s.playerCards[playerID].Seen,
+		}
+		if recipientID == playerID {
+			message.Command = protocol.NoLegalMoves
+			message.AwaitingResponse = true
+		}
+
+		msgs = append(msgs, message)
+	}
+
+	return msgs, nil
+}
+
+// step 2 of 2 of a player playing their hand
+func (s *shed) playHand(msg InboundMessage) {
+	playerID := msg.PlayerID
+	// add cards to pile
+	toPile := []deck.Card{}
+	for _, cardIdx := range msg.Decision {
+		// copy card from Hand
+		toPile = append(toPile, s.playerCards[playerID].Hand[cardIdx])
+	}
+
+	s.pile = append(s.pile, toPile...)
+
+	// remove selected cards from hand
+	newHand := []deck.Card{}
+	for _, hc := range s.playerCards[playerID].Hand {
+		for _, pc := range toPile {
+			if hc != pc {
+				newHand = append(newHand, hc)
+			}
+		}
+	}
+
+	s.playerCards[playerID].Hand = newHand
+}
+
+func (s *shed) pluckFromDeck(msg InboundMessage) bool {
+	if len(s.deck) == 0 {
+		return false
+	}
+
+	playerID := msg.PlayerID
+	// pluck from deck
+	fromDeck := s.deck.Deal(len(msg.Decision))
+	s.playerCards[playerID].Hand = append(s.playerCards[playerID].Hand, fromDeck...)
+
+	return true
 }
