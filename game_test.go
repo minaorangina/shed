@@ -726,7 +726,7 @@ func TestGameStageTwo(t *testing.T) {
 		// And the game expects an ack from the player
 		_, err = game.ReceiveResponse([]InboundMessage{{
 			PlayerID: game.currentPlayerID,
-			Command:  protocol.EndOfTurn,
+			Command:  protocol.UnseenSuccess,
 		}})
 		utils.AssertNoError(t, err)
 		utils.AssertEqual(t, game.awaitingResponse, false)
@@ -737,17 +737,81 @@ func TestGameStageTwo(t *testing.T) {
 
 	t.Run("stage 2: player has no legal moves and only unseen cards", func(t *testing.T) {
 		// Given a game in stage 2
-		// and a player with only Unseen cards
+		highValueCard := deck.NewCard(deck.Ace, deck.Spades)
+		pile := []deck.Card{highValueCard}
 
-		// When the player takes an illegal turn
+		// And a player with only a full set of Unseen cards
+		pc := &PlayerCards{
+			Hand: []deck.Card{},
+			Seen: []deck.Card{},
+			Unseen: []deck.Card{
+				deck.NewCard(deck.Eight, deck.Hearts),
+				deck.NewCard(deck.Nine, deck.Clubs),
+				deck.NewCard(deck.Six, deck.Diamonds),
+			},
+		}
 
-		// Then the player picks up the pile
+		game := NewShed(ShedOpts{
+			stage:           clearCards,
+			deck:            deck.Deck{},
+			pile:            pile,
+			playerIDs:       []string{"player-1", "player-2"},
+			currentPlayerID: "player-1",
+			playerCards: map[string]*PlayerCards{
+				"player-1": pc,
+				"player-2": somePlayerCards(3),
+			},
+		})
+
+		// When the player takes their turn
+		msgs, err := game.Next()
+		utils.AssertNoError(t, err)
+
+		// Then everyone is informed
+		checkNextMessages(t, msgs, protocol.PlayUnseen, game)
+
+		// Then the game selects all Unseen cards (legal moves or not)
+		moves := getMoves(msgs, game.currentPlayerID)
+		utils.AssertTrue(t, len(moves) > 0)
+		utils.AssertDeepEqual(t, moves, []int{0, 1, 2})
+
+		oldUnseenSize := len(game.playerCards[game.currentPlayerID].Unseen)
+		oldPileSize := len(game.pile)
+
+		// And when the player selects an illegal move
+		cardChoice := []int{moves[0]}
+		msgs, err = game.ReceiveResponse([]InboundMessage{{
+			PlayerID: game.currentPlayerID,
+			Command:  protocol.PlayUnseen,
+			Decision: cardChoice,
+		}})
+
+		utils.AssertNoError(t, err)
+
+		newHand := game.playerCards[game.currentPlayerID].Hand
+		newUnseenSize := len(game.playerCards[game.currentPlayerID].Unseen)
+
+		// Then the player picks up the pile and the Unseen cards are unaffected
+		utils.AssertEqual(t, len(game.pile), 0)
+		utils.AssertDeepEqual(t, len(newHand), oldPileSize)
+		utils.AssertEqual(t, newUnseenSize, oldUnseenSize)
+		checkReceiveResponseMessages(t, msgs, protocol.UnseenFailure, game)
 
 		// And the game is expecting an ack
+		utils.AssertTrue(t, game.awaitingResponse)
 
 		// And when the player's ack is received
+		previousPlayerID := game.currentPlayerID
+		msgs, err = game.ReceiveResponse([]InboundMessage{{
+			PlayerID: game.currentPlayerID,
+			Command:  protocol.UnseenFailure,
+		}})
+
+		utils.AssertNoError(t, err)
+		utils.AssertEqual(t, game.awaitingResponse, false)
 
 		// Then it's the next player's turn
+		utils.AssertTrue(t, previousPlayerID != game.currentPlayerID)
 	})
 
 	t.Run("stage 2: player has legal moves clears their cards (finished game)", func(t *testing.T) {

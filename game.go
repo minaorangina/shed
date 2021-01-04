@@ -203,30 +203,7 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 				unseenIndices = append(unseenIndices, i)
 			}
 
-			toSend := []OutboundMessage{{
-				PlayerID:         s.currentPlayerID,
-				Command:          protocol.PlayUnseen,
-				Hand:             s.playerCards[s.currentPlayerID].Hand,
-				Seen:             s.playerCards[s.currentPlayerID].Seen,
-				Pile:             s.pile,
-				Moves:            unseenIndices,
-				Opponents:        buildOpponents(s.currentPlayerID, s.playerCards),
-				AwaitingResponse: true,
-			}}
-			for _, id := range s.playerIDs {
-				if id != s.currentPlayerID {
-					toSend = append(toSend, OutboundMessage{
-						PlayerID:    id,
-						Command:     protocol.Turn,
-						CurrentTurn: s.currentPlayerID,
-						Hand:        s.playerCards[id].Hand,
-						Seen:        s.playerCards[id].Seen,
-						Pile:        s.pile,
-						Opponents:   buildOpponents(s.currentPlayerID, s.playerCards),
-					})
-				}
-			}
-
+			toSend := s.buildTurnMessages(protocol.PlayUnseen, unseenIndices)
 			s.awaitingResponse = true
 			return toSend, nil
 		}
@@ -293,7 +270,6 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 			s.completeMove(msg)
 			s.pluckFromDeck(msg)
 
-			// return messages with ack from current player expected.
 			toSend := []OutboundMessage{{
 				PlayerID:         s.currentPlayerID,
 				Command:          protocol.ReplenishHand,
@@ -328,20 +304,12 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 	if s.stage == clearCards {
 		switch msg.Command {
 
-		case protocol.EndOfTurn: // ack
+		case protocol.EndOfTurn, protocol.UnseenSuccess, protocol.UnseenFailure: // ack
 			s.awaitingResponse = false
 			s.turn()
 			return nil, nil
 
-		case protocol.PlayHand:
-			s.completeMove(msg)
-			s.pluckFromDeck(msg)
-
-			toSend := s.buildEndOfTurnMessages(protocol.EndOfTurn)
-			s.awaitingResponse = true
-			return toSend, nil
-
-		case protocol.PlaySeen:
+		case protocol.PlayHand, protocol.PlaySeen:
 			s.completeMove(msg)
 
 			toSend := s.buildEndOfTurnMessages(protocol.EndOfTurn)
@@ -350,7 +318,7 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 
 		case protocol.PlayUnseen:
 			if len(msg.Decision) == 0 {
-				panic("empty decision")
+				panic("empty decision") // return an error
 			}
 			// possible optimisation: could precalculate legal Unseen card moves
 			cardIdx := msg.Decision[0]
@@ -377,10 +345,9 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 
 // step 1 of 2 in a player playing their cards (Hand or Seen)
 func (s *shed) attemptMove(currentPlayerCmd protocol.Cmd) []OutboundMessage {
-	s.awaitingResponse = true
-
 	var cards []deck.Card
 	switch currentPlayerCmd {
+
 	case protocol.PlayHand:
 		cards = s.playerCards[s.currentPlayerID].Hand
 
