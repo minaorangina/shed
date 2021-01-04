@@ -143,3 +143,15 @@ func cardsUnique(cards []deck.Card) bool {
 	}
 	return true
 }
+
+func sliceContainsString(haystack []string, needle string) bool {
+	var found bool
+	for _, h := range haystack {
+		if needle == h {
+			found = true
+			break
+		}
+	}
+
+	return found
+}

@@ -814,22 +814,147 @@ func TestGameStageTwo(t *testing.T) {
 		utils.AssertTrue(t, previousPlayerID != game.currentPlayerID)
 	})
 
-	t.Run("stage 2: player has legal moves clears their cards (finished game)", func(t *testing.T) {
+	t.Run("stage 2: player finishes with final Unseen card", func(t *testing.T) {
 		// Given a game in stage 2
-		// and a player with one remaining Unseen card
+		lowValueCard := deck.NewCard(deck.Four, deck.Spades)
+		highValueCard := deck.NewCard(deck.Ace, deck.Spades)
+		pile := []deck.Card{lowValueCard}
+
+		// And a player with one remaining Unseen card
+		pc := &PlayerCards{
+			Hand: []deck.Card{},
+			Seen: []deck.Card{},
+			Unseen: []deck.Card{
+				highValueCard,
+			},
+		}
+
+		game := NewShed(ShedOpts{
+			stage:           clearCards,
+			deck:            deck.Deck{},
+			pile:            pile,
+			playerIDs:       []string{"player-1", "player-2", "player-3"},
+			currentPlayerID: "player-1",
+			playerCards: map[string]*PlayerCards{
+				"player-1": pc,
+				"player-2": somePlayerCards(3),
+				"player-3": somePlayerCards(3),
+			},
+		})
+
 		// When the player takes a legal turn
-		// Then they have finished the game
-		// And the game expects no response
+		msgs, err := game.Next()
+		utils.AssertNoError(t, err)
+
+		previousPlayerID := game.currentPlayerID
+		previousNumPlayers := len(game.activePlayers)
+
+		cardChoice := []int{0}
+		msgs, err = game.ReceiveResponse([]InboundMessage{{
+			PlayerID: game.currentPlayerID,
+			Command:  protocol.PlayUnseen,
+			Decision: cardChoice,
+		}})
+		utils.AssertNoError(t, err)
+
+		// Then the game informs everyone the player has finished
+		checkPlayerFinishedMessages(t, msgs, game)
+
+		// And the game is expecting a response
+		utils.AssertTrue(t, game.awaitingResponse)
+
+		// And when the player acks
+		msgs, err = game.ReceiveResponse([]InboundMessage{{
+			PlayerID: game.currentPlayerID,
+			Command:  protocol.PlayerFinished,
+		}})
+		utils.AssertNoError(t, err)
+
+		// Then there is one less active players
+		utils.AssertEqual(t, len(game.activePlayers), previousNumPlayers-1)
+		utils.AssertTrue(t, sliceContainsString(game.finishedPlayers, previousPlayerID))
+
 		// And it's the next player's turn
+		utils.AssertTrue(t, game.currentPlayerID != previousPlayerID)
 	})
 
-	t.Run("stage 2: game ends when n-1 players have finished", func(t *testing.T) {
+	t.Run("stage 2: player finishes with final Hand card", func(t *testing.T) {
 		// Given a game in stage 2
-		// and a player with one remaining Unseen card
+		lowValueCard := deck.NewCard(deck.Four, deck.Spades)
+		highValueCard := deck.NewCard(deck.Ace, deck.Spades)
+		pile := []deck.Card{lowValueCard}
+
+		// And a player with one remaining Hand card and no Unseen cards
+		pc := &PlayerCards{
+			Hand:   []deck.Card{highValueCard},
+			Seen:   []deck.Card{},
+			Unseen: []deck.Card{},
+		}
+
+		game := NewShed(ShedOpts{
+			stage:           clearCards,
+			deck:            deck.Deck{},
+			pile:            pile,
+			playerIDs:       []string{"player-1", "player-2", "player-3"},
+			currentPlayerID: "player-1",
+			playerCards: map[string]*PlayerCards{
+				"player-1": pc,
+				"player-2": somePlayerCards(3),
+				"player-3": somePlayerCards(3),
+			},
+		})
+
 		// When the player takes a legal turn
-		// Then they have finished the game
-		// And the game expects no response
+		msgs, err := game.Next()
+		utils.AssertNoError(t, err)
+
+		previousPlayerID := game.currentPlayerID
+		previousNumPlayers := len(game.activePlayers)
+
+		cardChoice := []int{0}
+		msgs, err = game.ReceiveResponse([]InboundMessage{{
+			PlayerID: game.currentPlayerID,
+			Command:  protocol.PlayHand,
+			Decision: cardChoice,
+		}})
+		utils.AssertNoError(t, err)
+
+		// Then the game informs everyone the player has finished
+		checkPlayerFinishedMessages(t, msgs, game)
+
+		// And the game is expecting a response
+		utils.AssertTrue(t, game.awaitingResponse)
+
+		// And when the player acks
+		msgs, err = game.ReceiveResponse([]InboundMessage{{
+			PlayerID: game.currentPlayerID,
+			Command:  protocol.PlayerFinished,
+		}})
+		utils.AssertNoError(t, err)
+
+		// Then there is one less active players
+		utils.AssertEqual(t, len(game.activePlayers), previousNumPlayers-1)
+		utils.AssertTrue(t, sliceContainsString(game.finishedPlayers, previousPlayerID))
+
 		// And it's the next player's turn
+		utils.AssertTrue(t, game.currentPlayerID != previousPlayerID)
+	})
+
+	t.Run("stage 2: game ends when n-1 players have finished (Unseen card)", func(t *testing.T) {
+		// Given a game in stage 2 with two players remaining
+		// and the current player has one remaining Unseen card
+		// When the player takes a legal turn
+		// Then the remaining player has lost
+		// And the game is over
+	})
+
+	t.Run("stage 2: game ends when n-1 players have finished (Hand card)", func(t *testing.T) {
+		// Given a game in stage 2 with two players remaining
+		// and the current player has one remaining Hand card
+		// When the player takes a legal turn
+		// When the player takes a legal turn
+		// Then the remaining player has lost
+		// And the game is over
 	})
 }
 
@@ -1491,6 +1616,7 @@ func TestGameStart(t *testing.T) {
 
 		utils.AssertNoError(t, err)
 		utils.AssertTrue(t, len(game.playerIDs) > 1)
+		utils.AssertTrue(t, len(game.activePlayers) == len(game.playerIDs))
 
 		for _, id := range playerIDs {
 			playerCards := game.playerCards[id]
@@ -1642,6 +1768,22 @@ func checkReceiveResponseMessages(t *testing.T, msgs []OutboundMessage, currentP
 			utils.AssertTrue(t, m.AwaitingResponse)
 		} else {
 			utils.AssertEqual(t, m.Command, protocol.EndOfTurn)
+			utils.AssertEqual(t, m.AwaitingResponse, false)
+		}
+	}
+}
+
+func checkPlayerFinishedMessages(t *testing.T, msgs []OutboundMessage, game *shed) {
+	t.Helper()
+
+	for _, m := range msgs {
+		utils.AssertDeepEqual(t, m.Hand, game.playerCards[m.PlayerID].Hand)
+		utils.AssertDeepEqual(t, m.Seen, game.playerCards[m.PlayerID].Seen)
+		utils.AssertEqual(t, m.Command, protocol.PlayerFinished)
+
+		if m.PlayerID == game.currentPlayerID {
+			utils.AssertTrue(t, m.AwaitingResponse)
+		} else {
 			utils.AssertEqual(t, m.AwaitingResponse, false)
 		}
 	}

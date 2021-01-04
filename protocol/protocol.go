@@ -12,13 +12,14 @@ const (
 	// will split later if necessary
 	PlayHand      // when a player plays cards from their hand
 	PlaySeen      // when a player plays cards from their seen cards
-	PlayUnseen    // when a player plays cards from their seen cards
+	PlayUnseen    // when a player plays cards from their unseen cards
 	ReplenishHand // might disappear if EndOfTurn is better
 	Turn
 	EndOfTurn
 	SkipTurn
 	UnseenSuccess
 	UnseenFailure
+	PlayerFinished
 )
 
 var cmdNames = []string{
@@ -35,6 +36,7 @@ var cmdNames = []string{
 	"SkipTurn",
 	"UnseenSuccess",
 	"UnseenFailure",
+	"PlayerFinished",
 }
 
 func (c Cmd) String() string {
