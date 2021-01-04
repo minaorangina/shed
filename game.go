@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"sort"
 	"time"
 
 	"github.com/minaorangina/shed/protocol"
@@ -185,22 +184,17 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 
 	case clearDeck:
 		s.awaitingResponse = true
-		if len(currentPlayerCards.Hand) > 0 {
-			return s.attemptToPlay(s.currentPlayerID, protocol.PlayHand), nil
-		}
-		if len(currentPlayerCards.Seen) > 0 {
-			return s.attemptToPlay(s.currentPlayerID, protocol.PlaySeen), nil
-		}
+		return s.attemptMove(protocol.PlayHand), nil
 
 	case clearCards:
-		s.awaitingResponse = true
-		fmt.Println(currentPlayerCards)
 		if len(currentPlayerCards.Hand) > 0 {
-			return s.attemptToPlay(s.currentPlayerID, protocol.PlayHand), nil
+			s.awaitingResponse = true
+			return s.attemptMove(protocol.PlayHand), nil
 		}
 
 		if len(currentPlayerCards.Seen) > 0 {
-			return s.attemptToPlay(s.currentPlayerID, protocol.PlaySeen), nil
+			s.awaitingResponse = true
+			return s.attemptMove(protocol.PlaySeen), nil
 		}
 
 		if len(currentPlayerCards.Unseen) > 0 {
@@ -209,7 +203,32 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 				unseenIndices = append(unseenIndices, i)
 			}
 
-			return s.buildNextTurnMessage(s.currentPlayerID, protocol.PlayUnseen, unseenIndices), nil
+			toSend := []OutboundMessage{{
+				PlayerID:         s.currentPlayerID,
+				Command:          protocol.PlayUnseen,
+				Hand:             s.playerCards[s.currentPlayerID].Hand,
+				Seen:             s.playerCards[s.currentPlayerID].Seen,
+				Pile:             s.pile,
+				Moves:            unseenIndices,
+				Opponents:        buildOpponents(s.currentPlayerID, s.playerCards),
+				AwaitingResponse: true,
+			}}
+			for _, id := range s.playerIDs {
+				if id != s.currentPlayerID {
+					toSend = append(toSend, OutboundMessage{
+						PlayerID:    id,
+						Command:     protocol.Turn,
+						CurrentTurn: s.currentPlayerID,
+						Hand:        s.playerCards[id].Hand,
+						Seen:        s.playerCards[id].Seen,
+						Pile:        s.pile,
+						Opponents:   buildOpponents(s.currentPlayerID, s.playerCards),
+					})
+				}
+			}
+
+			s.awaitingResponse = true
+			return toSend, nil
 		}
 
 		// this player is already out of the game, handle this situation somehow
@@ -254,7 +273,7 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 		return nil, fmt.Errorf("unexpected message from player %s", msg.PlayerID)
 	}
 
-	if msg.Command == protocol.NoLegalMoves { // ack
+	if msg.Command == protocol.SkipTurn { // ack
 		s.awaitingResponse = false
 		s.turn()
 		return nil, nil
@@ -271,7 +290,7 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 		case protocol.PlayHand:
 			// check this is a legal move. this has already been done, but worth
 			// double checking in case of client tampering.
-			s.play(msg)
+			s.completeMove(msg)
 			s.pluckFromDeck(msg)
 
 			// return messages with ack from current player expected.
@@ -315,138 +334,106 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 			return nil, nil
 
 		case protocol.PlayHand:
-			s.play(msg)
+			s.completeMove(msg)
 			s.pluckFromDeck(msg)
 
-			toSend := []OutboundMessage{}
-			for _, id := range s.playerIDs {
-				toSend = append(toSend, s.buildEndOfTurnMessage(id))
-			}
-
+			toSend := s.buildEndOfTurnMessages(protocol.EndOfTurn)
 			s.awaitingResponse = true
 			return toSend, nil
 
 		case protocol.PlaySeen:
-			s.play(msg)
-			toSend := []OutboundMessage{}
+			s.completeMove(msg)
 
-			for _, id := range s.playerIDs {
-				msg := s.buildEndOfTurnMessage(id)
-				if id == s.currentPlayerID {
-					msg.AwaitingResponse = true
-				}
-				toSend = append(toSend, msg)
-			}
-
+			toSend := s.buildEndOfTurnMessages(protocol.EndOfTurn)
 			s.awaitingResponse = true
 			return toSend, nil
 
-			// case protocol.PlayUnseen:
-			// 	// check legality of move
-			// 	legalMoves := getLegalMoves(s.pile, )
-		}
+		case protocol.PlayUnseen:
+			if len(msg.Decision) == 0 {
+				panic("empty decision")
+			}
+			// possible optimisation: could precalculate legal Unseen card moves
+			cardIdx := msg.Decision[0]
+			legalMoves := getLegalMoves(s.pile,
+				[]deck.Card{s.playerCards[s.currentPlayerID].Unseen[cardIdx]})
 
+			var cmd protocol.Cmd
+			if len(legalMoves) == 0 {
+				s.pickUpPile(s.currentPlayerID)
+				cmd = protocol.UnseenFailure
+			} else {
+				s.completeMove(msg)
+				cmd = protocol.UnseenSuccess
+			}
+
+			toSend := s.buildEndOfTurnMessages(cmd)
+			s.awaitingResponse = true
+			return toSend, nil
+		}
 	}
 
 	return nil, errors.New("invalid game state")
 }
 
-func (s *shed) turn() {
-	s.currentTurnIdx = (s.currentTurnIdx + 1) % len(s.playerIDs)
-	s.currentPlayerID = s.playerIDs[s.currentTurnIdx]
-}
-
-func (s *shed) buildEndOfTurnMessage(playerID string) OutboundMessage {
-	return OutboundMessage{
-		PlayerID: playerID,
-		Command:  protocol.EndOfTurn,
-		Hand:     s.playerCards[playerID].Hand,
-		Seen:     s.playerCards[playerID].Seen,
-		Pile:     s.pile,
-	}
-}
-
-func (s *shed) buildNextTurnMessage(
-	currentPlayerID string,
-	currentPlayerCmd protocol.Cmd,
-	currentPlayerMoves []int,
-) []OutboundMessage {
-	msgs := []OutboundMessage{}
-
-	for _, recipientID := range s.playerIDs {
-		message := OutboundMessage{
-			PlayerID:    recipientID,
-			CurrentTurn: currentPlayerID,
-			Command:     protocol.Turn,
-			Hand:        s.playerCards[recipientID].Hand,
-			Seen:        s.playerCards[recipientID].Seen,
-			Opponents:   buildOpponents(recipientID, s.playerCards),
-		}
-		if recipientID == currentPlayerID {
-			message.Command = currentPlayerCmd
-			message.AwaitingResponse = true
-			if currentPlayerMoves != nil {
-				message.Moves = currentPlayerMoves
-			}
-		}
-
-		msgs = append(msgs, message)
-	}
-
-	return msgs
-}
-
-// step 1 of 2 in a player playing their cards
-func (s *shed) attemptToPlay(playerID string, cmd protocol.Cmd) []OutboundMessage {
+// step 1 of 2 in a player playing their cards (Hand or Seen)
+func (s *shed) attemptMove(currentPlayerCmd protocol.Cmd) []OutboundMessage {
 	s.awaitingResponse = true
 
 	var cards []deck.Card
-	switch cmd {
+	switch currentPlayerCmd {
 	case protocol.PlayHand:
-		cards = s.playerCards[playerID].Hand
+		cards = s.playerCards[s.currentPlayerID].Hand
+
 	case protocol.PlaySeen:
-		cards = s.playerCards[playerID].Seen
+		cards = s.playerCards[s.currentPlayerID].Seen
+
+	default:
+		panic(fmt.Sprintf("unrecognised move protocol %s", currentPlayerCmd))
 	}
 
 	legalMoves := getLegalMoves(s.pile, cards)
 	if len(legalMoves) > 0 {
-		return s.buildNextTurnMessage(playerID, cmd, legalMoves)
+		toSend := s.buildTurnMessages(currentPlayerCmd, legalMoves)
+		return toSend
 	}
 
 	// no legal moves
-	s.pickUpPile(playerID)
+	s.pickUpPile(s.currentPlayerID)
 
-	return s.buildNextTurnMessage(playerID, protocol.NoLegalMoves, nil)
+	toSend := s.buildSkipTurnMessages(protocol.SkipTurn)
+	return toSend
 }
 
-// step 2 of 2 of a player playing their hand
-func (s *shed) play(msg InboundMessage) {
-	playerID := msg.PlayerID
-	toPile := []deck.Card{}
+// step 2 of 2 of a player playing their cards (Hand or Seen)
+func (s *shed) completeMove(msg InboundMessage) {
+
+	var (
+		toPile      = []deck.Card{}
+		newCards    *[]deck.Card
+		newCardsSet = map[deck.Card]struct{}{}
+	)
 
 	switch msg.Command {
 	case protocol.PlayHand:
-		newHand := cardSliceToSet(s.playerCards[playerID].Hand)
-
-		for _, cardIdx := range msg.Decision {
-			toPile = append(toPile, s.playerCards[playerID].Hand[cardIdx])
-			delete(newHand, s.playerCards[playerID].Hand[cardIdx])
-		}
-
-		s.pile = append(s.pile, toPile...)
-		s.playerCards[playerID].Hand = setToCardSlice(newHand)
+		newCards = &s.playerCards[s.currentPlayerID].Hand
+		newCardsSet = cardSliceToSet(s.playerCards[s.currentPlayerID].Hand)
 
 	case protocol.PlaySeen:
-		newSeen := cardSliceToSet(s.playerCards[playerID].Seen)
+		newCards = &s.playerCards[s.currentPlayerID].Seen
+		newCardsSet = cardSliceToSet(s.playerCards[s.currentPlayerID].Seen)
 
-		for _, cardIdx := range msg.Decision {
-			toPile = append(toPile, s.playerCards[playerID].Seen[cardIdx])
-			delete(newSeen, s.playerCards[playerID].Seen[cardIdx])
-		}
-
-		s.pile = append(s.pile, toPile...)
-		s.playerCards[playerID].Seen = setToCardSlice(newSeen)
+	case protocol.PlayUnseen:
+		newCards = &s.playerCards[s.currentPlayerID].Unseen
+		newCardsSet = cardSliceToSet(s.playerCards[s.currentPlayerID].Unseen)
 	}
+
+	for _, cardIdx := range msg.Decision {
+		toPile = append(toPile, (*newCards)[cardIdx])
+		delete(newCardsSet, (*newCards)[cardIdx])
+	}
+
+	s.pile = append(s.pile, toPile...)
+	*newCards = setToCardSlice(newCardsSet)
 }
 
 func (s *shed) pluckFromDeck(msg InboundMessage) {
@@ -463,103 +450,97 @@ func (s *shed) pickUpPile(currentPlayerID string) {
 	s.pile = []deck.Card{}
 }
 
-func setToIntSlice(set map[int]struct{}) []int {
-	s := []int{}
-	for key := range set {
-		s = append(s, key)
-	}
-
-	sort.Ints(s)
-
-	return s
+func (s *shed) turn() {
+	s.currentTurnIdx = (s.currentTurnIdx + 1) % len(s.playerIDs)
+	s.currentPlayerID = s.playerIDs[s.currentTurnIdx]
 }
 
-func setToCardSlice(set map[deck.Card]struct{}) []deck.Card {
-	s := []deck.Card{}
-	for key := range set {
-		s = append(s, key)
+func (s *shed) buildSkipTurnMessage(playerID string) OutboundMessage {
+	return OutboundMessage{
+		PlayerID:    playerID,
+		Command:     protocol.SkipTurn,
+		CurrentTurn: s.currentPlayerID,
+		Hand:        s.playerCards[playerID].Hand,
+		Seen:        s.playerCards[playerID].Seen,
+		Pile:        s.pile,
 	}
-	return s
 }
 
-func cardSliceToSet(s []deck.Card) map[deck.Card]struct{} {
-	set := map[deck.Card]struct{}{}
-	for _, key := range s {
-		set[key] = struct{}{}
+func (s *shed) buildSkipTurnMessages(currentPlayerCmd protocol.Cmd) []OutboundMessage {
+	currentPlayerMsg := OutboundMessage{
+		PlayerID:         s.currentPlayerID,
+		Command:          currentPlayerCmd, // always SkipTurn
+		Hand:             s.playerCards[s.currentPlayerID].Hand,
+		Seen:             s.playerCards[s.currentPlayerID].Seen,
+		Pile:             s.pile,
+		Opponents:        buildOpponents(s.currentPlayerID, s.playerCards),
+		AwaitingResponse: true,
 	}
-	return set
+
+	toSend := []OutboundMessage{currentPlayerMsg}
+	for _, id := range s.playerIDs {
+		if id != s.currentPlayerID {
+			toSend = append(toSend, s.buildSkipTurnMessage(id))
+		}
+	}
+
+	return toSend
 }
 
-func cardsUnique(cards []deck.Card) bool {
-	seen := map[deck.Card]struct{}{}
-	for _, c := range cards {
-		if _, ok := seen[c]; ok {
-			return false
-		}
-		seen[c] = struct{}{}
+func (s *shed) buildTurnMessage(playerID string) OutboundMessage {
+	return OutboundMessage{
+		PlayerID:    playerID,
+		Command:     protocol.Turn,
+		CurrentTurn: s.currentPlayerID,
+		Hand:        s.playerCards[playerID].Hand,
+		Seen:        s.playerCards[playerID].Seen,
+		Pile:        s.pile,
 	}
-	return true
 }
 
-func getLegalMoves(pile, toPlay []deck.Card) []int {
-	candidates := []deck.Card{}
-	for _, c := range pile {
-		if c.Rank != deck.Three {
-			candidates = append(candidates, c)
+func (s *shed) buildTurnMessages(currentPlayerCmd protocol.Cmd, moves []int) []OutboundMessage {
+	currentPlayerMsg := OutboundMessage{
+		PlayerID:         s.currentPlayerID,
+		Command:          currentPlayerCmd,
+		Hand:             s.playerCards[s.currentPlayerID].Hand,
+		Seen:             s.playerCards[s.currentPlayerID].Seen,
+		Pile:             s.pile,
+		Moves:            moves,
+		Opponents:        buildOpponents(s.currentPlayerID, s.playerCards),
+		AwaitingResponse: true,
+	}
+
+	toSend := []OutboundMessage{currentPlayerMsg}
+	for _, id := range s.playerIDs {
+		if id != s.currentPlayerID {
+			toSend = append(toSend, s.buildTurnMessage(id))
 		}
 	}
 
-	moves := map[int]struct{}{}
+	return toSend
+}
 
-	// can play any card on an empty pile
-	if len(candidates) == 0 {
-		for i := range toPlay {
-			moves[i] = struct{}{}
+func (s *shed) buildEndOfTurnMessage(playerID string) OutboundMessage {
+	return OutboundMessage{
+		PlayerID:    playerID,
+		Command:     protocol.EndOfTurn,
+		CurrentTurn: s.currentPlayerID,
+		Hand:        s.playerCards[playerID].Hand,
+		Seen:        s.playerCards[playerID].Seen,
+		Pile:        s.pile,
+	}
+}
+
+func (s *shed) buildEndOfTurnMessages(currentPlayerCommand protocol.Cmd) []OutboundMessage {
+	toSend := []OutboundMessage{}
+	for _, id := range s.playerIDs {
+		msg := s.buildEndOfTurnMessage(id)
+		if id == s.currentPlayerID {
+			msg.Command = currentPlayerCommand
+			msg.AwaitingResponse = true
 		}
-
-		return setToIntSlice(moves)
+		toSend = append(toSend, msg)
 	}
 
-	// tens (and twos and threes) beat anything
-	for i, tp := range toPlay {
-		if tp.Rank == deck.Ten {
-			moves[i] = struct{}{}
-			continue
-		}
-	}
-
-	topmostCard := candidates[0]
-	// two
-	if topmostCard.Rank == deck.Two {
-		for i := range toPlay {
-			moves[i] = struct{}{}
-		}
-		return setToIntSlice(moves)
-	}
-
-	// seven
-	if topmostCard.Rank == deck.Seven {
-		for i, tp := range toPlay {
-			if wins := sevenBeaters[tp.Rank]; wins {
-				moves[i] = struct{}{}
-			}
-		}
-		return setToIntSlice(moves)
-	}
-
-	for i, tp := range toPlay {
-		// skip tens (and twos and threes)
-		if tp.Rank == deck.Ten {
-			continue
-		}
-
-		tpValue := cardValues[tp.Rank]
-		pileValue := cardValues[topmostCard.Rank]
-
-		if tpValue >= pileValue {
-			moves[i] = struct{}{}
-		}
-	}
-
-	return setToIntSlice(moves)
+	return toSend
 }

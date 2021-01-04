@@ -2,6 +2,9 @@ package shed
 
 import (
 	"os"
+	"sort"
+
+	"github.com/minaorangina/shed/deck"
 )
 
 type SpyGame struct {
@@ -101,4 +104,42 @@ func NewTestGameStore(
 		Games:          games,
 		PendingPlayers: pendingPlayers,
 	}
+}
+
+func setToIntSlice(set map[int]struct{}) []int {
+	s := []int{}
+	for key := range set {
+		s = append(s, key)
+	}
+
+	sort.Ints(s)
+
+	return s
+}
+
+func setToCardSlice(set map[deck.Card]struct{}) []deck.Card {
+	s := []deck.Card{}
+	for key := range set {
+		s = append(s, key)
+	}
+	return s
+}
+
+func cardSliceToSet(s []deck.Card) map[deck.Card]struct{} {
+	set := map[deck.Card]struct{}{}
+	for _, key := range s {
+		set[key] = struct{}{}
+	}
+	return set
+}
+
+func cardsUnique(cards []deck.Card) bool {
+	seen := map[deck.Card]struct{}{}
+	for _, c := range cards {
+		if _, ok := seen[c]; ok {
+			return false
+		}
+		seen[c] = struct{}{}
+	}
+	return true
 }
