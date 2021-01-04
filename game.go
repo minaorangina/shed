@@ -120,17 +120,23 @@ func NewShed(opts ShedOpts) *shed {
 		s.playerCards = map[string]*PlayerCards{}
 	}
 	if s.playerIDs == nil {
+		// new game
 		s.playerIDs = []string{}
-	}
-	if s.finishedPlayers == nil {
+		s.activePlayers = []string{}
 		s.finishedPlayers = []string{}
-		s.activePlayers = s.playerIDs
+	} else if s.finishedPlayers == nil {
+		s.playerIDs = opts.playerIDs
+		s.activePlayers = opts.playerIDs
 	} else {
-		for _, p := range s.playerIDs {
-			if !sliceContainsString(s.finishedPlayers, p) {
-				s.activePlayers = append(s.activePlayers, p)
+		// work out who is still playing the game
+		stillPlaying := []string{}
+		for _, id := range opts.playerIDs {
+			if !sliceContainsString(opts.finishedPlayers, id) {
+				stillPlaying = append(stillPlaying, id)
 			}
 		}
+		s.playerIDs = opts.playerIDs
+		s.activePlayers = stillPlaying
 	}
 
 	return s

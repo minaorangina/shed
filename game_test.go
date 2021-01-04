@@ -15,22 +15,20 @@ import (
 func TestGameTurn(t *testing.T) {
 	gameWithRandomPlayers := func() (int, *shed) {
 		rand.Seed(time.Now().UnixNano())
-		randomNumber := rand.Intn(2) + 2
+		randomNumberOfPlayers := rand.Intn(2) + 2
 
 		players := map[string]*PlayerCards{}
 		playerIDs := []string{}
 
-		for i := 0; i < randomNumber; i++ {
+		for i := 0; i < randomNumberOfPlayers; i++ {
 			id := fmt.Sprintf("player-%d", i)
 			playerIDs = append(playerIDs, id)
 			players[id] = &PlayerCards{}
 		}
-		game := &shed{deck: deck.New(), playerCards: players, playerIDs: playerIDs}
 
-		for i := 0; i < randomNumber; i++ {
-			game.turn()
-		}
-		return randomNumber, game
+		game := NewShed(ShedOpts{deck: deck.New(), playerCards: players, playerIDs: playerIDs})
+
+		return randomNumberOfPlayers, game
 	}
 
 	t.Run("turns loop back through all players", func(t *testing.T) {
