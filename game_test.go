@@ -939,20 +939,130 @@ func TestGameStageTwo(t *testing.T) {
 	})
 
 	t.Run("stage 2: game ends when n-1 players have finished (Unseen card)", func(t *testing.T) {
-		// Given a game in stage 2 with two players remaining
-		// and the current player has one remaining Unseen card
+		// Given a game in stage 2
+		lowValueCard := deck.NewCard(deck.Four, deck.Spades)
+		highValueCard := deck.NewCard(deck.Ace, deck.Spades)
+		pile := []deck.Card{lowValueCard}
+
+		// And a player with one remaining Unseen card
+		pc := &PlayerCards{
+			Hand: []deck.Card{},
+			Seen: []deck.Card{},
+			Unseen: []deck.Card{
+				highValueCard,
+			},
+		}
+
+		game := NewShed(ShedOpts{
+			stage:           clearCards,
+			deck:            deck.Deck{},
+			pile:            pile,
+			playerIDs:       []string{"player-1", "player-2"},
+			currentPlayerID: "player-1",
+			playerCards: map[string]*PlayerCards{
+				"player-1": pc,
+				"player-2": somePlayerCards(3),
+			},
+		})
+
 		// When the player takes a legal turn
-		// Then the remaining player has lost
-		// And the game is over
+		msgs, err := game.Next()
+		utils.AssertNoError(t, err)
+
+		cardChoice := []int{0}
+		msgs, err = game.ReceiveResponse([]InboundMessage{{
+			PlayerID: game.currentPlayerID,
+			Command:  protocol.PlayUnseen,
+			Decision: cardChoice,
+		}})
+		utils.AssertNoError(t, err)
+
+		// Then the game informs everyone the player has finished
+		checkPlayerFinishedMessages(t, msgs, game)
+
+		// And the game is expecting a response
+		utils.AssertTrue(t, game.awaitingResponse)
+
+		// And when the player acks
+		msgs, err = game.ReceiveResponse([]InboundMessage{{
+			PlayerID: game.currentPlayerID,
+			Command:  protocol.PlayerFinished,
+		}})
+		utils.AssertNoError(t, err)
+
+		// Then the game informs everyone the game is over
+		checkGameOverMessages(t, msgs, game)
+
+		// And the game is NOT expecting a response
+		utils.AssertEqual(t, game.awaitingResponse, false)
+
+		// And calling game.Next() returns the same game over message
+		msgs, err = game.Next()
+		utils.AssertNoError(t, err)
+		checkGameOverMessages(t, msgs, game)
 	})
 
 	t.Run("stage 2: game ends when n-1 players have finished (Hand card)", func(t *testing.T) {
 		// Given a game in stage 2 with two players remaining
 		// and the current player has one remaining Hand card
+		lowValueCard := deck.NewCard(deck.Four, deck.Spades)
+		highValueCard := deck.NewCard(deck.Ace, deck.Spades)
+		pile := []deck.Card{lowValueCard}
+
+		// And a player with one remaining Hand card
+		pc := &PlayerCards{
+			Hand:   []deck.Card{highValueCard},
+			Seen:   []deck.Card{},
+			Unseen: []deck.Card{},
+		}
+
+		game := NewShed(ShedOpts{
+			stage:           clearCards,
+			deck:            deck.Deck{},
+			pile:            pile,
+			playerIDs:       []string{"player-1", "player-2"},
+			currentPlayerID: "player-1",
+			playerCards: map[string]*PlayerCards{
+				"player-1": pc,
+				"player-2": somePlayerCards(3),
+			},
+		})
+
 		// When the player takes a legal turn
-		// When the player takes a legal turn
-		// Then the remaining player has lost
-		// And the game is over
+		msgs, err := game.Next()
+		utils.AssertNoError(t, err)
+
+		cardChoice := []int{0}
+		msgs, err = game.ReceiveResponse([]InboundMessage{{
+			PlayerID: game.currentPlayerID,
+			Command:  protocol.PlayHand,
+			Decision: cardChoice,
+		}})
+		utils.AssertNoError(t, err)
+
+		// Then the game informs everyone the player has finished
+		checkPlayerFinishedMessages(t, msgs, game)
+
+		// And the game is expecting a response
+		utils.AssertTrue(t, game.awaitingResponse)
+
+		// And when the player acks
+		msgs, err = game.ReceiveResponse([]InboundMessage{{
+			PlayerID: game.currentPlayerID,
+			Command:  protocol.PlayerFinished,
+		}})
+		utils.AssertNoError(t, err)
+
+		// Then the game informs everyone the game is over
+		checkGameOverMessages(t, msgs, game)
+
+		// And the game is NOT expecting a response
+		utils.AssertEqual(t, game.awaitingResponse, false)
+
+		// And calling game.Next() returns the same game over message
+		msgs, err = game.Next()
+		utils.AssertNoError(t, err)
+		checkGameOverMessages(t, msgs, game)
 	})
 }
 
@@ -1784,6 +1894,17 @@ func checkPlayerFinishedMessages(t *testing.T, msgs []OutboundMessage, game *she
 		} else {
 			utils.AssertEqual(t, m.AwaitingResponse, false)
 		}
+	}
+}
+
+func checkGameOverMessages(t *testing.T, msgs []OutboundMessage, game *shed) {
+	t.Helper()
+
+	for _, m := range msgs {
+		utils.AssertEqual(t, m.Command, protocol.GameOver)
+		utils.AssertDeepEqual(t, m.Pile, game.pile)
+		utils.AssertEqual(t, m.AwaitingResponse, false)
+		utils.AssertTrue(t, len(game.finishedPlayers) == len(game.playerIDs))
 	}
 }
 

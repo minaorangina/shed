@@ -17,6 +17,7 @@ type InboundMessage struct {
 // OutboundMessage is a message from GameEngine to Player
 type OutboundMessage struct {
 	PlayerID         string       `json:"player_id"`
+	Command          protocol.Cmd `json:"command"`
 	Name             string       `json:"name"` // pointless?
 	Message          string       `json:"message"`
 	Hand             []deck.Card  `json:"hand"`
@@ -26,9 +27,8 @@ type OutboundMessage struct {
 	CurrentTurn      string       `json:"current_turn",omitempty`
 	Moves            []int        `json:"moves",omitempty`
 	Opponents        []Opponent   `json:"opponents",omitempty`
-	Command          protocol.Cmd `json:"command"`
+	FinishedPlayers  []string     `json:"finished_players",omitempty`
 	AwaitingResponse bool         `json:"awaiting_response"`
-	Broadcast        bool
 }
 
 // InitialCards represent the default cards dealt to a Player

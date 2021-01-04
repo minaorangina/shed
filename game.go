@@ -75,6 +75,7 @@ type shed struct {
 	currentTurnIdx   int
 	stage            Stage
 	awaitingResponse bool
+	gameOver         bool
 }
 
 type ShedOpts struct {
@@ -183,6 +184,9 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 	if s.awaitingResponse {
 		return nil, ErrGameAwaitingResponse
 	}
+	if s.gameOver {
+		return s.buildGameOverMessages(), nil
+	}
 
 	msgs := []OutboundMessage{}
 	currentPlayerCards := s.playerCards[s.currentPlayerID]
@@ -246,6 +250,9 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 	}
 	if !s.awaitingResponse {
 		return nil, ErrGameUnexpectedResponse
+	}
+	if s.gameOver {
+		return s.buildGameOverMessages(), nil
 	}
 
 	// stage 0
@@ -328,6 +335,14 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 		case protocol.PlayerFinished:
 			s.awaitingResponse = false
 			s.moveToFinishedPlayers() // handles the next turn
+
+			if s.gameIsOver() {
+				s.gameOver = true
+				// move the remaining player
+				s.moveToFinishedPlayers()
+				return s.buildGameOverMessages(), nil
+			}
+
 			return nil, nil
 
 		case protocol.EndOfTurn,
@@ -365,7 +380,6 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 
 			s.completeMove(msg)
 
-			// check if player has finished the game
 			if s.playerHasFinished() {
 				s.awaitingResponse = true
 				return s.buildPlayerFinishedMessages(), nil
@@ -460,12 +474,22 @@ func (s *shed) playerHasFinished() bool {
 		len(pc.Unseen) == 0
 }
 
+func (s *shed) gameIsOver() bool {
+	return len(s.activePlayers) == 1
+}
+
 func (s *shed) turn() {
 	s.currentTurnIdx = (s.currentTurnIdx + 1) % len(s.activePlayers)
 	s.currentPlayerID = s.activePlayers[s.currentTurnIdx]
 }
 
 func (s *shed) moveToFinishedPlayers() {
+	if len(s.activePlayers) == 1 {
+		s.finishedPlayers = append(s.finishedPlayers, s.activePlayers[0])
+		s.activePlayers = []string{}
+		return
+	}
+
 	s.activePlayers = append(s.activePlayers[:s.currentTurnIdx],
 		s.activePlayers[(s.currentTurnIdx+1)%len(s.activePlayers):]...)
 
@@ -566,12 +590,13 @@ func (s *shed) buildEndOfTurnMessages(currentPlayerCommand protocol.Cmd) []Outbo
 
 func (s *shed) buildPlayerFinishedMessage(playerID string) OutboundMessage {
 	return OutboundMessage{
-		PlayerID:    playerID,
-		Command:     protocol.PlayerFinished,
-		CurrentTurn: s.currentPlayerID,
-		Hand:        s.playerCards[playerID].Hand,
-		Seen:        s.playerCards[playerID].Seen,
-		Pile:        s.pile,
+		PlayerID:        playerID,
+		Command:         protocol.PlayerFinished,
+		CurrentTurn:     s.currentPlayerID,
+		Hand:            s.playerCards[playerID].Hand,
+		Seen:            s.playerCards[playerID].Seen,
+		Pile:            s.pile,
+		FinishedPlayers: s.finishedPlayers,
 	}
 }
 
@@ -583,6 +608,20 @@ func (s *shed) buildPlayerFinishedMessages() []OutboundMessage {
 			msg.AwaitingResponse = true
 		}
 		toSend = append(toSend, msg)
+	}
+
+	return toSend
+}
+
+func (s *shed) buildGameOverMessages() []OutboundMessage {
+	toSend := []OutboundMessage{}
+	for _, id := range s.playerIDs {
+		toSend = append(toSend, OutboundMessage{
+			PlayerID:        id,
+			Command:         protocol.GameOver,
+			FinishedPlayers: s.finishedPlayers,
+			Pile:            s.pile,
+		})
 	}
 
 	return toSend

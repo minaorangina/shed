@@ -20,6 +20,7 @@ const (
 	UnseenSuccess
 	UnseenFailure
 	PlayerFinished
+	GameOver
 )
 
 var cmdNames = []string{
@@ -37,6 +38,7 @@ var cmdNames = []string{
 	"UnseenSuccess",
 	"UnseenFailure",
 	"PlayerFinished",
+	"GameOver",
 }
 
 func (c Cmd) String() string {
