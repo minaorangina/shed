@@ -17,6 +17,7 @@ const (
 	Turn
 	EndOfTurn
 	SkipTurn
+	Burn
 	UnseenSuccess
 	UnseenFailure
 	PlayerFinished
@@ -35,6 +36,7 @@ var cmdNames = []string{
 	"Turn",
 	"EndOfTurn",
 	"SkipTurn",
+	"Burn",
 	"UnseenSuccess",
 	"UnseenFailure",
 	"PlayerFinished",

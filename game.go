@@ -20,44 +20,6 @@ const (
 	clearCards
 )
 
-const (
-	minPlayers = 2
-	maxPlayers = 4
-)
-
-var cardValues = map[deck.Rank]int{
-	deck.Four:  0,
-	deck.Five:  1,
-	deck.Six:   2,
-	deck.Eight: 4,
-	deck.Nine:  5,
-	deck.Jack:  6,
-	deck.Queen: 7,
-	deck.King:  8,
-	deck.Ace:   9,
-	// special powers
-	deck.Two:   9,
-	deck.Three: 9,
-	deck.Seven: 3,
-	deck.Ten:   9,
-}
-
-var sevenBeaters = map[deck.Rank]bool{
-	deck.Four:  true,
-	deck.Five:  true,
-	deck.Six:   true,
-	deck.Eight: false,
-	deck.Nine:  false,
-	deck.Jack:  false,
-	deck.Queen: false,
-	deck.King:  false,
-	deck.Ace:   false,
-	// special powers
-	deck.Two:   true,
-	deck.Three: true,
-	deck.Seven: true,
-}
-
 type Game interface {
 	Start(playerIDs []string) error
 	Next() ([]OutboundMessage, error)
@@ -278,6 +240,12 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 		return nil, fmt.Errorf("unexpected message from player %s", msg.PlayerID)
 	}
 
+	if msg.Command == protocol.Burn { // ack
+		// player gets another turn
+		s.awaitingResponse = false
+		return nil, nil
+	}
+
 	if msg.Command == protocol.SkipTurn { // ack
 		s.awaitingResponse = false
 		s.turn()
@@ -297,6 +265,11 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 			// double checking in case of client tampering.
 			s.completeMove(msg)
 			s.pluckFromDeck(msg)
+
+			if isBurn(s.pile) {
+				s.awaitingResponse = true // already set but let's be explicit
+				return s.buildBurnMessages(), nil
+			}
 
 			toSend := []OutboundMessage{{
 				PlayerID:         s.currentPlayerID,
@@ -624,6 +597,31 @@ func (s *shed) buildGameOverMessages() []OutboundMessage {
 			FinishedPlayers: s.finishedPlayers,
 			Pile:            s.pile,
 		})
+	}
+
+	return toSend
+}
+
+func (s *shed) buildBurnMessage(playerID string) OutboundMessage {
+	return OutboundMessage{
+		PlayerID:        playerID,
+		Command:         protocol.Burn,
+		CurrentTurn:     s.currentPlayerID,
+		Hand:            s.playerCards[playerID].Hand,
+		Seen:            s.playerCards[playerID].Seen,
+		Pile:            s.pile,
+		FinishedPlayers: s.finishedPlayers,
+	}
+}
+
+func (s *shed) buildBurnMessages() []OutboundMessage {
+	toSend := []OutboundMessage{}
+	for _, id := range s.playerIDs {
+		msg := s.buildBurnMessage(id)
+		if id == s.currentPlayerID {
+			msg.AwaitingResponse = true
+		}
+		toSend = append(toSend, msg)
 	}
 
 	return toSend
