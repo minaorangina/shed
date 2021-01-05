@@ -789,10 +789,10 @@ func TestGameStageTwo(t *testing.T) {
 		newHand := game.playerCards[game.currentPlayerID].Hand
 		newUnseenSize := len(game.playerCards[game.currentPlayerID].Unseen)
 
-		// Then the player picks up the pile and the Unseen cards are unaffected
+		// Then the player picks up the pile which includes the chosen Unseen card
 		utils.AssertEqual(t, len(game.pile), 0)
-		utils.AssertDeepEqual(t, len(newHand), oldPileSize)
-		utils.AssertEqual(t, newUnseenSize, oldUnseenSize)
+		utils.AssertDeepEqual(t, len(newHand), oldPileSize+1)
+		utils.AssertEqual(t, newUnseenSize, oldUnseenSize-1)
 		checkReceiveResponseMessages(t, msgs, protocol.UnseenFailure, game)
 
 		// And the game is expecting an ack
@@ -1004,7 +1004,6 @@ func TestGameStageTwo(t *testing.T) {
 
 	t.Run("stage 2: game ends when n-1 players have finished (Hand card)", func(t *testing.T) {
 		// Given a game in stage 2 with two players remaining
-		// and the current player has one remaining Hand card
 		lowValueCard := deck.NewCard(deck.Four, deck.Spades)
 		highValueCard := deck.NewCard(deck.Ace, deck.Spades)
 		pile := []deck.Card{lowValueCard}

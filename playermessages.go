@@ -23,7 +23,6 @@ type OutboundMessage struct {
 	Hand             []deck.Card  `json:"hand"`
 	Seen             []deck.Card  `json:"seen"`
 	Pile             []deck.Card  `json:"pile"`
-	UnseenVisible    []deck.Card  `json:"unseen_visible",omitempty`
 	CurrentTurn      string       `json:"current_turn",omitempty`
 	Moves            []int        `json:"moves",omitempty`
 	Opponents        []Opponent   `json:"opponents",omitempty`

@@ -369,7 +369,11 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 				return nil, errors.New("must play one unseen card only")
 			}
 			// possible optimisation: could precalculate legal Unseen card moves
-			chosenCard := s.playerCards[s.currentPlayerID].Unseen[msg.Decision[0]]
+			cardIdx := msg.Decision[0]
+			chosenCard := s.playerCards[s.currentPlayerID].Unseen[cardIdx]
+
+			s.completeMove(msg)
+
 			legalMoves := getLegalMoves(s.pile, []deck.Card{chosenCard})
 
 			if len(legalMoves) == 0 {
@@ -377,8 +381,6 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 				s.awaitingResponse = true
 				return s.buildEndOfTurnMessages(protocol.UnseenFailure), nil
 			}
-
-			s.completeMove(msg)
 
 			if s.playerHasFinished() {
 				s.awaitingResponse = true
