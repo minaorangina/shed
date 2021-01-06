@@ -107,6 +107,10 @@ func getLegalMoves(pile, toPlay []deck.Card) []int {
 }
 
 func isBurn(pile []deck.Card) bool {
+	if len(pile) < burnNum {
+		return false
+	}
+
 	// Here, the most recently played card is at index len-1
 	topCard := pile[len(pile)-1]
 	if topCard.Rank == deck.Ten {

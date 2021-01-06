@@ -701,6 +701,14 @@ func TestGameIsBurn(t *testing.T) {
 			},
 			false,
 		},
+		{
+			"two of the same suit (Jack)",
+			[]deck.Card{
+				deck.NewCard(deck.Jack, deck.Diamonds),
+				deck.NewCard(deck.Jack, deck.Spades),
+			},
+			false,
+		},
 	}
 
 	for _, tc := range tt[6:] {
