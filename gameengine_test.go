@@ -1,7 +1,6 @@
 package shed
 
 import (
-	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -11,15 +10,6 @@ import (
 )
 
 var gameEngineTestTimeout = time.Duration(200 * time.Millisecond)
-
-type spySetup struct {
-	called bool
-}
-
-func (s *spySetup) setup(ge GameEngine) error {
-	s.called = true
-	return nil
-}
 
 func TestGameEngineConstructor(t *testing.T) {
 	creatorID := "hermione-1"
@@ -114,12 +104,6 @@ func TestRemovePlayer(t *testing.T) {
 }
 
 func TestGameEngineInit(t *testing.T) {
-	t.Run("constructs with correct number of cards", func(t *testing.T) {
-		ge := gameEngineWithPlayers()
-		if len(ge.Deck()) != 52 {
-			t.Errorf("\nExpected: %+v\nActual: %+v\n", 52, len(ge.Deck()))
-		}
-	})
 	t.Run("has an ID", func(t *testing.T) {
 		gameID := "thisistheid"
 		playerID := "i created it"
@@ -144,32 +128,6 @@ func TestGameEngineInit(t *testing.T) {
 		utils.AssertNoError(t, err)
 
 		utils.AssertEqual(t, engine.CreatorID(), playerID)
-	})
-}
-
-// might move to the Game, or possibly become obsolete
-func TestGameEngineSetupFn(t *testing.T) {
-	t.Run("does not error if no setup fn defined", func(t *testing.T) {
-		engine, err := NewGameEngine(GameEngineOpts{Players: SomePlayers(), Game: &SpyGame{}})
-		utils.AssertNotNil(t, engine)
-		utils.AssertNoError(t, err)
-
-		err = engine.Setup()
-		utils.AssertNoError(t, err)
-	})
-
-	t.Run("propagates setup fn error", func(t *testing.T) {
-		erroringSetupFn := func(ge GameEngine) error {
-			return errors.New("Whoops")
-		}
-		engine, err := NewGameEngine(GameEngineOpts{Players: SomePlayers(), SetupFn: erroringSetupFn, Game: &SpyGame{}})
-		utils.AssertNoError(t, err)
-		utils.AssertNotNil(t, engine)
-
-		err = engine.Setup()
-		if err == nil {
-			t.Fatalf("Expected an error, but there was none")
-		}
 	})
 }
 
@@ -215,23 +173,6 @@ func TestGameEngineStart(t *testing.T) {
 		engine.playState = InProgress
 		err = engine.Start()
 		utils.AssertNoError(t, err)
-	})
-
-	t.Run("calls the setup fn", func(t *testing.T) {
-		spy := spySetup{}
-		engine, err := NewGameEngine(GameEngineOpts{
-			Players: SomePlayers(),
-			SetupFn: spy.setup,
-			Game:    &SpyGame{}})
-		utils.AssertNoError(t, err)
-		utils.AssertNotNil(t, engine)
-
-		err = engine.Start()
-		utils.AssertNoError(t, err)
-
-		if spy.called != true {
-			t.Errorf("Expected spy setup fn to be called")
-		}
 	})
 
 	t.Run("calls the poll state fn", func(t *testing.T) {

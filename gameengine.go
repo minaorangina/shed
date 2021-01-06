@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/minaorangina/shed/deck"
 	"github.com/minaorangina/shed/protocol"
 )
 
@@ -42,10 +41,8 @@ const (
 
 // GameEngine represents the engine of the game
 type GameEngine interface {
-	Setup() error
 	Start() error
 	MessagePlayers([]OutboundMessage) error
-	Deck() deck.Deck
 	Players() Players
 	ID() string
 	CreatorID() string
@@ -65,9 +62,6 @@ type gameEngine struct {
 	registerCh   chan Player
 	unregisterCh chan Player
 	inboundCh    chan InboundMessage
-	stage        Stage
-	deck         deck.Deck
-	setupFn      func(GameEngine) error
 	game         Game
 }
 
@@ -76,7 +70,6 @@ type GameEngineOpts struct {
 	GameID                   string
 	CreatorID                string
 	Players                  Players
-	SetupFn                  func(GameEngine) error
 	RegisterCh, UnregisterCh chan Player
 	InboundCh                chan InboundMessage
 	PlayState                PlayState
@@ -101,8 +94,6 @@ func NewGameEngine(opts GameEngineOpts) (*gameEngine, error) {
 		registerCh:   opts.RegisterCh,
 		unregisterCh: opts.UnregisterCh,
 		inboundCh:    opts.InboundCh,
-		deck:         deck.New(), // to move to Game
-		setupFn:      opts.SetupFn,
 		playState:    opts.PlayState,
 		game:         opts.Game,
 	}
@@ -126,14 +117,6 @@ func (ge *gameEngine) RemovePlayer(p Player) {
 	ge.unregisterCh <- p
 }
 
-// Setup does any pre-game setup required
-func (ge *gameEngine) Setup() error {
-	if ge.setupFn != nil {
-		return ge.setupFn(ge)
-	}
-	return nil
-}
-
 // Start starts a game
 // Might be renamed `next`
 func (ge *gameEngine) Start() error {
@@ -153,10 +136,6 @@ func (ge *gameEngine) Start() error {
 
 	err := ge.game.Start(ids)
 	if err != nil {
-		return err
-	}
-
-	if err := ge.Setup(); err != nil {
 		return err
 	}
 
@@ -185,17 +164,6 @@ func (ge *gameEngine) MessagePlayers(messages []OutboundMessage) error {
 // Receive forwards InboundMessages from Players for sorting
 func (ge *gameEngine) Receive(msg InboundMessage) {
 	ge.inboundCh <- msg
-}
-
-func (ge *gameEngine) checkNumPlayers() error {
-	if len(ge.players) < 2 {
-		return ErrTooFewPlayers
-	}
-	if len(ge.players) > 4 {
-		return ErrTooManyPlayers
-	}
-
-	return nil
 }
 
 // Listen forwards outbound messages to target Players
@@ -249,10 +217,6 @@ func (ge *gameEngine) ID() string {
 
 func (ge *gameEngine) CreatorID() string {
 	return ge.creatorID
-}
-
-func (ge *gameEngine) Deck() deck.Deck {
-	return ge.deck
 }
 
 func (ge *gameEngine) Players() Players {
