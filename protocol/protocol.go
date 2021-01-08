@@ -8,6 +8,7 @@ const (
 	Reorg
 	Start
 	HasStarted
+	Error
 	// combining game-specific and internal protocol messages.
 	// will split later if necessary
 	PlayHand      // when a player plays cards from their hand
@@ -29,6 +30,7 @@ var cmdNames = []string{
 	"Reorg",
 	"Start",
 	"HasStarted",
+	"Error",
 	"PlayHand",
 	"PlaySeen",
 	"PlayUnseen",

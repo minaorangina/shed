@@ -28,6 +28,8 @@ type OutboundMessage struct {
 	Opponents        []Opponent   `json:"opponents",omitempty`
 	FinishedPlayers  []string     `json:"finished_players",omitempty`
 	AwaitingResponse bool         `json:"awaiting_response"`
+	Error            string       `json:"error",omitempty`
+	DefaultMessage   InboundMessage
 }
 
 // InitialCards represent the default cards dealt to a Player

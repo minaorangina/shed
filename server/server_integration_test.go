@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/minaorangina/shed"
 	utils "github.com/minaorangina/shed/internal"
+	"github.com/minaorangina/shed/protocol"
 )
 
 var serverTestTimeout = time.Duration(600 * time.Millisecond)
@@ -116,7 +117,17 @@ func TestCreateAndJoinNewGame(t *testing.T) {
 
 func TestStartGame(t *testing.T) {
 	// given an inactive game and players with ws connections
-	server, gameID := newTestServerWithInactiveGame(t, nil)
+	server, gameID := newTestServerWithInactiveGame(t, nil, []shed.PlayerInfo{
+		{
+			PlayerID: "pending-player-id",
+			Name:     "Penelope",
+		},
+		{
+			PlayerID: "hersha-1",
+			Name:     "Hersha",
+		},
+	})
+
 	creatorID, player2ID := "hersha-1", "pending-player-id"
 
 	url := makeWSUrl(server.URL, gameID, creatorID)
@@ -166,7 +177,40 @@ func TestStartGame(t *testing.T) {
 
 	assertStatus(t, response.StatusCode, http.StatusBadRequest)
 }
-func TestRearrangingHand(t *testing.T) {
-	// players := SomePlayers()
 
+func TestServerNotEnoughPlayers(t *testing.T) {
+	// Given a server with a game and one player with an active ws connection
+	server, gameID := newTestServerWithInactiveGame(t, nil, []shed.PlayerInfo{
+		{
+			PlayerID: "pending-player-id",
+			Name:     "Penelope",
+		},
+	})
+
+	creatorID := "pending-player-id"
+
+	url := makeWSUrl(server.URL, gameID, creatorID)
+	creatorConn := mustDialWS(t, url)
+	defer creatorConn.Close()
+
+	// When the player tries to start the game
+	data, err := json.Marshal(shed.InboundMessage{
+		PlayerID: creatorID,
+		Command:  protocol.Start,
+	})
+	err = creatorConn.WriteMessage(websocket.TextMessage, data)
+	utils.AssertNoError(t, err)
+
+	// Then the player receives an error
+	utils.Within(t, serverTestTimeout, func() {
+		_, bytes, err := creatorConn.ReadMessage()
+		utils.AssertNoError(t, err)
+		utils.AssertTrue(t, len(bytes) > 0)
+
+		var data shed.OutboundMessage
+		err = json.Unmarshal(bytes, &data)
+		utils.AssertNoError(t, err)
+
+		utils.AssertEqual(t, data.Command, protocol.Error)
+	})
 }

@@ -117,6 +117,13 @@ func (p *WSPlayer) Send(msg OutboundMessage) error {
 
 	case protocol.HasStarted:
 		formattedMsg = []byte("STARTED")
+
+	default:
+		payload, err := json.Marshal(msg)
+		if err != nil {
+			return err
+		}
+		formattedMsg = payload
 	}
 	// should this be in a goroutine?
 	p.sendCh <- formattedMsg
@@ -219,4 +226,12 @@ func (ps Players) Find(id string) (Player, bool) {
 		}
 	}
 	return nil, false
+}
+
+func (ps Players) IDs() []string {
+	ids := []string{}
+	for _, p := range ps {
+		ids = append(ids, p.ID())
+	}
+	return ids
 }

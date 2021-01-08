@@ -186,7 +186,7 @@ func newServerWithInactiveGame(t *testing.T, ps shed.Players) (*GameServer, stri
 
 // newTestServerWithInactiveGame returns an httptest.Server with an inactive game
 // and some hard-coded values
-func newTestServerWithInactiveGame(t *testing.T, ps shed.Players) (*httptest.Server, string) {
+func newTestServerWithInactiveGame(t *testing.T, ps shed.Players, info []shed.PlayerInfo) (*httptest.Server, string) {
 	store := &shed.InMemoryGameStore{
 		Games:          map[string]shed.GameEngine{},
 		PendingPlayers: map[string][]shed.PlayerInfo{},
@@ -195,7 +195,7 @@ func newTestServerWithInactiveGame(t *testing.T, ps shed.Players) (*httptest.Ser
 	gameID := "some-pending-id"
 	game, err := shed.NewGameEngine(shed.GameEngineOpts{
 		GameID:    gameID,
-		CreatorID: "hersha-1",
+		CreatorID: info[0].PlayerID,
 		Players:   ps,
 		Game:      shed.NewShed(shed.ShedOpts{}),
 	})
@@ -204,16 +204,7 @@ func newTestServerWithInactiveGame(t *testing.T, ps shed.Players) (*httptest.Ser
 	}
 
 	store.Games[gameID] = game
-	store.PendingPlayers[gameID] = []shed.PlayerInfo{
-		{
-			PlayerID: "pending-player-id",
-			Name:     "Penelope",
-		},
-		{
-			PlayerID: "hersha-1",
-			Name:     "Hersha",
-		},
-	}
+	store.PendingPlayers[gameID] = info
 
 	server := httptest.NewServer(NewServer(store))
 
@@ -258,6 +249,8 @@ func assertPendingGameResponse(t *testing.T, body *bytes.Buffer, want string) {
 }
 
 func mustDialWS(t *testing.T, url string) *websocket.Conn {
+	t.Helper()
+
 	ws, resp, err := websocket.DefaultDialer.Dial(url, nil)
 
 	if err != nil {

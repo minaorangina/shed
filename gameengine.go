@@ -196,7 +196,19 @@ func (ge *gameEngine) Listen() {
 
 		case msg := <-ge.inboundCh:
 			switch msg.Command {
+
 			case protocol.Start:
+				err := ge.game.Start(ge.players.IDs())
+				if err != nil {
+					p, _ := ge.players.Find(msg.PlayerID)
+
+					p.Send(OutboundMessage{
+						PlayerID: msg.PlayerID,
+						Command:  protocol.Error,
+						Error:    err.Error(),
+					})
+				}
+
 				ge.Start()
 				for _, p := range ge.players {
 					outbound := buildGameHasStartedMessage(p)

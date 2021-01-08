@@ -300,7 +300,12 @@ func TestWS(t *testing.T) {
 		p := shed.APlayer(playerID, name)
 		ps := shed.NewPlayers(p)
 
-		server, _ := newTestServerWithInactiveGame(t, ps)
+		server, _ := newTestServerWithInactiveGame(t, ps, []shed.PlayerInfo{
+			{
+				PlayerID: playerID,
+				Name:     name,
+			},
+		})
 		defer server.Close()
 
 		wsURL := "ws" + strings.Trim(server.URL, "http") +
