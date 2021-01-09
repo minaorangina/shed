@@ -4,7 +4,8 @@ package protocol
 type Cmd int
 
 const (
-	NewJoiner Cmd = iota
+	Null Cmd = iota
+	NewJoiner
 	Reorg
 	Start
 	HasStarted
@@ -26,6 +27,7 @@ const (
 )
 
 var cmdNames = []string{
+	"Null",
 	"NewJoiner",
 	"Reorg",
 	"Start",

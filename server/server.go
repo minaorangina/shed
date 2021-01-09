@@ -357,7 +357,6 @@ func (g *GameServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 
 	// create player
 	player := shed.NewWSPlayer(playerID, pendingPlayer.Name, rawConn, make(chan []byte), game)
-
 	// reference to hub etc
 	err = game.AddPlayer(player)
 	if err != nil {

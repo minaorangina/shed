@@ -11,6 +11,10 @@ type SpyGame struct {
 	startCalled bool
 }
 
+func (g *SpyGame) AwaitingResponse() bool {
+	return true
+}
+
 func (g *SpyGame) Start(playerIDs []string) error {
 	g.startCalled = true
 	return nil

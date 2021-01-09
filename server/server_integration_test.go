@@ -116,7 +116,7 @@ func TestCreateAndJoinNewGame(t *testing.T) {
 }
 
 func TestStartGame(t *testing.T) {
-	// given an inactive game and players with ws connections
+	// Given an inactive game and players with ws connections
 	server, gameID := newTestServerWithInactiveGame(t, nil, []shed.PlayerInfo{
 		{
 			PlayerID: "pending-player-id",
@@ -145,13 +145,13 @@ func TestStartGame(t *testing.T) {
 		utils.AssertEqual(t, string(bytes), fmt.Sprintf("Penelope has joined the game!"))
 	})
 
-	// when the creator sends the command to start the game
-	data, err := json.Marshal(shed.InboundMessage{PlayerID: creatorID, Command: 2})
+	// When the creator sends the command to start the game
+	data, err := json.Marshal(shed.InboundMessage{PlayerID: creatorID, Command: protocol.Start})
 	utils.AssertNoError(t, err)
 	err = creatorConn.WriteMessage(websocket.TextMessage, data)
 	utils.AssertNoError(t, err)
 
-	// then the start event is broadcast to all players
+	// Then the start event is broadcast to all players
 	utils.Within(t, serverTestTimeout, func() {
 		_, bytes, err := player2Conn.ReadMessage()
 		utils.AssertNoError(t, err)

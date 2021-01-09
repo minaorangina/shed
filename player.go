@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/minaorangina/shed/deck"
 	"github.com/minaorangina/shed/protocol"
 	uuid "github.com/satori/go.uuid"
 )
@@ -46,12 +45,6 @@ type Conn interface {
 	Send(data []byte) error
 	Receive(data []byte)
 	Conn() io.Closer
-}
-
-type PlayerCards struct {
-	Hand   []deck.Card
-	Seen   []deck.Card
-	Unseen []deck.Card
 }
 
 // Player represents a player in the game
@@ -162,8 +155,7 @@ func (p *WSPlayer) readPump() {
 			log.Printf("error unmarshalling json: %v", err)
 			continue
 		}
-		// fmt.Println("READPUMP BYTES", string(message))
-		// fmt.Println("READPUMP INBOUND", inbound)
+
 		p.engine.Receive(inbound)
 	}
 }

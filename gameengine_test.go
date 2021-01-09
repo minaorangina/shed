@@ -9,7 +9,7 @@ import (
 	"github.com/minaorangina/shed/protocol"
 )
 
-var gameEngineTestTimeout = time.Duration(200 * time.Millisecond)
+const gameEngineTestTimeout = time.Duration(200 * time.Millisecond)
 
 func TestGameEngineConstructor(t *testing.T) {
 	creatorID := "hermione-1"
@@ -173,10 +173,6 @@ func TestGameEngineStart(t *testing.T) {
 		engine.playState = InProgress
 		err = engine.Start()
 		utils.AssertNoError(t, err)
-	})
-
-	t.Run("calls the poll state fn", func(t *testing.T) {
-		// ???
 	})
 }
 

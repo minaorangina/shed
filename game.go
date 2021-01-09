@@ -20,10 +20,15 @@ const (
 	clearCards
 )
 
+type PlayerCards struct {
+	Hand, Seen, Unseen []deck.Card
+}
+
 type Game interface {
 	Start(playerIDs []string) error
 	Next() ([]OutboundMessage, error)
 	ReceiveResponse([]InboundMessage) ([]OutboundMessage, error)
+	AwaitingResponse() bool
 }
 
 type shed struct {
@@ -103,6 +108,10 @@ func NewShed(opts ShedOpts) *shed {
 	}
 
 	return s
+}
+
+func (s *shed) AwaitingResponse() bool {
+	return s.awaitingResponse
 }
 
 func (s *shed) Start(playerIDs []string) error {

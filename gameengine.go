@@ -3,6 +3,7 @@ package shed
 import (
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/minaorangina/shed/protocol"
 )
@@ -42,7 +43,7 @@ const (
 // GameEngine represents the engine of the game
 type GameEngine interface {
 	Start() error
-	MessagePlayers([]OutboundMessage) error
+	Send([]OutboundMessage)
 	Players() Players
 	ID() string
 	CreatorID() string
@@ -55,14 +56,15 @@ type GameEngine interface {
 // gameEngine represents the engine of the game
 
 type gameEngine struct {
-	id           string
-	creatorID    string
-	playState    PlayState
-	players      Players
-	registerCh   chan Player
-	unregisterCh chan Player
-	inboundCh    chan InboundMessage
-	game         Game
+	id                       string
+	creatorID                string
+	playState                PlayState
+	players                  Players
+	registerCh, unregisterCh chan Player
+	inboundCh                chan InboundMessage
+	outboundCh               chan []OutboundMessage
+	gameCh                   chan []InboundMessage
+	game                     Game
 }
 
 // GameEngineOpts represents options for constructing a new GameEngine
@@ -72,6 +74,8 @@ type GameEngineOpts struct {
 	Players                  Players
 	RegisterCh, UnregisterCh chan Player
 	InboundCh                chan InboundMessage
+	OutboundCh               chan []OutboundMessage
+	GameCh                   chan []InboundMessage
 	PlayState                PlayState
 	Game                     Game
 }
@@ -87,6 +91,12 @@ func NewGameEngine(opts GameEngineOpts) (*gameEngine, error) {
 	if opts.InboundCh == nil {
 		opts.InboundCh = make(chan InboundMessage)
 	}
+	if opts.OutboundCh == nil {
+		opts.OutboundCh = make(chan []OutboundMessage)
+	}
+	if opts.GameCh == nil {
+		opts.GameCh = make(chan []InboundMessage)
+	}
 	engine := &gameEngine{
 		id:           opts.GameID,
 		creatorID:    opts.CreatorID,
@@ -94,6 +104,8 @@ func NewGameEngine(opts GameEngineOpts) (*gameEngine, error) {
 		registerCh:   opts.RegisterCh,
 		unregisterCh: opts.UnregisterCh,
 		inboundCh:    opts.InboundCh,
+		outboundCh:   opts.OutboundCh,
+		gameCh:       opts.GameCh,
 		playState:    opts.PlayState,
 		game:         opts.Game,
 	}
@@ -104,37 +116,16 @@ func NewGameEngine(opts GameEngineOpts) (*gameEngine, error) {
 	return engine, nil
 }
 
-// AddPlayer adds a player to a game
-func (ge *gameEngine) AddPlayer(p Player) error {
-	if ge.playState != Idle {
-		return errors.New("cannot add player - game has started")
-	}
-	ge.registerCh <- p
-	return nil
-}
-
-func (ge *gameEngine) RemovePlayer(p Player) {
-	ge.unregisterCh <- p
-}
-
 // Start starts a game
-// Might be renamed `next`
 func (ge *gameEngine) Start() error {
 	if ge.playState != Idle {
 		return nil
 	}
-
 	if ge.game == nil {
 		return ErrNilGame
 	}
 
-	// until there's a proper way to get ids
-	ids := []string{}
-	for _, p := range ge.players {
-		ids = append(ids, p.ID())
-	}
-
-	err := ge.game.Start(ids)
+	err := ge.game.Start(ge.players.IDs())
 	if err != nil {
 		return err
 	}
@@ -145,30 +136,39 @@ func (ge *gameEngine) Start() error {
 	return nil
 }
 
-func (ge *gameEngine) MessagePlayers(messages []OutboundMessage) error {
-	missingPlayers := []string{}
-	for _, m := range messages {
-		p, ok := ge.players.Find(m.PlayerID)
-		if !ok {
-			missingPlayers = append(missingPlayers, m.PlayerID)
+func (ge *gameEngine) Play() {
+	for inbound := range ge.gameCh {
+		var (
+			outbound []OutboundMessage
+			err      error
+		)
+
+		if len(inbound) == 0 {
+			outbound, err = ge.game.Next()
+		} else {
+			outbound, err = ge.game.ReceiveResponse(inbound)
 		}
-		p.Send(m)
-	}
-	if len(missingPlayers) > 0 {
-		return fmt.Errorf("could not send to some players")
-	}
+		if err != nil {
+			// err
+		}
 
-	return nil
-}
-
-// Receive forwards InboundMessages from Players for sorting
-func (ge *gameEngine) Receive(msg InboundMessage) {
-	ge.inboundCh <- msg
+		ge.Send(outbound)
+	}
 }
 
 // Listen forwards outbound messages to target Players
 // outside of the interface
 func (ge *gameEngine) Listen() {
+	commTracker := struct {
+		mu              *sync.Mutex
+		messages        []InboundMessage
+		expectedCommand protocol.Cmd
+	}{
+		mu:              &sync.Mutex{},
+		messages:        []InboundMessage{},
+		expectedCommand: protocol.Start,
+	}
+
 	for {
 		select {
 		case joiner := <-ge.registerCh:
@@ -183,7 +183,6 @@ func (ge *gameEngine) Listen() {
 			}
 
 		case leaver := <-ge.unregisterCh:
-			fmt.Println("THIS HAPPENED")
 			ps := ge.Players()
 			target, ok := ps.Find(leaver.ID())
 			if ok {
@@ -194,7 +193,24 @@ func (ge *gameEngine) Listen() {
 				underlyingPlayer.conn = nil
 			}
 
+		case msgs := <-ge.outboundCh:
+			ge.messagePlayers(msgs)
+
+			if ge.game.AwaitingResponse() {
+				// set expected command in a more robust way
+				commTracker.mu.Lock()
+				commTracker.expectedCommand = msgs[0].Command
+				commTracker.mu.Unlock()
+			} else {
+				ge.sendToGame(nil)
+			}
+
 		case msg := <-ge.inboundCh:
+			// Ignore messages that are not expected
+			if msg.Command != commTracker.expectedCommand {
+				continue
+			}
+
 			switch msg.Command {
 
 			case protocol.Start:
@@ -210,17 +226,68 @@ func (ge *gameEngine) Listen() {
 				}
 
 				ge.Start()
+
 				for _, p := range ge.players {
-					outbound := buildGameHasStartedMessage(p)
-					p.Send(outbound)
+					p.Send(buildGameHasStartedMessage(p)) // broadcast
 				}
+
+			case protocol.Reorg:
+
+				commTracker.messages = append(commTracker.messages, msg)
+				if len(commTracker.messages) == len(ge.Players()) {
+					commTracker.mu.Lock()
+
+					ge.sendToGame(commTracker.messages)
+
+					commTracker.messages = []InboundMessage{}
+					commTracker.expectedCommand = protocol.Null
+
+					commTracker.mu.Unlock()
+				}
+
+			default:
+				ge.sendToGame([]InboundMessage{msg}) // handle failures
+				commTracker.mu.Lock()
+				commTracker.expectedCommand = msg.Command
+				commTracker.mu.Unlock()
 			}
-
-			// for all other cases, send to "Game"
-			// case protocol.Reorg:
-
 		}
 	}
+}
+
+func (ge *gameEngine) messagePlayers(msgs []OutboundMessage) {
+	for _, m := range msgs {
+		p, ok := ge.players.Find(m.PlayerID)
+		if ok {
+			p.Send(m)
+		}
+	}
+}
+
+func (ge *gameEngine) sendToGame(msgs []InboundMessage) {
+	ge.gameCh <- msgs
+}
+
+func (ge *gameEngine) Send(msgs []OutboundMessage) {
+	ge.outboundCh <- msgs
+}
+
+// Receive forwards InboundMessages from Players for sorting
+func (ge *gameEngine) Receive(msg InboundMessage) {
+	ge.inboundCh <- msg
+}
+
+// AddPlayer adds a player to a game
+func (ge *gameEngine) AddPlayer(p Player) error {
+	if ge.playState != Idle {
+		return errors.New("cannot add player - game has started")
+	}
+	ge.registerCh <- p
+	return nil
+}
+
+func (ge *gameEngine) RemovePlayer(p Player) {
+	ge.unregisterCh <- p
 }
 
 func (ge *gameEngine) ID() string {
@@ -255,24 +322,4 @@ func buildNewJoinerMessage(joiner, recipient Player) OutboundMessage {
 		Message:  fmt.Sprintf("%s has joined the game!", joiner.Name()),
 		Command:  protocol.NewJoiner,
 	}
-}
-
-func messagePlayersAwaitReply(
-	ps Players,
-	messages []OutboundMessage,
-) error {
-	for _, m := range messages {
-		if p, ok := ps.Find(m.PlayerID); ok {
-			go p.Send(m)
-			break // debug
-		}
-	}
-
-	// responses := []InboundMessage{}
-	// for i := 0; i < len(messages); i++ {
-	// 	resp := <-ch
-	// 	responses = append(responses, resp)
-	// }
-
-	return nil
 }
