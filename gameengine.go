@@ -3,6 +3,7 @@ package shed
 import (
 	"errors"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -179,12 +180,13 @@ func (ge *gameEngine) Listen() {
 		select {
 		case joiner := <-ge.registerCh:
 			ps := ge.Players()
-			ge.players = AddPlayer(ps, joiner)
+			ge.players = AppendPlayer(ps, joiner)
 			for _, p := range ge.players {
 				if p.ID() == joiner.ID() {
 					continue
 				}
 				outbound := buildNewJoinerMessage(joiner, p)
+				log.Printf("PLAYERID: %s\nmsg: %#v\n", p.ID(), outbound)
 				p.Send(outbound)
 			}
 

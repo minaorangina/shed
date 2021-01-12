@@ -14,6 +14,37 @@ type InboundMessage struct {
 	Decision []int        `json:"decision,omitempty"` // not used in stage 0
 }
 
+// func (im *InboundMessage) MarshalJSON() ([]byte, error) {
+// 	type Alias InboundMessage
+// 	return json.Marshal(&struct {
+// 		Command string `json:"command"`
+// 		*Alias
+// 	}{
+// 		Command: im.Command.String(),
+// 		Alias:   (*Alias)(im),
+// 	})
+// }
+
+// func (im *InboundMessage) UnmarshalJSON(data []byte) error {
+// 	type Alias InboundMessage
+// 	aux := &struct {
+// 		Command string `json:"command"`
+// 		*Alias
+// 	}{
+// 		Alias: (*Alias)(im),
+// 	}
+// 	if err := json.Unmarshal(data, &aux); err != nil {
+// 		return err
+// 	}
+// 	v, ok := protocol.NameToCmd[aux.Command]
+// 	if !ok {
+// 		return fmt.Errorf("unknown command %s", aux.Command)
+// 	}
+
+// 	im.Command = v
+// 	return nil
+// }
+
 // OutboundMessage is a message from GameEngine to Player
 type OutboundMessage struct {
 	PlayerID         string       `json:"player_id"`

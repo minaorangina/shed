@@ -119,7 +119,7 @@ func TestStartGame(t *testing.T) {
 	// Given an inactive game and players with ws connections
 	server, gameID := newTestServerWithInactiveGame(t, nil, []shed.PlayerInfo{
 		{
-			PlayerID: "pending-player-id",
+			PlayerID: "penny-1",
 			Name:     "Penelope",
 		},
 		{
@@ -142,7 +142,11 @@ func TestStartGame(t *testing.T) {
 		_, bytes, err := creatorConn.ReadMessage()
 		utils.AssertNoError(t, err)
 		utils.AssertTrue(t, len(bytes) > 0)
-		utils.AssertEqual(t, string(bytes), fmt.Sprintf("Penelope has joined the game!"))
+
+		var data shed.OutboundMessage
+		err = json.Unmarshal(bytes, &data)
+		utils.AssertNoError(t, err)
+		utils.AssertEqual(t, string(data.Message), fmt.Sprintf("Hersha has joined the game!"))
 	})
 
 	// When the creator sends the command to start the game

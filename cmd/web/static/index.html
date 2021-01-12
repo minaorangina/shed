@@ -9,16 +9,21 @@
 <body>
   <h1>Welcome to Shed!</h1>
 
-  <button class="new-game">New game</button>
-
-  <h2>Join a game</h2>
+  
+  
   <form action="" class="game-code-form" autocomplete=off>
-    <p class="form-error">Missing values</p>
+    <label for="player-name">Your name (required):</label>
+    <input type=text id="player-name" />
+    <h2>New game</h2>
+    <button class="new-game">New game</button>
+
+    <hr/>
+
+    <h2>Join a game</h2>
     <label for="game-code">Enter code:</label>
     <input type=text id="game-code" />
-    <label for="game-code">Your name:</label>
-    <input type=text id="player-name" />
-    <button>Join</button>
+    <button class="join-game">Join</button>
+    <p class="form-error">Missing values</p>
   </form>
 
   <script>
@@ -41,7 +46,7 @@
         headers: new Headers(),
         body: JSON.stringify({
           game_id: code,
-          name: "Mina",
+          name,
         })
       });
 
@@ -58,11 +63,19 @@
 
     const button = document.querySelector(".new-game");
     button.addEventListener("click", () => {
+      const name = document.querySelector("#player-name").value.trim()
+      if (name === "") {
+        document.querySelector(".form-error").style.visibility = "visible";
+        return
+      }
+
+      document.querySelector(".form-error").style.visibility = "hidden";
+
       const req = new Request("/new", {
         method: "POST",
         headers: new Headers(),
         body: JSON.stringify({
-          name: "Mina"
+          name
         }),
       })
       fetch(req)

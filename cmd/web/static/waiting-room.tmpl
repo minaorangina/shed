@@ -30,13 +30,17 @@
 
       conn.onerror = e => console.error("websocket error", e.error);
 
-      conn.onmessage = console.info
+      conn.onmessage = e => console.info("Incoming", e.data)
 
       const adminStartButton = document.querySelector(".start-button")
       if (adminStartButton) {
         adminStartButton.addEventListener("click", () => {
-          conn.send("START");
-        }));
+          const data = {
+            player_id: playerID,
+            command: "Start"
+          };
+          conn.send(JSON.stringify(data));
+        });
       }
     }
   </script>

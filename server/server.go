@@ -58,6 +58,7 @@ func unknownGameIDMsg(unknownID string) string {
 }
 
 func servePage(w http.ResponseWriter, path string) {
+	log.Print(path)
 	tmpl, err := template.ParseFiles(path)
 
 	if err != nil {
@@ -84,7 +85,7 @@ func NewServer(store shed.GameStore) *GameServer {
 
 		servePage(w, homepage)
 	}))
-	router.Handle("/static/", http.StripPrefix("/static", fileServer))
+	router.Handle("/static/", http.StripPrefix("/static/", fileServer))
 	router.Handle("/new", http.HandlerFunc(s.HandleNewGame))
 	router.Handle("/game/", http.HandlerFunc(s.HandleFindGame))
 	router.Handle("/join", http.HandlerFunc(s.HandleJoinGame))

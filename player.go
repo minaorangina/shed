@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/minaorangina/shed/protocol"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -102,18 +101,12 @@ func (p *WSPlayer) Cards() *PlayerCards {
 func (p *WSPlayer) Send(msg OutboundMessage) error {
 	var formattedMsg []byte
 
-	switch msg.Command {
-
-	case protocol.NewJoiner:
-		formattedMsg = []byte(msg.Message)
-
-	default:
-		payload, err := json.Marshal(msg)
-		if err != nil {
-			return err
-		}
-		formattedMsg = payload
+	payload, err := json.Marshal(msg)
+	if err != nil {
+		return err
 	}
+	formattedMsg = payload
+
 	// should this be in a goroutine?
 	p.sendCh <- formattedMsg
 
@@ -183,7 +176,8 @@ func (p *WSPlayer) writePump() {
 		case <-ticker.C:
 			p.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := p.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				panic(err)
+				log.Printf("removing player %s", p.ID())
+				p.engine.RemovePlayer(p)
 				// return
 			}
 		}
@@ -198,8 +192,8 @@ func NewPlayers(p ...Player) Players {
 	return Players(p)
 }
 
-// AddPlayer adds a player to a set of Players
-func AddPlayer(ps Players, p Player) Players {
+// AppendPlayer adds a player to a set of Players
+func AppendPlayer(ps Players, p Player) Players {
 	if _, ok := ps.Find(p.ID()); !ok {
 		return Players(append(ps, p))
 	}

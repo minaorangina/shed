@@ -1,6 +1,7 @@
 package shed
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -57,7 +58,12 @@ func TestGameEngineAddPlayer(t *testing.T) {
 		utils.Within(t, gameEngineTestTimeout, func() {
 			msg, ok := <-sendCh
 			utils.AssertTrue(t, ok)
-			utils.AssertEqual(t, fmt.Sprintf("%s has joined the game!", joiningPlayer.Name()), string(msg))
+
+			var data OutboundMessage
+			err := json.Unmarshal(msg, &data)
+			utils.AssertNoError(t, err)
+			fmt.Println(data)
+			utils.AssertEqual(t, fmt.Sprintf("%s has joined the game!", joiningPlayer.Name()), string(data.Message))
 		})
 	})
 }
