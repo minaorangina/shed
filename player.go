@@ -103,13 +103,9 @@ func (p *WSPlayer) Send(msg OutboundMessage) error {
 	var formattedMsg []byte
 
 	switch msg.Command {
-	case protocol.Reorg:
 
 	case protocol.NewJoiner:
 		formattedMsg = []byte(msg.Message)
-
-	case protocol.HasStarted:
-		formattedMsg = []byte("STARTED")
 
 	default:
 		payload, err := json.Marshal(msg)

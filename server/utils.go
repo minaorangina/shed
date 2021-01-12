@@ -184,8 +184,8 @@ func newServerWithInactiveGame(t *testing.T, ps shed.Players) (*GameServer, stri
 	return server, gameID
 }
 
-// newTestServerWithInactiveGame returns an httptest.Server with an inactive game
-// and some hard-coded values
+// newTestServerWithInactiveGame returns an httptest.Server and
+// the game id of an inactive game
 func newTestServerWithInactiveGame(t *testing.T, ps shed.Players, info []shed.PlayerInfo) (*httptest.Server, string) {
 	store := &shed.InMemoryGameStore{
 		Games:          map[string]shed.GameEngine{},

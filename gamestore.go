@@ -58,6 +58,7 @@ func (s *InMemoryGameStore) FindInactiveGame(ID string) GameEngine {
 	if !ok {
 		return nil
 	}
+	// to be replaced by something real
 	if game.PlayState() != Idle {
 		return nil
 	}

@@ -153,17 +153,18 @@ func TestStartGame(t *testing.T) {
 
 	// Then the start event is broadcast to all players
 	utils.Within(t, serverTestTimeout, func() {
-		_, bytes, err := player2Conn.ReadMessage()
-		utils.AssertNoError(t, err)
-		utils.AssertTrue(t, len(bytes) > 0)
-		utils.AssertEqual(t, string(bytes), "STARTED")
-	})
-
-	utils.Within(t, serverTestTimeout, func() {
 		_, bytes, err := creatorConn.ReadMessage()
+		var data shed.OutboundMessage
+		err = json.Unmarshal(bytes, &data)
 		utils.AssertNoError(t, err)
-		utils.AssertTrue(t, len(bytes) > 0)
-		utils.AssertEqual(t, string(bytes), "STARTED")
+
+		utils.AssertEqual(t, data.Command, protocol.HasStarted)
+
+		_, bytes, err = player2Conn.ReadMessage()
+		err = json.Unmarshal(bytes, &data)
+		utils.AssertNoError(t, err)
+
+		utils.AssertEqual(t, data.Command, protocol.HasStarted)
 	})
 
 	// and it's no longer possible for players to join the game
@@ -212,5 +213,61 @@ func TestServerNotEnoughPlayers(t *testing.T) {
 		utils.AssertNoError(t, err)
 
 		utils.AssertEqual(t, data.Command, protocol.Error)
+	})
+}
+
+func TestServerGameStart(t *testing.T) {
+	// Given a server with an inactive game
+	creatorID := "player-1"
+	otherPlayerID := "player-2"
+	server, gameID := newTestServerWithInactiveGame(t, nil, []shed.PlayerInfo{
+		{
+			PlayerID: creatorID,
+			Name:     "Penelope",
+		},
+		{
+			PlayerID: otherPlayerID,
+			Name:     "Wendy",
+		},
+	})
+	// And active ws connections for each player
+	creatorConn := mustDialWS(t, makeWSUrl(server.URL, gameID, creatorID))
+	defer creatorConn.Close()
+
+	p2Conn := mustDialWS(t, makeWSUrl(server.URL, gameID, otherPlayerID))
+	defer p2Conn.Close()
+
+	// When the creator starts the game
+	data, err := json.Marshal(shed.InboundMessage{
+		PlayerID: creatorID,
+		Command:  protocol.Start,
+	})
+	err = creatorConn.WriteMessage(websocket.TextMessage, data)
+	utils.AssertNoError(t, err)
+
+	// Then players are informed of the start of the game
+	utils.Within(t, serverTestTimeout, func() {
+		_, bytes, err := p2Conn.ReadMessage()
+		utils.AssertNoError(t, err)
+		utils.AssertTrue(t, len(bytes) > 0)
+
+		var data shed.OutboundMessage
+		err = json.Unmarshal(bytes, &data)
+		utils.AssertNoError(t, err)
+
+		utils.AssertEqual(t, data.Command, protocol.HasStarted)
+	})
+
+	// And after a small delay, the game actually begins
+	utils.Within(t, time.Millisecond*1500, func() {
+		_, bytes, err := p2Conn.ReadMessage()
+		utils.AssertNoError(t, err)
+		utils.AssertTrue(t, len(bytes) > 0)
+
+		var data shed.OutboundMessage
+		err = json.Unmarshal(bytes, &data)
+		utils.AssertNoError(t, err)
+
+		utils.AssertEqual(t, data.Command, protocol.Reorg)
 	})
 }

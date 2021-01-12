@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/minaorangina/shed/protocol"
 )
@@ -132,28 +133,33 @@ func (ge *gameEngine) Start() error {
 
 	// mutex
 	ge.playState = InProgress
+	ge.Play()
 
 	return nil
 }
 
 func (ge *gameEngine) Play() {
-	for inbound := range ge.gameCh {
-		var (
-			outbound []OutboundMessage
-			err      error
-		)
+	// this will need some way to shutdown gracefully
+	go func() {
+		for inbound := range ge.gameCh {
+			var (
+				outbound []OutboundMessage
+				err      error
+			)
 
-		if len(inbound) == 0 {
-			outbound, err = ge.game.Next()
-		} else {
-			outbound, err = ge.game.ReceiveResponse(inbound)
+			if len(inbound) == 0 {
+				outbound, err = ge.game.Next()
+			} else {
+				outbound, err = ge.game.ReceiveResponse(inbound)
+			}
+			if err != nil {
+				// err
+			}
+			ge.Send(outbound)
 		}
-		if err != nil {
-			// err
-		}
+	}()
 
-		ge.Send(outbound)
-	}
+	ge.gameCh <- []InboundMessage{}
 }
 
 // Listen forwards outbound messages to target Players
@@ -214,7 +220,7 @@ func (ge *gameEngine) Listen() {
 			switch msg.Command {
 
 			case protocol.Start:
-				err := ge.game.Start(ge.players.IDs())
+				err := ge.Start()
 				if err != nil {
 					p, _ := ge.players.Find(msg.PlayerID)
 
@@ -223,13 +229,15 @@ func (ge *gameEngine) Listen() {
 						Command:  protocol.Error,
 						Error:    err.Error(),
 					})
+					continue
 				}
-
-				ge.Start()
 
 				for _, p := range ge.players {
-					p.Send(buildGameHasStartedMessage(p)) // broadcast
+					p.Send(buildGameHasStartedMessage(p))
 				}
+				// small delay before game starts
+				<-time.After(time.Second * 1)
+				ge.Start()
 
 			case protocol.Reorg:
 
@@ -310,7 +318,7 @@ func buildGameHasStartedMessage(recipient Player) OutboundMessage {
 	return OutboundMessage{
 		PlayerID: recipient.ID(),
 		Name:     recipient.Name(),
-		Message:  fmt.Sprintf("STARTED"),
+		Message:  fmt.Sprintf("Game is starting!"),
 		Command:  protocol.HasStarted,
 	}
 }

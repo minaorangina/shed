@@ -66,6 +66,17 @@ func AssertDeepEqual(t *testing.T, got, want interface{}) {
 	}
 }
 
+// AssertEqualToOneOf checks that at least one of the values are equal
+func AssertEqualToOneOf(t *testing.T, got interface{}, want ...interface{}) {
+	t.Helper()
+	for _, w := range want {
+		if got == w {
+			return
+		}
+	}
+	FailureMessage(t, got, want)
+}
+
 func AssertStringEquality(t *testing.T, got, want string) {
 	t.Helper()
 	if want != got {
