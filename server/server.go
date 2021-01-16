@@ -129,7 +129,6 @@ func (g *GameServer) HandleNewGame(w http.ResponseWriter, r *http.Request) {
 	var data NewGameReq
 	err := json.NewDecoder(r.Body).Decode(&data)
 	defer r.Body.Close()
-
 	if err != nil {
 		writeParseError(err, w, r)
 		return

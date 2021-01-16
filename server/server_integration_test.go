@@ -43,6 +43,7 @@ func TestCreateAndJoinNewGame(t *testing.T) {
 	utils.AssertNoError(t, err)
 	utils.AssertNotEmptyString(t, createPayload.GameID)
 	utils.AssertNotEmptyString(t, createPayload.PlayerID)
+	utils.AssertNotEmptyString(t, createPayload.Name)
 	utils.AssertTrue(t, createPayload.Admin)
 
 	// an entry for the game exists in the store
@@ -114,6 +115,10 @@ func TestCreateAndJoinNewGame(t *testing.T) {
 		_, got, err := creatorConn.ReadMessage()
 		utils.AssertNoError(t, err)
 		utils.AssertTrue(t, len(got) > 0)
+		var payload shed.OutboundMessage
+		err = json.Unmarshal(got, &payload)
+		utils.AssertNoError(t, err)
+		utils.AssertEqual(t, payload.Joiner, joinerName)
 	})
 }
 
