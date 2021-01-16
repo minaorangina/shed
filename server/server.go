@@ -36,7 +36,7 @@ type PendingGameRes struct {
 	PlayerID string   `json:"player_id"`
 	Name     string   `json:"name"`
 	Admin    bool     `json:"is_admin"`
-	Players  []string `json:players`
+	Players  []string `json:"players"`
 }
 
 type JoinGameReq struct {
