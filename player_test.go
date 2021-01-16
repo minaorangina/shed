@@ -56,7 +56,7 @@ func TestPlayers(t *testing.T) {
 		extraPlayerID := "another-player"
 		extraPlayerName := "Human"
 
-		ps = AddPlayer(ps, APlayer(extraPlayerID, extraPlayerName))
+		ps = AppendPlayer(ps, APlayer(extraPlayerID, extraPlayerName))
 
 		_, ok := ps.Find(extraPlayerID)
 
@@ -72,8 +72,8 @@ func TestPlayers(t *testing.T) {
 		extraPlayerName := "Human"
 		extraPlayer := APlayer(extraPlayerID, extraPlayerName)
 
-		ps = AddPlayer(ps, extraPlayer)
-		ps = AddPlayer(ps, extraPlayer)
+		ps = AppendPlayer(ps, extraPlayer)
+		ps = AppendPlayer(ps, extraPlayer)
 
 		_, ok := ps.Find(extraPlayerID)
 

@@ -254,7 +254,8 @@ func mustDialWS(t *testing.T, url string) *websocket.Conn {
 	ws, resp, err := websocket.DefaultDialer.Dial(url, nil)
 
 	if err != nil {
-		t.Fatalf("could not open a ws connection on %s, code %d: %v", url, resp.StatusCode, err)
+		body, _ := ioutil.ReadAll(resp.Body)
+		t.Fatalf("could not open a ws connection on %s, code %d: %s, %v", url, resp.StatusCode, body, err)
 	}
 	if ws == nil {
 		t.Fatal("unexpected nil websocket conn")

@@ -3,7 +3,6 @@ package server
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"testing"
@@ -44,6 +43,7 @@ func TestCreateAndJoinNewGame(t *testing.T) {
 	utils.AssertNoError(t, err)
 	utils.AssertNotEmptyString(t, createPayload.GameID)
 	utils.AssertNotEmptyString(t, createPayload.PlayerID)
+	utils.AssertTrue(t, createPayload.Admin)
 
 	// an entry for the game exists in the store
 	game := store.FindInactiveGame(createPayload.GameID)
@@ -87,6 +87,8 @@ func TestCreateAndJoinNewGame(t *testing.T) {
 	err = json.Unmarshal(bodyBytes, &joinPayload)
 	utils.AssertNoError(t, err)
 	utils.AssertNotEmptyString(t, joinPayload.PlayerID)
+	utils.AssertDeepEqual(t, joinPayload.Players, []string{createPayload.Name})
+	utils.AssertEqual(t, joinPayload.Admin, false)
 
 	// and a pending player is created
 	utils.AssertNotNil(t,
@@ -117,18 +119,18 @@ func TestCreateAndJoinNewGame(t *testing.T) {
 
 func TestStartGame(t *testing.T) {
 	// Given an inactive game and players with ws connections
+	creatorID, player2ID := "hersha-1", "penny-1"
+	creatorName, player2Name := "Hersha", "Penelope"
 	server, gameID := newTestServerWithInactiveGame(t, nil, []shed.PlayerInfo{
 		{
-			PlayerID: "penny-1",
-			Name:     "Penelope",
+			PlayerID: creatorID,
+			Name:     creatorName,
 		},
 		{
-			PlayerID: "hersha-1",
-			Name:     "Hersha",
+			PlayerID: player2ID,
+			Name:     player2Name,
 		},
 	})
-
-	creatorID, player2ID := "hersha-1", "pending-player-id"
 
 	url := makeWSUrl(server.URL, gameID, creatorID)
 	creatorConn := mustDialWS(t, url)
@@ -146,7 +148,7 @@ func TestStartGame(t *testing.T) {
 		var data shed.OutboundMessage
 		err = json.Unmarshal(bytes, &data)
 		utils.AssertNoError(t, err)
-		utils.AssertEqual(t, string(data.Message), fmt.Sprintf("Hersha has joined the game!"))
+		utils.AssertEqual(t, data.Joiner, player2Name)
 	})
 
 	// When the creator sends the command to start the game

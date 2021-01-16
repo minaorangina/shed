@@ -15,13 +15,16 @@ import (
 )
 
 var (
-	homepage            = "./static/index.html"
+	homepage            = "./build/index.html"
 	waitingRoomTemplate = "./static/waiting-room.tmpl"
 )
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
 }
 
 type NewGameReq struct {
@@ -29,9 +32,11 @@ type NewGameReq struct {
 }
 
 type PendingGameRes struct {
-	GameID   string `json:"game_id"`
-	PlayerID string `json:"player_id"`
-	Name     string `json:"name"`
+	GameID   string   `json:"game_id"`
+	PlayerID string   `json:"player_id"`
+	Name     string   `json:"name"`
+	Admin    bool     `json:"is_admin"`
+	Players  []string `json:players`
 }
 
 type JoinGameReq struct {
@@ -57,6 +62,13 @@ func unknownGameIDMsg(unknownID string) string {
 	return fmt.Sprintf("unknown game ID '%s'", unknownID)
 }
 
+func enableCors(handler http.HandlerFunc) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		handler.ServeHTTP(w, r)
+	}
+}
+
 func servePage(w http.ResponseWriter, path string) {
 	log.Print(path)
 	tmpl, err := template.ParseFiles(path)
@@ -74,23 +86,26 @@ func NewServer(store shed.GameStore) *GameServer {
 	s := new(GameServer)
 
 	router := http.NewServeMux()
-	fileServer := http.FileServer(http.Dir("./static"))
 
 	router.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Root endpoint")
 		if r.URL.Path != "/" {
+			log.Println(r.URL.Path)
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
 		servePage(w, homepage)
 	}))
-	router.Handle("/static/", http.StripPrefix("/static/", fileServer))
-	router.Handle("/new", http.HandlerFunc(s.HandleNewGame))
+
+	fileServer := http.FileServer(http.Dir("./build"))
+	router.Handle("/static/", fileServer)
+	router.Handle("/build/", http.StripPrefix("/build/", fileServer))
+	router.Handle("/new", http.HandlerFunc(enableCors(s.HandleNewGame)))
 	router.Handle("/game/", http.HandlerFunc(s.HandleFindGame))
-	router.Handle("/join", http.HandlerFunc(s.HandleJoinGame))
+	router.Handle("/join", http.HandlerFunc(enableCors(s.HandleJoinGame)))
 	router.Handle("/waiting-room", http.HandlerFunc(s.HandleWaitingRoom))
-	router.Handle("/ws", http.HandlerFunc(s.HandleWS))
+	router.Handle("/ws", http.HandlerFunc(enableCors(s.HandleWS)))
 
 	s.store = store
 
@@ -156,7 +171,13 @@ func (g *GameServer) HandleNewGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	payload := PendingGameRes{gameID, playerID, data.Name}
+	payload := PendingGameRes{
+		GameID:   gameID,
+		PlayerID: playerID,
+		Name:     data.Name,
+		Admin:    true,
+	}
+
 	bytes, err := json.Marshal(payload)
 	if err != nil {
 		log.Println(err.Error())
@@ -254,11 +275,19 @@ func (g *GameServer) HandleJoinGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	playerNames := []string{}
+	ps := game.Players()
+	for _, p := range ps {
+		playerNames = append(playerNames, p.Name())
+	}
+
 	payload := PendingGameRes{
 		PlayerID: playerID,
 		GameID:   data.GameID,
 		Name:     data.Name,
+		Players:  playerNames,
 	}
+
 	bytes, err := json.Marshal(payload)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -319,8 +348,10 @@ func (g *GameServer) HandleWaitingRoom(w http.ResponseWriter, r *http.Request) {
 func (g *GameServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	vals, ok := query["game_id"]
+	log.Println(vals, ok)
 	if !ok || len(vals) != 1 {
-		w.WriteHeader(http.StatusInternalServerError)
+		log.Println("missing game ID")
+		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("missing game ID"))
 		return
 	}
@@ -328,8 +359,9 @@ func (g *GameServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 
 	vals, ok = query["player_id"]
 	if !ok || len(vals) != 1 {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("missing user ID"))
+		log.Println("missing player ID")
+		w.Write([]byte("missing player ID"))
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -343,8 +375,9 @@ func (g *GameServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 
 	pendingPlayer := g.store.FindPendingPlayer(gameID, playerID)
 	if pendingPlayer == nil {
+		log.Println("missing player ID")
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("unknown user id"))
+		w.Write([]byte("unknown player ID"))
 		return
 	}
 

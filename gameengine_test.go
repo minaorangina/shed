@@ -63,7 +63,7 @@ func TestGameEngineAddPlayer(t *testing.T) {
 			err := json.Unmarshal(msg, &data)
 			utils.AssertNoError(t, err)
 			fmt.Println(data)
-			utils.AssertEqual(t, fmt.Sprintf("%s has joined the game!", joiningPlayer.Name()), string(data.Message))
+			utils.AssertEqual(t, data.Joiner, joiningPlayer.Name())
 		})
 	})
 }

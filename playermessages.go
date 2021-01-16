@@ -50,6 +50,7 @@ type OutboundMessage struct {
 	PlayerID         string       `json:"player_id"`
 	Command          protocol.Cmd `json:"command"`
 	Name             string       `json:"name"` // pointless?
+	Joiner           string       `json"joiner",omitempty`
 	Message          string       `json:"message"`
 	Hand             []deck.Card  `json:"hand"`
 	Seen             []deck.Card  `json:"seen"`
