@@ -3,7 +3,6 @@ package shed
 import (
 	"errors"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -126,7 +125,6 @@ func (ge *gameEngine) Start() error {
 	if ge.game == nil {
 		return ErrNilGame
 	}
-
 	err := ge.game.Start(ge.players.IDs())
 	if err != nil {
 		return err
@@ -186,7 +184,6 @@ func (ge *gameEngine) Listen() {
 					continue
 				}
 				outbound := buildNewJoinerMessage(joiner, p)
-				log.Printf("PLAYERID: %s\nmsg: %#v\n", p.ID(), outbound)
 				p.Send(outbound)
 			}
 
@@ -203,25 +200,12 @@ func (ge *gameEngine) Listen() {
 
 		case msgs := <-ge.outboundCh:
 			ge.messagePlayers(msgs)
-
-			if ge.game.AwaitingResponse() {
-				// set expected command in a more robust way
-				commTracker.mu.Lock()
-				commTracker.expectedCommand = msgs[0].Command
-				commTracker.mu.Unlock()
-			} else {
+			if ge.game.AwaitingResponse() == protocol.Null {
 				ge.sendToGame(nil)
 			}
 
 		case msg := <-ge.inboundCh:
-			// Ignore messages that are not expected
-			if msg.Command != commTracker.expectedCommand {
-				continue
-			}
-
-			switch msg.Command {
-
-			case protocol.Start:
+			if msg.Command == protocol.Start {
 				err := ge.Start()
 				if err != nil {
 					p, _ := ge.players.Find(msg.PlayerID)
@@ -238,11 +222,19 @@ func (ge *gameEngine) Listen() {
 					p.Send(buildGameHasStartedMessage(p))
 				}
 				// small delay before game starts
-				<-time.After(time.Second * 1)
-				ge.Start()
+				<-time.After(time.Millisecond * 400)
+				ge.sendToGame(nil)
 
+				continue
+			}
+
+			// Ignore messages that are not expected
+			if msg.Command != commTracker.expectedCommand {
+				continue
+			}
+
+			switch msg.Command {
 			case protocol.Reorg:
-
 				commTracker.messages = append(commTracker.messages, msg)
 				if len(commTracker.messages) == len(ge.Players()) {
 					commTracker.mu.Lock()

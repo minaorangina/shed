@@ -5,14 +5,15 @@ import (
 	"sort"
 
 	"github.com/minaorangina/shed/deck"
+	"github.com/minaorangina/shed/protocol"
 )
 
 type SpyGame struct {
 	startCalled bool
 }
 
-func (g *SpyGame) AwaitingResponse() bool {
-	return true
+func (g *SpyGame) AwaitingResponse() protocol.Cmd {
+	return protocol.Null
 }
 
 func (g *SpyGame) Start(playerIDs []string) error {

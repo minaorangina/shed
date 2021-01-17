@@ -69,7 +69,7 @@ func TestGameStageZero(t *testing.T) {
 		}
 
 		// and the game is awaiting a response
-		utils.AssertTrue(t, game.awaitingResponse)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.Reorg)
 	})
 
 	t.Run("reorganised cards handled correctly", func(t *testing.T) {
@@ -168,7 +168,7 @@ func TestGameStageOne(t *testing.T) {
 		moves := getMoves(msgs, game.currentPlayerID)
 
 		// And the game expects a response
-		utils.AssertTrue(t, game.awaitingResponse)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.PlayHand)
 
 		// And when player response is received
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
@@ -202,7 +202,7 @@ func TestGameStageOne(t *testing.T) {
 		// expecting a response only from the current player
 		utils.AssertEqual(t, len(msgs), len(game.playerIDs))
 		checkReceiveResponseMessages(t, msgs, protocol.ReplenishHand, game)
-		utils.AssertTrue(t, game.awaitingResponse)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.ReplenishHand)
 
 		// And when the current player acks and releases their turn
 		previousPlayerID := game.currentPlayerID
@@ -308,6 +308,7 @@ func TestGameStageOne(t *testing.T) {
 		// when a player takes their turn
 		msgs, err := game.Next()
 		utils.AssertNoError(t, err)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.SkipTurn)
 
 		newHandSize := len(game.playerCards[game.currentPlayerID].Hand)
 		newPileSize := len(game.pile)
@@ -325,11 +326,11 @@ func TestGameStageOne(t *testing.T) {
 		utils.AssertEqual(t, len(msgs), len(game.playerIDs))
 
 		// and the current player's OutboundMessage has the expected content
-		utils.AssertTrue(t, msgs[0].AwaitingResponse)
+		utils.AssertTrue(t, msgs[0].ShouldRespond)
 		utils.AssertEqual(t, msgs[0].Command, protocol.SkipTurn)
 
 		// and the other players' OutboundMessages have the expected content
-		utils.AssertEqual(t, msgs[1].AwaitingResponse, false)
+		utils.AssertEqual(t, msgs[1].ShouldRespond, false)
 		utils.AssertEqual(t, msgs[1].Command, protocol.SkipTurn)
 
 		// and the current player's response is handled correctly
@@ -340,7 +341,7 @@ func TestGameStageOne(t *testing.T) {
 		}})
 		utils.AssertNoError(t, err)
 		utils.AssertDeepEqual(t, response, []OutboundMessage(nil))
-		utils.AssertEqual(t, game.awaitingResponse, false)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.Null)
 
 		// and the next player is up
 		utils.AssertTrue(t, game.currentPlayerID != previousPlayerID)
@@ -395,7 +396,7 @@ func TestGameStageOne(t *testing.T) {
 
 		// Then the hand size is smaller, and the cards have changed
 		utils.AssertEqual(t, newHandSize, oldHandSize-1)
-		utils.AssertEqual(t, containsCard(newHand, targetCards...), false)
+		utils.AssertEqual(t, containsCard(newHand, targetCards...), false) // fails sometimes
 
 		// And the pile has two extra cards (from the hand)
 		utils.AssertEqual(t, newPileSize, oldPileSize+2)
@@ -408,7 +409,7 @@ func TestGameStageOne(t *testing.T) {
 		// expecting a response only from the current player
 		utils.AssertEqual(t, len(msgs), len(game.playerIDs))
 		checkReceiveResponseMessages(t, msgs, protocol.ReplenishHand, game)
-		utils.AssertTrue(t, game.awaitingResponse)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.ReplenishHand)
 
 		// And when the current player acks and releases their turn
 		previousPlayerID := game.currentPlayerID
@@ -457,7 +458,7 @@ func TestGameStageTwo(t *testing.T) {
 		msgs, err := game.Next()
 		utils.AssertNoError(t, err)
 		utils.AssertNotNil(t, msgs)
-		utils.AssertTrue(t, game.awaitingResponse)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.PlayHand)
 
 		moves := getMoves(msgs, game.currentPlayerID)
 
@@ -473,7 +474,7 @@ func TestGameStageTwo(t *testing.T) {
 			Decision: cardChoice,
 		}})
 		utils.AssertNoError(t, err)
-		utils.AssertTrue(t, game.awaitingResponse)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.EndOfTurn)
 
 		newHandSize := len(game.playerCards[game.currentPlayerID].Hand)
 		newSeenSize := len(game.playerCards[game.currentPlayerID].Seen)
@@ -492,7 +493,7 @@ func TestGameStageTwo(t *testing.T) {
 		utils.AssertNoError(t, err)
 
 		// Then the game is no longer expecting a response
-		utils.AssertEqual(t, game.awaitingResponse, false)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.Null)
 
 		// And it's the next player's turn
 		utils.AssertTrue(t, previousPlayerID != game.currentPlayerID)
@@ -527,6 +528,7 @@ func TestGameStageTwo(t *testing.T) {
 		// When the player starts their turn
 		msgs, err := game.Next()
 		utils.AssertNoError(t, err)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.PlaySeen)
 
 		// Then everyone is informed
 		checkNextMessages(t, msgs, protocol.PlaySeen, game)
@@ -566,14 +568,14 @@ func TestGameStageTwo(t *testing.T) {
 			utils.AssertEqual(t, m.Command, protocol.EndOfTurn)
 
 			if m.PlayerID == game.currentPlayerID {
-				utils.AssertTrue(t, m.AwaitingResponse)
+				utils.AssertTrue(t, m.ShouldRespond)
 			} else {
-				utils.AssertEqual(t, m.AwaitingResponse, false)
+				utils.AssertEqual(t, m.ShouldRespond, false)
 			}
 		}
 
 		// And the game expects an ack from the player
-		utils.AssertTrue(t, game.awaitingResponse)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.EndOfTurn)
 
 		previousPlayerID := game.currentPlayerID
 		// And when the player sends an ack
@@ -584,7 +586,7 @@ func TestGameStageTwo(t *testing.T) {
 		utils.AssertNoError(t, err)
 
 		// Then it's the next player's turn
-		utils.AssertEqual(t, game.awaitingResponse, false)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.Null)
 		utils.AssertTrue(t, previousPlayerID != game.currentPlayerID)
 	})
 
@@ -638,11 +640,11 @@ func TestGameStageTwo(t *testing.T) {
 		utils.AssertEqual(t, len(msgs), len(game.playerIDs))
 
 		// and the current player's OutboundMessage has the expected content
-		utils.AssertTrue(t, msgs[0].AwaitingResponse)
+		utils.AssertTrue(t, msgs[0].ShouldRespond)
 		utils.AssertEqual(t, msgs[0].Command, protocol.SkipTurn)
 
 		// and the other players' OutboundMessages have the expected content
-		utils.AssertEqual(t, msgs[1].AwaitingResponse, false)
+		utils.AssertEqual(t, msgs[1].ShouldRespond, false)
 		utils.AssertEqual(t, msgs[1].Command, protocol.SkipTurn)
 
 		// and the current player's response is handled correctly
@@ -653,7 +655,7 @@ func TestGameStageTwo(t *testing.T) {
 		}})
 		utils.AssertNoError(t, err)
 		utils.AssertDeepEqual(t, response, []OutboundMessage(nil))
-		utils.AssertEqual(t, game.awaitingResponse, false)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.Null)
 
 		// and the next player is up
 		utils.AssertTrue(t, game.currentPlayerID != previousPlayerID)
@@ -709,7 +711,7 @@ func TestGameStageTwo(t *testing.T) {
 			Decision: cardChoice,
 		}})
 		utils.AssertNoError(t, err)
-		utils.AssertEqual(t, game.awaitingResponse, true)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.UnseenSuccess)
 
 		newHandSize := len(game.playerCards[game.currentPlayerID].Hand)
 		newUnseenSize := len(game.playerCards[game.currentPlayerID].Unseen)
@@ -727,7 +729,7 @@ func TestGameStageTwo(t *testing.T) {
 			Command:  protocol.UnseenSuccess,
 		}})
 		utils.AssertNoError(t, err)
-		utils.AssertEqual(t, game.awaitingResponse, false)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.Null)
 
 		// And it's the next player's turn
 		utils.AssertTrue(t, previousPlayerID != game.currentPlayerID)
@@ -796,7 +798,7 @@ func TestGameStageTwo(t *testing.T) {
 		checkReceiveResponseMessages(t, msgs, protocol.UnseenFailure, game)
 
 		// And the game is expecting an ack
-		utils.AssertTrue(t, game.awaitingResponse)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.UnseenFailure)
 
 		// And when the player's ack is received
 		previousPlayerID := game.currentPlayerID
@@ -806,7 +808,7 @@ func TestGameStageTwo(t *testing.T) {
 		}})
 
 		utils.AssertNoError(t, err)
-		utils.AssertEqual(t, game.awaitingResponse, false)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.Null)
 
 		// Then it's the next player's turn
 		utils.AssertTrue(t, previousPlayerID != game.currentPlayerID)
@@ -859,7 +861,7 @@ func TestGameStageTwo(t *testing.T) {
 		checkPlayerFinishedMessages(t, msgs, game)
 
 		// And the game is expecting a response
-		utils.AssertTrue(t, game.awaitingResponse)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.PlayerFinished)
 
 		// And when the player acks
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
@@ -905,6 +907,7 @@ func TestGameStageTwo(t *testing.T) {
 		// When the player takes a legal turn
 		msgs, err := game.Next()
 		utils.AssertNoError(t, err)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.PlayHand)
 
 		previousPlayerID := game.currentPlayerID
 		previousNumPlayers := len(game.activePlayers)
@@ -921,7 +924,7 @@ func TestGameStageTwo(t *testing.T) {
 		checkPlayerFinishedMessages(t, msgs, game)
 
 		// And the game is expecting a response
-		utils.AssertTrue(t, game.awaitingResponse)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.PlayerFinished)
 
 		// And when the player acks
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
@@ -936,6 +939,7 @@ func TestGameStageTwo(t *testing.T) {
 
 		// And it's the next player's turn
 		utils.AssertTrue(t, game.currentPlayerID != previousPlayerID)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.Null)
 	})
 
 	t.Run("stage 2: game ends when n-1 players have finished (Unseen card)", func(t *testing.T) {
@@ -981,7 +985,7 @@ func TestGameStageTwo(t *testing.T) {
 		checkPlayerFinishedMessages(t, msgs, game)
 
 		// And the game is expecting a response
-		utils.AssertTrue(t, game.awaitingResponse)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.PlayerFinished)
 
 		// And when the player acks
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
@@ -994,7 +998,7 @@ func TestGameStageTwo(t *testing.T) {
 		checkGameOverMessages(t, msgs, game)
 
 		// And the game is NOT expecting a response
-		utils.AssertEqual(t, game.awaitingResponse, false)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.Null)
 
 		// And calling game.Next() returns the same game over message
 		msgs, err = game.Next()
@@ -1030,6 +1034,7 @@ func TestGameStageTwo(t *testing.T) {
 		// When the player takes a legal turn
 		msgs, err := game.Next()
 		utils.AssertNoError(t, err)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.PlayHand)
 
 		cardChoice := []int{0}
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
@@ -1043,7 +1048,7 @@ func TestGameStageTwo(t *testing.T) {
 		checkPlayerFinishedMessages(t, msgs, game)
 
 		// And the game is expecting a response
-		utils.AssertTrue(t, game.awaitingResponse)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.PlayerFinished)
 
 		// And when the player acks
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
@@ -1056,7 +1061,7 @@ func TestGameStageTwo(t *testing.T) {
 		checkGameOverMessages(t, msgs, game)
 
 		// And the game is NOT expecting a response
-		utils.AssertEqual(t, game.awaitingResponse, false)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.Null)
 
 		// And calling game.Next() returns the same game over message
 		msgs, err = game.Next()
@@ -1099,7 +1104,7 @@ func TestGameNext(t *testing.T) {
 	})
 
 	t.Run("game won't progress if waiting for a response", func(t *testing.T) {
-		game := NewShed(ShedOpts{awaitingResponse: true})
+		game := NewShed(ShedOpts{awaitingResponse: protocol.PlaySeen})
 		err := game.Start([]string{"p1", "p2", "p3"})
 		utils.AssertNoError(t, err)
 
@@ -1134,10 +1139,10 @@ func TestGameNext(t *testing.T) {
 			utils.AssertEqual(t, m.PlayerID, playerID)
 
 			if playerIdx == game.currentTurnIdx {
-				utils.AssertTrue(t, m.AwaitingResponse)
+				utils.AssertTrue(t, m.ShouldRespond)
 				utils.AssertEqual(t, m.Command, protocol.PlayHand)
 			} else {
-				utils.AssertEqual(t, m.AwaitingResponse, false)
+				utils.AssertEqual(t, m.ShouldRespond, protocol.Null)
 				utils.AssertEqual(t, m.Command, protocol.Turn)
 			}
 			utils.AssertDeepEqual(t, m.Hand, game.playerCards[playerID].Hand)
@@ -1170,6 +1175,7 @@ func TestGameNext(t *testing.T) {
 		msgs, err := game.Next()
 		utils.AssertNoError(t, err)
 		utils.AssertNotNil(t, msgs)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.PlayHand)
 
 		utils.AssertEqual(t, msgs[0].PlayerID, game.currentPlayerID)
 
@@ -1183,7 +1189,7 @@ func TestGameNext(t *testing.T) {
 		}})
 
 		// Then the game expects an ack
-		utils.AssertTrue(t, game.awaitingResponse)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.ReplenishHand)
 
 		// And when the game receives the ack
 		_, err = game.ReceiveResponse([]InboundMessage{{
@@ -1198,12 +1204,27 @@ func TestGameNext(t *testing.T) {
 
 func TestGameReceiveResponse(t *testing.T) {
 	t.Run("handles unexpected response", func(t *testing.T) {
-		game := NewShed(ShedOpts{})
+		game := NewShed(ShedOpts{stage: 1, currentPlayerID: "p1"})
 		err := game.Start([]string{"p1", "p2", "p3"})
 		utils.AssertNoError(t, err)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.Null)
 
 		_, err = game.ReceiveResponse([]InboundMessage{{PlayerID: "p1", Command: protocol.PlayHand}})
 		utils.AssertErrored(t, err)
+	})
+
+	t.Run("handles response with incorrect command", func(t *testing.T) {
+		game := NewShed(ShedOpts{
+			stage:            1,
+			awaitingResponse: protocol.PlayHand,
+			currentPlayerID:  "p1"})
+		err := game.Start([]string{"p1", "p2", "p3"})
+		utils.AssertNoError(t, err)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.PlayHand)
+
+		_, err = game.ReceiveResponse([]InboundMessage{{PlayerID: "p1", Command: protocol.PlayUnseen}})
+		utils.AssertErrored(t, err)
+		utils.AssertContains(t, err.Error(), "unexpected command")
 	})
 
 	t.Run("expects multiple responses in stage 0", func(t *testing.T) {
@@ -1213,6 +1234,7 @@ func TestGameReceiveResponse(t *testing.T) {
 
 		_, err = game.Next()
 		utils.AssertNoError(t, err)
+		utils.AssertEqual(t, game.awaitingResponse, protocol.Reorg)
 
 		p2NewCards := somePlayerCards(3)
 		p2NewCards.Unseen = game.playerCards["p2"].Unseen
@@ -1276,7 +1298,7 @@ func TestGameBurn(t *testing.T) {
 
 	msgs, err := game.Next()
 	utils.AssertNoError(t, err)
-	utils.AssertTrue(t, game.awaitingResponse)
+	utils.AssertEqual(t, game.awaitingResponse, protocol.PlayHand)
 
 	checkNextMessages(t, msgs, protocol.PlayHand, game)
 	moves := getMoves(msgs, game.currentPlayerID)
@@ -1294,7 +1316,7 @@ func TestGameBurn(t *testing.T) {
 
 	// Then the game sends burn messages to all players
 	// expecting a response only from the current player
-	utils.AssertTrue(t, game.awaitingResponse)
+	utils.AssertEqual(t, game.awaitingResponse, protocol.Burn)
 	utils.AssertEqual(t, len(msgs), len(game.playerIDs))
 	checkBurnMessages(t, msgs, game)
 
@@ -1324,7 +1346,7 @@ func checkNextMessages(t *testing.T, msgs []OutboundMessage, cmd protocol.Cmd, g
 		if m.PlayerID == game.currentPlayerID {
 			// and the current player is asked to make a choice
 			utils.AssertEqual(t, m.Command, cmd)
-			utils.AssertTrue(t, m.AwaitingResponse)
+			utils.AssertTrue(t, m.ShouldRespond)
 			utils.AssertTrue(t, len(m.Moves) > 0)
 		} else {
 			cmdForOtherPlayers := protocol.Turn
@@ -1332,7 +1354,7 @@ func checkNextMessages(t *testing.T, msgs []OutboundMessage, cmd protocol.Cmd, g
 				cmdForOtherPlayers = protocol.EndOfTurn
 			}
 			utils.AssertEqual(t, m.Command, cmdForOtherPlayers)
-			utils.AssertEqual(t, m.AwaitingResponse, false)
+			utils.AssertEqual(t, m.ShouldRespond, false)
 		}
 	}
 }
@@ -1347,10 +1369,10 @@ func checkReceiveResponseMessages(t *testing.T, msgs []OutboundMessage, currentP
 		if m.PlayerID == game.currentPlayerID {
 			// and the current player is asked to make a choice
 			utils.AssertEqual(t, m.Command, currentPlayerCmd)
-			utils.AssertTrue(t, m.AwaitingResponse)
+			utils.AssertTrue(t, m.ShouldRespond)
 		} else {
 			utils.AssertEqual(t, m.Command, protocol.EndOfTurn)
-			utils.AssertEqual(t, m.AwaitingResponse, false)
+			utils.AssertEqual(t, m.ShouldRespond, false)
 		}
 	}
 }
@@ -1364,9 +1386,9 @@ func checkPlayerFinishedMessages(t *testing.T, msgs []OutboundMessage, game *she
 		utils.AssertEqual(t, m.Command, protocol.PlayerFinished)
 
 		if m.PlayerID == game.currentPlayerID {
-			utils.AssertTrue(t, m.AwaitingResponse)
+			utils.AssertTrue(t, m.ShouldRespond)
 		} else {
-			utils.AssertEqual(t, m.AwaitingResponse, false)
+			utils.AssertEqual(t, m.ShouldRespond, false)
 		}
 	}
 }
@@ -1377,7 +1399,7 @@ func checkGameOverMessages(t *testing.T, msgs []OutboundMessage, game *shed) {
 	for _, m := range msgs {
 		utils.AssertEqual(t, m.Command, protocol.GameOver)
 		utils.AssertDeepEqual(t, m.Pile, game.pile)
-		utils.AssertEqual(t, m.AwaitingResponse, false)
+		utils.AssertEqual(t, m.ShouldRespond, false)
 		utils.AssertTrue(t, len(game.finishedPlayers) == len(game.playerIDs))
 	}
 }
@@ -1389,7 +1411,7 @@ func checkBurnMessages(t *testing.T, msgs []OutboundMessage, game *shed) {
 		utils.AssertEqual(t, m.Command, protocol.Burn)
 		utils.AssertDeepEqual(t, m.Pile, game.pile)
 		if m.PlayerID == game.currentPlayerID {
-			utils.AssertTrue(t, m.AwaitingResponse)
+			utils.AssertTrue(t, m.ShouldRespond)
 		}
 	}
 }

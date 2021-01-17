@@ -47,21 +47,21 @@ type InboundMessage struct {
 
 // OutboundMessage is a message from GameEngine to Player
 type OutboundMessage struct {
-	PlayerID         string       `json:"player_id"`
-	Command          protocol.Cmd `json:"command"`
-	Name             string       `json:"name"` // pointless?
-	Joiner           string       `json:"joiner,omitempty"`
-	Message          string       `json:"message"`
-	Hand             []deck.Card  `json:"hand"`
-	Seen             []deck.Card  `json:"seen"`
-	Pile             []deck.Card  `json:"pile"`
-	CurrentTurn      string       `json:"current_turn,omitempty"`
-	Moves            []int        `json:"moves,omitempty"`
-	Opponents        []Opponent   `json:"opponents,omitempty"`
-	FinishedPlayers  []string     `json:"finished_players,omitempty"`
-	AwaitingResponse bool         `json:"awaiting_response"`
-	Error            string       `json:"error,omitempty"`
-	DefaultMessage   InboundMessage
+	PlayerID        string       `json:"player_id"`
+	Command         protocol.Cmd `json:"command"`
+	Name            string       `json:"name"` // pointless?
+	Joiner          string       `json:"joiner,omitempty"`
+	Message         string       `json:"message"`
+	Hand            []deck.Card  `json:"hand"`
+	Seen            []deck.Card  `json:"seen"`
+	Pile            []deck.Card  `json:"pile"`
+	CurrentTurn     string       `json:"current_turn,omitempty"`
+	Moves           []int        `json:"moves,omitempty"`
+	Opponents       []Opponent   `json:"opponents,omitempty"`
+	FinishedPlayers []string     `json:"finished_players,omitempty"`
+	ShouldRespond   bool         `json:"should_respond"`
+	Error           string       `json:"error,omitempty"`
+	DefaultMessage  InboundMessage
 }
 
 // InitialCards represent the default cards dealt to a Player

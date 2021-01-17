@@ -3,6 +3,7 @@ package internal
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -108,6 +109,15 @@ func AssertNotEmptyString(t *testing.T, got string) {
 
 	if got == "" {
 		t.Error("unexpected empty string")
+	}
+}
+
+// AssertContains checks if the string contains the specified substring
+func AssertContains(t *testing.T, got, substring string) {
+	t.Helper()
+
+	if !strings.Contains(got, substring) {
+		t.Errorf("expected '%s' to contain %s (but it didn't)", got, substring)
 	}
 }
 

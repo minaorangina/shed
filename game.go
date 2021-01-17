@@ -28,7 +28,7 @@ type Game interface {
 	Start(playerIDs []string) error
 	Next() ([]OutboundMessage, error)
 	ReceiveResponse([]InboundMessage) ([]OutboundMessage, error)
-	AwaitingResponse() bool
+	AwaitingResponse() protocol.Cmd
 }
 
 type shed struct {
@@ -41,7 +41,7 @@ type shed struct {
 	currentPlayerID  string
 	currentTurnIdx   int
 	stage            Stage
-	awaitingResponse bool
+	awaitingResponse protocol.Cmd
 	gameOver         bool
 }
 
@@ -53,7 +53,7 @@ type ShedOpts struct {
 	finishedPlayers  []string
 	currentPlayerID  string
 	stage            Stage
-	awaitingResponse bool
+	awaitingResponse protocol.Cmd
 }
 
 // NewShed constructs a new game of Shed
@@ -110,7 +110,7 @@ func NewShed(opts ShedOpts) *shed {
 	return s
 }
 
-func (s *shed) AwaitingResponse() bool {
+func (s *shed) AwaitingResponse() protocol.Cmd {
 	return s.awaitingResponse
 }
 
@@ -152,7 +152,7 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 	if s.playerCards == nil || len(s.playerCards) == 0 {
 		return nil, ErrNoPlayers
 	}
-	if s.awaitingResponse {
+	if s.awaitingResponse != protocol.Null {
 		return nil, ErrGameAwaitingResponse
 	}
 	if s.gameOver {
@@ -166,31 +166,46 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 	case preGame:
 		for _, id := range s.playerIDs {
 			m := OutboundMessage{
-				PlayerID:         id,
-				Command:          protocol.Reorg,
-				Hand:             s.playerCards[id].Hand,
-				Seen:             s.playerCards[id].Seen,
-				AwaitingResponse: true,
+				PlayerID:      id,
+				Command:       protocol.Reorg,
+				Hand:          s.playerCards[id].Hand,
+				Seen:          s.playerCards[id].Seen,
+				ShouldRespond: true,
 			}
 			msgs = append(msgs, m)
 		}
 
-		s.awaitingResponse = true
+		s.awaitingResponse = protocol.Reorg
 		return msgs, nil
 
 	case clearDeck:
-		s.awaitingResponse = true
-		return s.attemptMove(protocol.PlayHand), nil
+		msgs, legalMoves := s.attemptMove(protocol.PlayHand)
+		if legalMoves {
+			s.awaitingResponse = protocol.PlayHand
+		} else {
+			s.awaitingResponse = protocol.SkipTurn
+		}
+		return msgs, nil
 
 	case clearCards:
 		if len(currentPlayerCards.Hand) > 0 {
-			s.awaitingResponse = true
-			return s.attemptMove(protocol.PlayHand), nil
+			msgs, legalMoves := s.attemptMove(protocol.PlayHand)
+			if legalMoves {
+				s.awaitingResponse = protocol.PlayHand
+			} else {
+				s.awaitingResponse = protocol.SkipTurn
+			}
+			return msgs, nil
 		}
 
 		if len(currentPlayerCards.Seen) > 0 {
-			s.awaitingResponse = true
-			return s.attemptMove(protocol.PlaySeen), nil
+			msgs, legalMoves := s.attemptMove(protocol.PlaySeen)
+			if legalMoves {
+				s.awaitingResponse = protocol.PlaySeen
+			} else {
+				s.awaitingResponse = protocol.SkipTurn
+			}
+			return msgs, nil
 		}
 
 		if len(currentPlayerCards.Unseen) > 0 {
@@ -200,7 +215,7 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 			}
 
 			toSend := s.buildTurnMessages(protocol.PlayUnseen, unseenIndices)
-			s.awaitingResponse = true
+			s.awaitingResponse = protocol.PlayUnseen
 			return toSend, nil
 		}
 
@@ -219,7 +234,7 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 	if s.playerCards == nil {
 		return nil, ErrNoPlayers
 	}
-	if !s.awaitingResponse {
+	if s.awaitingResponse == protocol.Null {
 		return nil, ErrGameUnexpectedResponse
 	}
 	if s.gameOver {
@@ -240,23 +255,26 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 
 		// switch to stage 1
 		s.stage = clearDeck
-		s.awaitingResponse = false
+		s.awaitingResponse = protocol.Null
 		return nil, nil
 	}
 
 	msg := inboundMsgs[0]
+	if msg.Command != s.awaitingResponse {
+		return nil, fmt.Errorf("unexpected command - got %s, want %s", msg.Command.String(), s.awaitingResponse.String())
+	}
 	if msg.PlayerID != s.currentPlayerID {
 		return nil, fmt.Errorf("unexpected message from player %s", msg.PlayerID)
 	}
 
 	if msg.Command == protocol.Burn { // ack
 		// player gets another turn
-		s.awaitingResponse = false
+		s.awaitingResponse = protocol.Null
 		return nil, nil
 	}
 
 	if msg.Command == protocol.SkipTurn { // ack
-		s.awaitingResponse = false
+		s.awaitingResponse = protocol.Null
 		s.turn()
 		return nil, nil
 	}
@@ -276,17 +294,17 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 			s.pluckFromDeck(msg)
 
 			if isBurn(s.pile) {
-				s.awaitingResponse = true // already set but let's be explicit
+				s.awaitingResponse = protocol.Burn
 				return s.buildBurnMessages(), nil
 			}
 
 			toSend := []OutboundMessage{{
-				PlayerID:         s.currentPlayerID,
-				Command:          protocol.ReplenishHand,
-				Hand:             s.playerCards[s.currentPlayerID].Hand,
-				Seen:             s.playerCards[s.currentPlayerID].Seen,
-				Pile:             s.pile,
-				AwaitingResponse: true,
+				PlayerID:      s.currentPlayerID,
+				Command:       protocol.ReplenishHand,
+				Hand:          s.playerCards[s.currentPlayerID].Hand,
+				Seen:          s.playerCards[s.currentPlayerID].Seen,
+				Pile:          s.pile,
+				ShouldRespond: true,
 			}}
 
 			for _, id := range s.playerIDs {
@@ -295,7 +313,7 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 				}
 			}
 
-			s.awaitingResponse = true
+			s.awaitingResponse = protocol.ReplenishHand
 			return toSend, nil
 
 		case protocol.ReplenishHand:
@@ -304,7 +322,7 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 				s.stage = clearCards
 			}
 
-			s.awaitingResponse = false
+			s.awaitingResponse = protocol.Null
 			s.turn()
 			return nil, nil
 		}
@@ -315,7 +333,7 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 		switch msg.Command {
 
 		case protocol.PlayerFinished:
-			s.awaitingResponse = false
+			s.awaitingResponse = protocol.Null
 			s.moveToFinishedPlayers() // handles the next turn
 
 			if s.gameIsOver() {
@@ -330,7 +348,7 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 		case protocol.EndOfTurn,
 			protocol.UnseenSuccess,
 			protocol.UnseenFailure: // ack
-			s.awaitingResponse = false
+			s.awaitingResponse = protocol.Null
 			s.turn()
 			return nil, nil
 
@@ -338,12 +356,12 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 			s.completeMove(msg)
 
 			if s.playerHasFinished() {
-				s.awaitingResponse = true
+				s.awaitingResponse = protocol.PlayerFinished
 				return s.buildPlayerFinishedMessages(), nil
 			}
 
 			toSend := s.buildEndOfTurnMessages(protocol.EndOfTurn)
-			s.awaitingResponse = true
+			s.awaitingResponse = protocol.EndOfTurn
 			return toSend, nil
 
 		case protocol.PlayUnseen:
@@ -360,16 +378,16 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 
 			if len(legalMoves) == 0 {
 				s.pickUpPile(s.currentPlayerID)
-				s.awaitingResponse = true
+				s.awaitingResponse = protocol.UnseenFailure
 				return s.buildEndOfTurnMessages(protocol.UnseenFailure), nil
 			}
 
 			if s.playerHasFinished() {
-				s.awaitingResponse = true
+				s.awaitingResponse = protocol.PlayerFinished
 				return s.buildPlayerFinishedMessages(), nil
 			}
 
-			s.awaitingResponse = true
+			s.awaitingResponse = protocol.UnseenSuccess
 			return s.buildEndOfTurnMessages(protocol.UnseenSuccess), nil
 		}
 	}
@@ -378,7 +396,7 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 }
 
 // step 1 of 2 in a player playing their cards (Hand or Seen)
-func (s *shed) attemptMove(currentPlayerCmd protocol.Cmd) []OutboundMessage {
+func (s *shed) attemptMove(currentPlayerCmd protocol.Cmd) ([]OutboundMessage, bool) {
 	var cards []deck.Card
 	switch currentPlayerCmd {
 
@@ -395,14 +413,14 @@ func (s *shed) attemptMove(currentPlayerCmd protocol.Cmd) []OutboundMessage {
 	legalMoves := getLegalMoves(s.pile, cards)
 	if len(legalMoves) > 0 {
 		toSend := s.buildTurnMessages(currentPlayerCmd, legalMoves)
-		return toSend
+		return toSend, true
 	}
 
 	// no legal moves
 	s.pickUpPile(s.currentPlayerID)
 
 	toSend := s.buildSkipTurnMessages(protocol.SkipTurn)
-	return toSend
+	return toSend, false
 }
 
 // step 2 of 2 of a player playing their cards (Hand or Seen)
@@ -495,13 +513,13 @@ func (s *shed) buildSkipTurnMessage(playerID string) OutboundMessage {
 
 func (s *shed) buildSkipTurnMessages(currentPlayerCmd protocol.Cmd) []OutboundMessage {
 	currentPlayerMsg := OutboundMessage{
-		PlayerID:         s.currentPlayerID,
-		Command:          currentPlayerCmd, // always SkipTurn
-		Hand:             s.playerCards[s.currentPlayerID].Hand,
-		Seen:             s.playerCards[s.currentPlayerID].Seen,
-		Pile:             s.pile,
-		Opponents:        buildOpponents(s.currentPlayerID, s.playerCards),
-		AwaitingResponse: true,
+		PlayerID:      s.currentPlayerID,
+		Command:       currentPlayerCmd, // always SkipTurn
+		Hand:          s.playerCards[s.currentPlayerID].Hand,
+		Seen:          s.playerCards[s.currentPlayerID].Seen,
+		Pile:          s.pile,
+		Opponents:     buildOpponents(s.currentPlayerID, s.playerCards),
+		ShouldRespond: true,
 	}
 
 	toSend := []OutboundMessage{currentPlayerMsg}
@@ -527,14 +545,14 @@ func (s *shed) buildTurnMessage(playerID string) OutboundMessage {
 
 func (s *shed) buildTurnMessages(currentPlayerCmd protocol.Cmd, moves []int) []OutboundMessage {
 	currentPlayerMsg := OutboundMessage{
-		PlayerID:         s.currentPlayerID,
-		Command:          currentPlayerCmd,
-		Hand:             s.playerCards[s.currentPlayerID].Hand,
-		Seen:             s.playerCards[s.currentPlayerID].Seen,
-		Pile:             s.pile,
-		Moves:            moves,
-		Opponents:        buildOpponents(s.currentPlayerID, s.playerCards),
-		AwaitingResponse: true,
+		PlayerID:      s.currentPlayerID,
+		Command:       currentPlayerCmd,
+		Hand:          s.playerCards[s.currentPlayerID].Hand,
+		Seen:          s.playerCards[s.currentPlayerID].Seen,
+		Pile:          s.pile,
+		Moves:         moves,
+		Opponents:     buildOpponents(s.currentPlayerID, s.playerCards),
+		ShouldRespond: true,
 	}
 
 	toSend := []OutboundMessage{currentPlayerMsg}
@@ -564,7 +582,7 @@ func (s *shed) buildEndOfTurnMessages(currentPlayerCommand protocol.Cmd) []Outbo
 		msg := s.buildEndOfTurnMessage(id)
 		if id == s.currentPlayerID {
 			msg.Command = currentPlayerCommand
-			msg.AwaitingResponse = true
+			msg.ShouldRespond = true
 		}
 		toSend = append(toSend, msg)
 	}
@@ -589,7 +607,7 @@ func (s *shed) buildPlayerFinishedMessages() []OutboundMessage {
 	for _, id := range s.playerIDs {
 		msg := s.buildPlayerFinishedMessage(id)
 		if id == s.currentPlayerID {
-			msg.AwaitingResponse = true
+			msg.ShouldRespond = true
 		}
 		toSend = append(toSend, msg)
 	}
@@ -628,7 +646,7 @@ func (s *shed) buildBurnMessages() []OutboundMessage {
 	for _, id := range s.playerIDs {
 		msg := s.buildBurnMessage(id)
 		if id == s.currentPlayerID {
-			msg.AwaitingResponse = true
+			msg.ShouldRespond = true
 		}
 		toSend = append(toSend, msg)
 	}
