@@ -132,33 +132,29 @@ func (ge *gameEngine) Start() error {
 
 	// mutex
 	ge.playState = InProgress
-	ge.Play()
+	go ge.Play()
 
 	return nil
 }
 
 func (ge *gameEngine) Play() {
 	// this will need some way to shutdown gracefully
-	go func() {
-		for inbound := range ge.gameCh {
-			var (
-				outbound []OutboundMessage
-				err      error
-			)
+	for inbound := range ge.gameCh {
+		var (
+			outbound []OutboundMessage
+			err      error
+		)
 
-			if len(inbound) == 0 {
-				outbound, err = ge.game.Next()
-			} else {
-				outbound, err = ge.game.ReceiveResponse(inbound)
-			}
-			if err != nil {
-				// err
-			}
-			ge.Send(outbound)
+		if len(inbound) == 0 {
+			outbound, err = ge.game.Next()
+		} else {
+			outbound, err = ge.game.ReceiveResponse(inbound)
 		}
-	}()
-
-	ge.gameCh <- []InboundMessage{}
+		if err != nil {
+			panic(fmt.Sprintf("error: %s\n%v", err.Error(), outbound))
+		}
+		ge.Send(outbound)
+	}
 }
 
 // Listen forwards outbound messages to target Players
