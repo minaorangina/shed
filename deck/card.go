@@ -1,6 +1,7 @@
 package deck
 
 import (
+	"encoding/json"
 	"fmt"
 )
 
@@ -60,6 +61,57 @@ func NewCard(rank Rank, suit Suit) Card {
 	return Card{Rank: Rank(rank), Suit: Suit(suit)}
 }
 
-func (rc Card) String() string {
-	return fmt.Sprintf("%s of %s", rankNames[rc.Rank], suitNames[rc.Suit])
+func (c Card) String() string {
+	return fmt.Sprintf("%s of %s", rankNames[c.Rank], suitNames[c.Suit])
+}
+
+func (c Card) ToWireCard() WireCard {
+	return WireCard{
+		Rank: rankNames[c.Rank],
+		Suit: suitNames[c.Suit],
+	}
+}
+
+func (c Card) MarshalJSON() ([]byte, error) {
+	return json.Marshal(c.ToWireCard())
+}
+
+func (c *Card) UnmarshalJSON(b []byte) error {
+	var wc WireCard
+	if err := json.Unmarshal(b, &wc); err != nil {
+		return err
+	}
+
+	*c = wc.ToCard()
+	return nil
+}
+
+type WireCard struct {
+	Rank string `json:"rank"`
+	Suit string `json:"suit"`
+}
+
+func (wc WireCard) String() string {
+	return fmt.Sprintf("%q of %q", wc.Rank, wc.Suit)
+}
+
+func (wc WireCard) ToCard() Card {
+	var rank Rank
+	var suit Suit
+
+	for i, name := range rankNames {
+		if name == wc.Rank {
+			rank = Rank(i)
+			break
+		}
+	}
+
+	for i, name := range suitNames {
+		if name == wc.Suit {
+			suit = Suit(i)
+			break
+		}
+	}
+
+	return NewCard(rank, suit)
 }

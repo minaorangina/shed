@@ -1,6 +1,7 @@
 package deck
 
 import (
+	"encoding/json"
 	"math/rand"
 	"testing"
 
@@ -43,5 +44,73 @@ func TestCard(t *testing.T) {
 	t.Run("get suit", func(t *testing.T) {
 		spade := NewCard(Rank(rand.Intn(13)), Suit(3))
 		utils.AssertEqual(t, spade.Suit.String(), "Spades")
+	})
+}
+
+func TestWireCard(t *testing.T) {
+	t.Run("type conversion from Card", func(t *testing.T) {
+		tt := []struct {
+			source Card
+			want   WireCard
+		}{
+			{
+				NewCard(Ace, Spades),
+				WireCard{
+					Rank: "Ace",
+					Suit: "Spades",
+				},
+			},
+		}
+
+		for _, tc := range tt {
+			t.Run(tc.source.String(), func(t *testing.T) {
+				got := tc.source.ToWireCard()
+				utils.AssertDeepEqual(t, got, tc.want)
+			})
+		}
+	})
+
+	t.Run("type conversion to Card", func(t *testing.T) {
+		tt := []struct {
+			source WireCard
+			want   Card
+		}{
+			{
+				WireCard{
+					Rank: "Ace",
+					Suit: "Spades",
+				},
+				NewCard(Ace, Spades),
+			},
+		}
+
+		for _, tc := range tt {
+			t.Run(tc.source.String(), func(t *testing.T) {
+				got := tc.source.ToCard()
+				utils.AssertDeepEqual(t, got, tc.want)
+			})
+		}
+	})
+
+	t.Run("unmarshal WireCard json to Card", func(t *testing.T) {
+		wc := WireCard{"Ace", "Spades"}
+		bytes, err := json.Marshal(wc)
+		utils.AssertNoError(t, err)
+
+		want := NewCard(Ace, Spades)
+
+		var got Card
+		err = json.Unmarshal(bytes, &got)
+		utils.AssertNoError(t, err)
+		utils.AssertDeepEqual(t, got, want)
+	})
+
+	t.Run("marshal Card to WireCard json", func(t *testing.T) {
+		want := []byte(`{"rank":"Four","suit":"Diamonds"}`)
+		card := NewCard(Four, Diamonds)
+
+		got, err := json.Marshal(card)
+		utils.AssertNoError(t, err)
+		utils.AssertStringEquality(t, string(got), string(want))
 	})
 }
