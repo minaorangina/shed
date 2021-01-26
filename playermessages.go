@@ -73,7 +73,7 @@ type InitialCards struct {
 
 // Opponent is a representation of an opponent player
 type Opponent struct {
-	ID   string      `json:"id"`
-	Name string      `json:"name"`
-	Seen []deck.Card `json:"opponent_seen"`
+	PlayerID string      `json:"player_id"`
+	Name     string      `json:"name"`
+	Seen     []deck.Card `json:"opponent_seen"`
 }

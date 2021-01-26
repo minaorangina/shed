@@ -85,7 +85,7 @@ func buildOpponents(playerID string, playerCards map[string]*PlayerCards) []Oppo
 	for id, pc := range playerCards {
 		if id != playerID {
 			opponents = append(opponents, Opponent{
-				ID: id, Seen: pc.Seen,
+				PlayerID: id, Seen: pc.Seen,
 			})
 		}
 	}
