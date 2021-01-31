@@ -240,7 +240,7 @@ func TestServerGETGame(t *testing.T) {
 
 		server.ServeHTTP(response, request)
 
-		want := GetGameRes{Status: "active", GameID: testID}
+		want := GetGameRes{Status: "InProgress", GameID: testID}
 
 		bodyBytes, err := ioutil.ReadAll(response.Result().Body)
 		utils.AssertNoError(t, err)
@@ -261,7 +261,7 @@ func TestServerGETGame(t *testing.T) {
 
 		server.ServeHTTP(response, request)
 
-		want := GetGameRes{Status: "pending", GameID: pendingID}
+		want := GetGameRes{Status: "Idle", GameID: pendingID}
 
 		bodyBytes, err := ioutil.ReadAll(response.Result().Body)
 		utils.AssertNoError(t, err)

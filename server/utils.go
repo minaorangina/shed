@@ -87,6 +87,10 @@ func (s fakeStore) ActivateGame(gameID string) error {
 	return nil
 }
 
+func (s fakeStore) FindGame(gameID string) shed.GameEngine {
+	return nil
+}
+
 func NewBasicStore() *shed.InMemoryGameStore {
 	return &shed.InMemoryGameStore{
 		Games:          map[string]shed.GameEngine{},

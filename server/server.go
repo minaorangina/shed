@@ -218,12 +218,17 @@ func (g *GameServer) HandleFindGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gameExists := findGame(g.store)
+	game := g.store.FindGame(gameID)
 
-	if !found {
+	if game == nil {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte(unknownGameIDMsg(gameID)))
 		return
+	}
+
+	response := GetGameRes{
+		Status: fmt.Sprint(game.PlayState()),
+		GameID: game.ID(),
 	}
 
 	responseBytes, err := json.Marshal(response)
@@ -415,12 +420,4 @@ func writeParseError(err error, w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-}
-
-func findGame(s shed.GameStore) bool {
-	game := g.store.FindGame(gameID)
-	if game != nil {
-		return true
-	}
-	return false
 }

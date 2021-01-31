@@ -26,11 +26,11 @@ type PlayState int
 
 func (gps PlayState) String() string {
 	if gps == 0 {
-		return "idle"
+		return "Idle"
 	} else if gps == 1 {
 		return "InProgress"
 	} else if gps == 2 {
-		return "paused"
+		return "Paused"
 	}
 	return ""
 }
