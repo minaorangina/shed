@@ -85,7 +85,11 @@ func TestGameStageZero(t *testing.T) {
 		// Then the game enters the reorganisation stage
 		utils.AssertEqual(t, game.stage, preGame)
 
-		p2NewCards := somePlayerCards(3)
+		p2Cards := game.playerCards["p2"]
+		p2NewCards := &PlayerCards{
+			Hand: []deck.Card{p2Cards.Hand[2], p2Cards.Seen[1], p2Cards.Seen[2]},
+			Seen: []deck.Card{p2Cards.Hand[0], p2Cards.Hand[1], p2Cards.Seen[0]},
+		}
 		p2NewCards.Unseen = game.playerCards["p2"].Unseen
 
 		want := map[string]*PlayerCards{
@@ -99,20 +103,17 @@ func TestGameStageZero(t *testing.T) {
 			{
 				PlayerID: "p1",
 				Command:  protocol.Reorg,
-				Hand:     game.playerCards["p1"].Hand,
-				Seen:     game.playerCards["p1"].Seen,
+				Decision: []int{0, 1, 2},
 			},
 			{
 				PlayerID: "p2",
 				Command:  protocol.Reorg,
-				Hand:     p2NewCards.Hand,
-				Seen:     p2NewCards.Seen,
+				Decision: []int{2, 4, 5},
 			},
 			{
 				PlayerID: "p3",
 				Command:  protocol.Reorg,
-				Hand:     game.playerCards["p3"].Hand,
-				Seen:     game.playerCards["p3"].Seen,
+				Decision: []int{0, 1, 2},
 			},
 		})
 

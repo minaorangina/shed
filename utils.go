@@ -111,6 +111,15 @@ func NewTestGameStore(
 	}
 }
 
+func intSliceToSet(s []int) map[int]struct{} {
+	set := map[int]struct{}{}
+	for i := range s {
+		set[i] = struct{}{}
+	}
+
+	return set
+}
+
 func setToIntSlice(set map[int]struct{}) []int {
 	s := []int{}
 	for key := range set {

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"sort"
 	"time"
 
 	"github.com/minaorangina/shed/protocol"
@@ -249,8 +250,23 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 		}
 
 		for _, m := range inboundMsgs {
-			s.playerCards[m.PlayerID].Hand = m.Hand
-			s.playerCards[m.PlayerID].Seen = m.Seen
+			cardIndicesSet := intSliceToSet([]int{0, 1, 2, 3, 4, 5})
+			newHand, newSeen := []deck.Card{}, []deck.Card{}
+
+			for _, v := range m.Decision {
+				newHand = append(newHand, s.getReorgCard(m.PlayerID, v))
+				delete(cardIndicesSet, v)
+			}
+
+			cardIndices := setToIntSlice(cardIndicesSet)
+			sort.Ints(cardIndices)
+
+			for _, v := range cardIndices {
+				newSeen = append(newSeen, s.getReorgCard(m.PlayerID, v))
+			}
+
+			s.playerCards[m.PlayerID].Hand = newHand
+			s.playerCards[m.PlayerID].Seen = newSeen
 		}
 
 		// switch to stage 1
@@ -652,4 +668,18 @@ func (s *shed) buildBurnMessages() []OutboundMessage {
 	}
 
 	return toSend
+}
+
+func (s *shed) getReorgCard(playerID string, choice int) deck.Card {
+	oldHand := s.playerCards[playerID].Hand
+	oldSeen := s.playerCards[playerID].Seen
+
+	var card deck.Card
+	if choice > 2 {
+		card = oldSeen[choice-3]
+	} else {
+		card = oldHand[choice]
+	}
+
+	return card
 }
