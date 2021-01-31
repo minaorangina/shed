@@ -6,8 +6,10 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/minaorangina/shed"
@@ -56,6 +58,19 @@ type GameServer struct {
 
 func NewID() string {
 	return uuid.NewV4().String()
+}
+
+func NewGameID() string {
+	letters := []byte("ABCDEFGHIJKLMNOPQURSTUVWXYZ")
+	var code = []byte{}
+
+	for i := 0; i < 6; i++ {
+		rand.Seed(time.Now().UnixNano())
+		idx := rand.Intn(25)
+		code = append(code, letters[idx])
+	}
+
+	return string(code)
 }
 
 func unknownGameIDMsg(unknownID string) string {
@@ -135,7 +150,8 @@ func (g *GameServer) HandleNewGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// generate game ID
-	gameID, playerID := NewID(), NewID()
+	gameID := NewGameID()
+	playerID := NewID()
 	game, err := shed.NewGameEngine(shed.GameEngineOpts{
 		GameID:    gameID,
 		CreatorID: playerID,
