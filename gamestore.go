@@ -6,9 +6,9 @@ import (
 )
 
 var (
-	ErrUnknownGameID          = errors.New("unknown game ID")
-	ErrUnknownPlayerID        = errors.New("unknown player ID")
-	ErrFnUnknownPendingGameID = func(gameID string) error {
+	ErrUnknownGameID           = errors.New("unknown game ID")
+	ErrUnknownPlayerID         = errors.New("unknown player ID")
+	ErrFnUnknownInactiveGameID = func(gameID string) error {
 		return fmt.Errorf("pending game with id \"%s\" does not exist", gameID)
 	}
 	ErrGameAlreadyStarted = errors.New("game has already started")
@@ -19,6 +19,7 @@ type PlayerInfo struct {
 }
 
 type GameStore interface {
+	FindGame(gameID string) GameEngine
 	FindActiveGame(gameID string) GameEngine
 	FindInactiveGame(gameID string) GameEngine
 	FindPendingPlayer(gameID, playerID string) *PlayerInfo
@@ -39,6 +40,15 @@ func NewInMemoryGameStore() *InMemoryGameStore {
 		Games:          map[string]GameEngine{},
 		PendingPlayers: map[string][]PlayerInfo{},
 	}
+}
+
+func (s *InMemoryGameStore) FindGame(ID string) GameEngine {
+	game, ok := s.Games[ID]
+	if !ok {
+		return nil
+	}
+
+	return game
 }
 
 // does this need a mutex?
@@ -95,7 +105,7 @@ func (s *InMemoryGameStore) AddInactiveGame(game GameEngine) error {
 func (s *InMemoryGameStore) AddPendingPlayer(gameID, playerID, name string) error {
 	game := s.FindInactiveGame(gameID)
 	if game == nil {
-		return ErrFnUnknownPendingGameID(gameID)
+		return ErrFnUnknownInactiveGameID(gameID)
 	}
 
 	if game.PlayState() != Idle {
@@ -111,7 +121,7 @@ func (s *InMemoryGameStore) AddPendingPlayer(gameID, playerID, name string) erro
 func (s *InMemoryGameStore) AddPlayerToGame(gameID string, player Player) error {
 	game := s.FindInactiveGame(gameID)
 	if game == nil {
-		return ErrFnUnknownPendingGameID(gameID)
+		return ErrFnUnknownInactiveGameID(gameID)
 	}
 
 	return game.AddPlayer(player)
