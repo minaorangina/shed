@@ -56,8 +56,9 @@ func TestWireCard(t *testing.T) {
 			{
 				NewCard(Ace, Spades),
 				WireCard{
-					Rank: "Ace",
-					Suit: "Spades",
+					Rank:          "Ace",
+					Suit:          "Spades",
+					CanonicalName: "Ace of Spades",
 				},
 			},
 		}
@@ -77,8 +78,9 @@ func TestWireCard(t *testing.T) {
 		}{
 			{
 				WireCard{
-					Rank: "Ace",
-					Suit: "Spades",
+					Rank:          "Ace",
+					Suit:          "Spades",
+					CanonicalName: "Ace of Spades",
 				},
 				NewCard(Ace, Spades),
 			},
@@ -93,7 +95,7 @@ func TestWireCard(t *testing.T) {
 	})
 
 	t.Run("unmarshal WireCard json to Card", func(t *testing.T) {
-		wc := WireCard{"Ace", "Spades"}
+		wc := WireCard{"Ace", "Spades", "Ace of Spades"}
 		bytes, err := json.Marshal(wc)
 		utils.AssertNoError(t, err)
 
@@ -106,7 +108,7 @@ func TestWireCard(t *testing.T) {
 	})
 
 	t.Run("marshal Card to WireCard json", func(t *testing.T) {
-		want := []byte(`{"rank":"Four","suit":"Diamonds"}`)
+		want := []byte(`{"rank":"Four","suit":"Diamonds","canonical_name":"Four of Diamonds"}`)
 		card := NewCard(Four, Diamonds)
 
 		got, err := json.Marshal(card)

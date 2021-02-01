@@ -67,8 +67,9 @@ func (c Card) String() string {
 
 func (c Card) ToWireCard() WireCard {
 	return WireCard{
-		Rank: rankNames[c.Rank],
-		Suit: suitNames[c.Suit],
+		Rank:          rankNames[c.Rank],
+		Suit:          suitNames[c.Suit],
+		CanonicalName: c.String(),
 	}
 }
 
@@ -87,8 +88,9 @@ func (c *Card) UnmarshalJSON(b []byte) error {
 }
 
 type WireCard struct {
-	Rank string `json:"rank"`
-	Suit string `json:"suit"`
+	Rank          string `json:"rank"`
+	Suit          string `json:"suit"`
+	CanonicalName string `json:"canonical_name"`
 }
 
 func (wc WireCard) String() string {
