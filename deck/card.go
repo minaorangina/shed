@@ -90,7 +90,7 @@ func (c *Card) UnmarshalJSON(b []byte) error {
 type WireCard struct {
 	Rank          string `json:"rank"`
 	Suit          string `json:"suit"`
-	CanonicalName string `json:"canonical_name"`
+	CanonicalName string `json:"canonicalName"`
 }
 
 func (wc WireCard) String() string {

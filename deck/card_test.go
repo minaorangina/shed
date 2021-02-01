@@ -108,7 +108,7 @@ func TestWireCard(t *testing.T) {
 	})
 
 	t.Run("marshal Card to WireCard json", func(t *testing.T) {
-		want := []byte(`{"rank":"Four","suit":"Diamonds","canonical_name":"Four of Diamonds"}`)
+		want := []byte(`{"rank":"Four","suit":"Diamonds","canonicalName":"Four of Diamonds"}`)
 		card := NewCard(Four, Diamonds)
 
 		got, err := json.Marshal(card)
