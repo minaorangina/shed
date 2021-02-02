@@ -56,8 +56,7 @@ func (p CLIPlayer) handleReorg(msg OutboundMessage) InboundMessage {
 	response := InboundMessage{
 		PlayerID: msg.PlayerID,
 		Command:  msg.Command,
-		Hand:     msg.Hand,
-		Seen:     msg.Seen,
+		Decision: []int{0, 1, 2},
 	}
 
 	playerCards := PlayerCards{

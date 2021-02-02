@@ -9,9 +9,7 @@ import (
 type InboundMessage struct {
 	PlayerID string       `json:"player_id"`
 	Command  protocol.Cmd `json:"command"`
-	Hand     []deck.Card  `json:"hand,omitempty"`
-	Seen     []deck.Card  `json:"seen,omitempty"`
-	Decision []int        `json:"decision,omitempty"`
+	Decision []int        `json:"decision"`
 }
 
 // OutboundMessage is a message from GameEngine to Player

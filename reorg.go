@@ -75,8 +75,7 @@ func reorganiseCards(conn *conn, msg OutboundMessage) InboundMessage {
 	defaultResponse := InboundMessage{
 		PlayerID: msg.PlayerID,
 		Command:  msg.Command,
-		Hand:     msg.Hand,
-		Seen:     msg.Seen,
+		Decision: []int{0, 1, 2},
 	}
 
 	allVisibleCards := []deck.Card{}
@@ -103,8 +102,7 @@ func reorganiseCards(conn *conn, msg OutboundMessage) InboundMessage {
 		return InboundMessage{
 			PlayerID: msg.PlayerID,
 			Command:  msg.Command,
-			Hand:     newHand,
-			Seen:     newSeen,
+			Decision: choices,
 		}
 	}
 

@@ -29,19 +29,6 @@ func (g *SpyGame) ReceiveResponse(messages []InboundMessage) ([]OutboundMessage,
 	return nil, nil
 }
 
-func messagesToInitialCards(messages []InboundMessage) map[string]InitialCards {
-	reorganised := map[string]InitialCards{}
-
-	for _, msg := range messages {
-		reorganised[msg.PlayerID] = InitialCards{
-			Seen: msg.Seen,
-			Hand: msg.Hand,
-		}
-	}
-
-	return reorganised
-}
-
 func namesToPlayers(names []string) Players {
 	ps := []Player{}
 	for _, n := range names {

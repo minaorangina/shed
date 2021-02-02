@@ -1244,20 +1244,17 @@ func TestGameReceiveResponse(t *testing.T) {
 			{
 				PlayerID: "p1",
 				Command:  protocol.Reorg,
-				Hand:     game.playerCards["p1"].Hand,
-				Seen:     game.playerCards["p1"].Seen,
+				Decision: []int{2, 3, 4},
 			},
 			{
 				PlayerID: "p2",
 				Command:  protocol.Reorg,
-				Hand:     p2NewCards.Hand,
-				Seen:     p2NewCards.Seen,
+				Decision: []int{0, 1, 5},
 			},
 			{
 				PlayerID: "p3",
 				Command:  protocol.Reorg,
-				Hand:     game.playerCards["p3"].Hand,
-				Seen:     game.playerCards["p3"].Seen,
+				Decision: []int{1, 3, 4},
 			},
 		})
 
@@ -1424,8 +1421,7 @@ func reorganiseSomeCards(outbound []OutboundMessage) []InboundMessage {
 			PlayerID: m.PlayerID,
 			Command:  protocol.Reorg,
 			// ought to shuffle really...
-			Hand: m.Seen,
-			Seen: m.Hand,
+			Decision: []int{2, 4, 5},
 		})
 	}
 
