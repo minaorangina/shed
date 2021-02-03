@@ -126,7 +126,7 @@ func (ge *gameEngine) Start() error {
 	if ge.game == nil {
 		return ErrNilGame
 	}
-	err := ge.game.Start(ge.players.IDs())
+	err := ge.game.Start(ge.players.Info())
 	if err != nil {
 		return err
 	}

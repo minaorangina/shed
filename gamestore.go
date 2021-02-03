@@ -15,7 +15,8 @@ var (
 )
 
 type PlayerInfo struct {
-	PlayerID, Name string
+	PlayerID string `json:"player_id"`
+	Name     string `json:"name"`
 }
 
 type GameStore interface {

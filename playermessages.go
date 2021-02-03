@@ -22,10 +22,10 @@ type OutboundMessage struct {
 	Hand            []deck.Card  `json:"hand"`
 	Seen            []deck.Card  `json:"seen"`
 	Pile            []deck.Card  `json:"pile"`
-	CurrentTurn     string       `json:"current_turn,omitempty"`
+	CurrentTurn     PlayerInfo   `json:"current_turn,omitempty"`
 	Moves           []int        `json:"moves,omitempty"`
 	Opponents       []Opponent   `json:"opponents,omitempty"`
-	FinishedPlayers []string     `json:"finished_players,omitempty"`
+	FinishedPlayers []PlayerInfo `json:"finished_players,omitempty"`
 	ShouldRespond   bool         `json:"should_respond"`
 	Error           string       `json:"error,omitempty"`
 	DefaultMessage  InboundMessage

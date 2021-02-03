@@ -22,7 +22,7 @@ func (g *SpyGame) AwaitingResponse() protocol.Cmd {
 	return protocol.Null
 }
 
-func (g *SpyGame) Start(playerIDs []string) error {
+func (g *SpyGame) Start(info []PlayerInfo) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.startCalled = true
@@ -157,6 +157,18 @@ func sliceContainsString(haystack []string, needle string) bool {
 	var found bool
 	for _, h := range haystack {
 		if needle == h {
+			found = true
+			break
+		}
+	}
+
+	return found
+}
+
+func sliceContainsPlayerID(haystack []PlayerInfo, needle string) bool {
+	var found bool
+	for _, h := range haystack {
+		if needle == h.PlayerID {
 			found = true
 			break
 		}

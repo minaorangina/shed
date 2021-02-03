@@ -40,6 +40,13 @@ func NewTestPlayer(id, name string, in io.Reader, out io.Writer) *TestPlayer {
 	}
 }
 
+func (tp *TestPlayer) Info() PlayerInfo {
+	return PlayerInfo{
+		PlayerID: tp.id,
+		Name:     tp.name,
+	}
+}
+
 func (tp *TestPlayer) ID() string {
 	return tp.id
 }

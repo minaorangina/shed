@@ -34,11 +34,11 @@ type NewGameReq struct {
 }
 
 type PendingGameRes struct {
-	GameID   string   `json:"game_id"`
-	PlayerID string   `json:"player_id"`
-	Name     string   `json:"name"`
-	Admin    bool     `json:"is_admin"`
-	Players  []string `json:"players"`
+	GameID   string            `json:"game_id"`
+	PlayerID string            `json:"player_id"`
+	Name     string            `json:"name"`
+	Admin    bool              `json:"is_admin"`
+	Players  []shed.PlayerInfo `json:"players,omitempty"`
 }
 
 type JoinGameReq struct {
@@ -185,6 +185,7 @@ func (g *GameServer) HandleNewGame(w http.ResponseWriter, r *http.Request) {
 		GameID:   gameID,
 		PlayerID: playerID,
 		Name:     data.Name,
+		Players:  []shed.PlayerInfo{{playerID, data.Name}},
 		Admin:    true,
 	}
 
@@ -275,17 +276,17 @@ func (g *GameServer) HandleJoinGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	playerNames := []string{}
+	playerInfos := []shed.PlayerInfo{}
 	ps := game.Players()
 	for _, p := range ps {
-		playerNames = append(playerNames, p.Name())
+		playerInfos = append(playerInfos, shed.PlayerInfo{p.ID(), p.Name()})
 	}
 
 	payload := PendingGameRes{
 		PlayerID: playerID,
 		GameID:   data.GameID,
 		Name:     data.Name,
-		Players:  playerNames,
+		Players:  playerInfos,
 	}
 
 	bytes, err := json.Marshal(payload)

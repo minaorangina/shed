@@ -50,6 +50,7 @@ type Conn interface {
 type Player interface {
 	ID() string
 	Name() string
+	Info() PlayerInfo
 	Cards() *PlayerCards
 	Send(msg OutboundMessage) error
 	Receive(data []byte)
@@ -78,6 +79,13 @@ func NewWSPlayer(id, name string, ws *websocket.Conn, sendCh chan []byte, engine
 	go player.readPump()
 
 	return player
+}
+
+func (p *WSPlayer) Info() PlayerInfo {
+	return PlayerInfo{
+		PlayerID: p.id,
+		Name:     p.name,
+	}
 }
 
 func (p *WSPlayer) ID() string {
@@ -218,4 +226,12 @@ func (ps Players) IDs() []string {
 		ids = append(ids, p.ID())
 	}
 	return ids
+}
+
+func (ps Players) Info() []PlayerInfo {
+	info := []PlayerInfo{}
+	for _, p := range ps {
+		info = append(info, p.Info())
+	}
+	return info
 }

@@ -12,21 +12,29 @@ import (
 	"github.com/minaorangina/shed/protocol"
 )
 
+var (
+	twoPlayers   = func() []PlayerInfo { return []PlayerInfo{{PlayerID: "p1"}, {PlayerID: "p2"}} }
+	threePlayers = func() []PlayerInfo { return []PlayerInfo{{PlayerID: "p1"}, {PlayerID: "p2"}, {PlayerID: "p3"}} }
+	fourPlayers  = func() []PlayerInfo {
+		return []PlayerInfo{{PlayerID: "p1"}, {PlayerID: "p2"}, {PlayerID: "p3"}, {PlayerID: "p4"}}
+	}
+)
+
 func TestGameTurn(t *testing.T) {
 	gameWithRandomPlayers := func() (int, *shed) {
 		rand.Seed(time.Now().UnixNano())
 		randomNumberOfPlayers := rand.Intn(2) + 2
 
 		players := map[string]*PlayerCards{}
-		playerIDs := []string{}
+		playerInfo := []PlayerInfo{}
 
 		for i := 0; i < randomNumberOfPlayers; i++ {
 			id := fmt.Sprintf("player-%d", i)
-			playerIDs = append(playerIDs, id)
+			playerInfo = append(playerInfo, PlayerInfo{PlayerID: id})
 			players[id] = &PlayerCards{}
 		}
 
-		game := NewShed(ShedOpts{deck: deck.New(), playerCards: players, playerIDs: playerIDs})
+		game := NewShed(ShedOpts{deck: deck.New(), playerCards: players, playerInfo: playerInfo})
 
 		return randomNumberOfPlayers, game
 	}
@@ -45,7 +53,7 @@ func TestGameTurn(t *testing.T) {
 		}
 
 		utils.AssertEqual(t, game.currentTurnIdx, 1)
-		utils.AssertEqual(t, game.currentPlayerID, "player-1")
+		utils.AssertEqual(t, game.currentPlayer.PlayerID, "player-1")
 	})
 }
 
@@ -55,14 +63,14 @@ func TestGameStageZero(t *testing.T) {
 		game := NewShed(ShedOpts{})
 		// When the game starts
 
-		err := game.Start([]string{"p1", "p2", "p3"})
+		err := game.Start(threePlayers())
 		utils.AssertNoError(t, err)
 
 		msgs, err := game.Next()
 
 		// then players receive an instruction to reorganise their cards
 		utils.AssertNoError(t, err)
-		utils.AssertTrue(t, len(msgs) == len(game.playerIDs))
+		utils.AssertTrue(t, len(msgs) == len(game.playerInfo))
 
 		for _, m := range msgs {
 			utils.AssertEqual(t, m.Command, protocol.Reorg)
@@ -77,7 +85,7 @@ func TestGameStageZero(t *testing.T) {
 		game := NewShed(ShedOpts{})
 
 		// When the game has started and Next is called
-		err := game.Start([]string{"p1", "p2", "p3"})
+		err := game.Start(threePlayers())
 		utils.AssertNoError(t, err)
 		_, err = game.Next()
 		utils.AssertNoError(t, err)
@@ -132,7 +140,7 @@ func TestGameStageZero(t *testing.T) {
 		// and when Next() is called, someone is assigned the first turn
 		_, err = game.Next()
 		utils.AssertNoError(t, err)
-		utils.AssertNotEmptyString(t, game.currentPlayerID)
+		utils.AssertNotEmptyString(t, game.currentPlayer.PlayerID)
 	})
 }
 
@@ -153,41 +161,41 @@ func TestGameStageOne(t *testing.T) {
 		pc := &PlayerCards{Hand: hand}
 
 		game := NewShed(ShedOpts{
-			stage:           clearDeck,
-			deck:            someDeck(4),
-			pile:            pile,
-			playerIDs:       []string{"player-1", "player-2"},
-			currentPlayerID: "player-1",
+			stage:         clearDeck,
+			deck:          someDeck(4),
+			pile:          pile,
+			playerInfo:    twoPlayers(),
+			currentPlayer: twoPlayers()[0],
 			playerCards: map[string]*PlayerCards{
-				"player-1": pc,
-				"player-2": somePlayerCards(3),
+				"p1": pc,
+				"p2": somePlayerCards(3),
 			},
 		})
 
-		oldHand := game.playerCards[game.currentPlayerID].Hand
+		oldHand := game.playerCards[game.currentPlayer.PlayerID].Hand
 		oldHandSize, oldPileSize, oldDeckSize := len(oldHand), len(game.pile), len(game.deck)
 
 		// When the game progresses, then players are informed of the current turn
 		msgs, err := game.Next()
 		utils.AssertNoError(t, err)
 		utils.AssertNotNil(t, msgs)
-		utils.AssertEqual(t, len(msgs), len(game.playerIDs))
+		utils.AssertEqual(t, len(msgs), len(game.playerInfo))
 
 		checkNextMessages(t, msgs, protocol.PlayHand, game)
-		moves := getMoves(msgs, game.currentPlayerID)
+		moves := getMoves(msgs, game.currentPlayer.PlayerID)
 
 		// And the game expects a response
 		utils.AssertEqual(t, game.awaitingResponse, protocol.PlayHand)
 
 		// And when player response is received
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.PlayHand,
 			Decision: []int{moves[1]}, // target card is the second one
 		}})
 		utils.AssertNoError(t, err)
 
-		newHand := game.playerCards[game.currentPlayerID].Hand
+		newHand := game.playerCards[game.currentPlayer.PlayerID].Hand
 		newHandSize, newPileSize, newDeckSize := len(newHand), len(game.pile), len(game.deck)
 
 		// Then the pile contains the selected card
@@ -209,20 +217,20 @@ func TestGameStageOne(t *testing.T) {
 
 		// And the game produces messages to all players
 		// expecting a response only from the current player
-		utils.AssertEqual(t, len(msgs), len(game.playerIDs))
+		utils.AssertEqual(t, len(msgs), len(game.playerInfo))
 		checkReceiveResponseMessages(t, msgs, protocol.ReplenishHand, game)
 		utils.AssertEqual(t, game.awaitingResponse, protocol.ReplenishHand)
 
 		// And when the current player acks and releases their turn
-		previousPlayerID := game.currentPlayerID
+		previousPlayerID := game.currentPlayer.PlayerID
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.ReplenishHand,
 		}})
 		utils.AssertNoError(t, err)
 
 		// And the next player is up
-		utils.AssertTrue(t, game.currentPlayerID != previousPlayerID)
+		utils.AssertTrue(t, game.currentPlayer.PlayerID != previousPlayerID)
 	})
 
 	t.Run("stage 1: player plays multiple cards from their hand", func(t *testing.T) {
@@ -237,18 +245,18 @@ func TestGameStageOne(t *testing.T) {
 		pc := &PlayerCards{Hand: append(targetCards, deck.NewCard(deck.Eight, deck.Hearts))}
 
 		game := NewShed(ShedOpts{
-			stage:           clearDeck,
-			deck:            someDeck(4),
-			pile:            pile,
-			playerIDs:       []string{"player-1", "player-2"},
-			currentPlayerID: "player-1",
+			stage:         clearDeck,
+			deck:          someDeck(4),
+			pile:          pile,
+			playerInfo:    twoPlayers(),
+			currentPlayer: twoPlayers()[0],
 			playerCards: map[string]*PlayerCards{
-				"player-1": pc,
-				"player-2": somePlayerCards(3),
+				"p1": pc,
+				"p2": somePlayerCards(3),
 			},
 		})
 
-		oldHand := game.playerCards[game.currentPlayerID].Hand
+		oldHand := game.playerCards[game.currentPlayer.PlayerID].Hand
 		oldHandSize := len(oldHand)
 		oldPileSize := len(game.pile)
 		oldDeckSize := len(game.deck)
@@ -258,19 +266,19 @@ func TestGameStageOne(t *testing.T) {
 		utils.AssertNoError(t, err)
 		utils.AssertNotNil(t, msgs)
 		utils.AssertEqual(t, game.currentTurnIdx, 0)
-		utils.AssertTrue(t, game.currentPlayerID != "")
+		utils.AssertTrue(t, game.currentPlayer.PlayerID != "")
 
 		moves := msgs[0].Moves
 		utils.AssertTrue(t, len(moves) > 1)
 
 		// And chooses to play two of the same card
 		_, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.PlayHand,
 			Decision: []int{0, 1},
 		}})
 		utils.AssertNoError(t, err)
-		newHand := game.playerCards[game.currentPlayerID].Hand
+		newHand := game.playerCards[game.currentPlayer.PlayerID].Hand
 		newHandSize := len(newHand)
 		newPileSize := len(game.pile)
 		newDeckSize := len(game.deck)
@@ -299,18 +307,18 @@ func TestGameStageOne(t *testing.T) {
 		}
 
 		game := NewShed(ShedOpts{
-			stage:           clearDeck,
-			deck:            someDeck(4),
-			pile:            []deck.Card{highValueCard},
-			playerIDs:       []string{"player-1", "player-2"},
-			currentPlayerID: "player-1",
+			stage:         clearDeck,
+			deck:          someDeck(4),
+			pile:          []deck.Card{highValueCard},
+			playerInfo:    twoPlayers(),
+			currentPlayer: twoPlayers()[0],
 			playerCards: map[string]*PlayerCards{
-				"player-1": &PlayerCards{Hand: deck.Deck(lowValueCards)},
-				"player-2": somePlayerCards(3),
+				"p1": &PlayerCards{Hand: deck.Deck(lowValueCards)},
+				"p2": somePlayerCards(3),
 			},
 		})
 
-		oldHandSize := len(game.playerCards[game.currentPlayerID].Hand)
+		oldHandSize := len(game.playerCards[game.currentPlayer.PlayerID].Hand)
 		oldPileSize := len(game.pile)
 		oldDeckSize := len(game.deck)
 
@@ -319,7 +327,7 @@ func TestGameStageOne(t *testing.T) {
 		utils.AssertNoError(t, err)
 		utils.AssertEqual(t, game.awaitingResponse, protocol.SkipTurn)
 
-		newHandSize := len(game.playerCards[game.currentPlayerID].Hand)
+		newHandSize := len(game.playerCards[game.currentPlayer.PlayerID].Hand)
 		newPileSize := len(game.pile)
 		newDeckSize := len(game.deck)
 
@@ -332,7 +340,7 @@ func TestGameStageOne(t *testing.T) {
 
 		// then everyone is informed
 		utils.AssertNotNil(t, msgs)
-		utils.AssertEqual(t, len(msgs), len(game.playerIDs))
+		utils.AssertEqual(t, len(msgs), len(game.playerInfo))
 
 		// and the current player's OutboundMessage has the expected content
 		utils.AssertTrue(t, msgs[0].ShouldRespond)
@@ -343,9 +351,9 @@ func TestGameStageOne(t *testing.T) {
 		utils.AssertEqual(t, msgs[1].Command, protocol.SkipTurn)
 
 		// and the current player's response is handled correctly
-		previousPlayerID := game.currentPlayerID
+		previousPlayerID := game.currentPlayer.PlayerID
 		response, err := game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.SkipTurn,
 		}})
 		utils.AssertNoError(t, err)
@@ -353,7 +361,7 @@ func TestGameStageOne(t *testing.T) {
 		utils.AssertEqual(t, game.awaitingResponse, protocol.Null)
 
 		// and the next player is up
-		utils.AssertTrue(t, game.currentPlayerID != previousPlayerID)
+		utils.AssertTrue(t, game.currentPlayer.PlayerID != previousPlayerID)
 	})
 
 	t.Run("stage 1: not enough cards in deck", func(t *testing.T) {
@@ -368,18 +376,18 @@ func TestGameStageOne(t *testing.T) {
 		pc := &PlayerCards{Hand: append(targetCards, deck.NewCard(deck.Eight, deck.Hearts))}
 
 		game := NewShed(ShedOpts{
-			stage:           clearDeck,
-			deck:            someDeck(1),
-			pile:            []deck.Card{lowValueCard},
-			playerIDs:       []string{"player-1", "player-2"},
-			currentPlayerID: "player-1",
+			stage:         clearDeck,
+			deck:          someDeck(1),
+			pile:          []deck.Card{lowValueCard},
+			playerInfo:    twoPlayers(),
+			currentPlayer: twoPlayers()[0],
 			playerCards: map[string]*PlayerCards{
-				"player-1": pc,
-				"player-2": somePlayerCards(3),
+				"p1": pc,
+				"p2": somePlayerCards(3),
 			},
 		})
 
-		oldHand := game.playerCards[game.currentPlayerID].Hand
+		oldHand := game.playerCards[game.currentPlayer.PlayerID].Hand
 		oldHandSize, oldPileSize := len(oldHand), len(game.pile)
 
 		// When the player takes their turn
@@ -392,13 +400,13 @@ func TestGameStageOne(t *testing.T) {
 
 		// And chooses to play two cards of the same value
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.PlayHand,
 			Decision: []int{0, 1},
 		}})
 		utils.AssertNoError(t, err)
 
-		newHand := game.playerCards[game.currentPlayerID].Hand
+		newHand := game.playerCards[game.currentPlayer.PlayerID].Hand
 		newHandSize := len(newHand)
 		newPileSize := len(game.pile)
 		newDeckSize := len(game.deck)
@@ -416,14 +424,14 @@ func TestGameStageOne(t *testing.T) {
 
 		// And the game produces messages to all players
 		// expecting a response only from the current player
-		utils.AssertEqual(t, len(msgs), len(game.playerIDs))
+		utils.AssertEqual(t, len(msgs), len(game.playerInfo))
 		checkReceiveResponseMessages(t, msgs, protocol.ReplenishHand, game)
 		utils.AssertEqual(t, game.awaitingResponse, protocol.ReplenishHand)
 
 		// And when the current player acks and releases their turn
-		previousPlayerID := game.currentPlayerID
+		previousPlayerID := game.currentPlayer.PlayerID
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.ReplenishHand,
 		}})
 		utils.AssertNoError(t, err)
@@ -432,12 +440,13 @@ func TestGameStageOne(t *testing.T) {
 		utils.AssertEqual(t, game.stage, clearCards)
 
 		// And the next player is up
-		utils.AssertTrue(t, game.currentPlayerID != previousPlayerID)
+		utils.AssertTrue(t, game.currentPlayer.PlayerID != previousPlayerID)
 	})
 }
 
 func TestGameStageTwo(t *testing.T) {
 	t.Run("stage 2: hand gets smaller", func(t *testing.T) {
+
 		// Given a game in stage 2, with a low-value card on the pile
 		lowValueCard := deck.NewCard(deck.Six, deck.Hearts)
 		pile := []deck.Card{lowValueCard}
@@ -452,14 +461,14 @@ func TestGameStageTwo(t *testing.T) {
 		pc := &PlayerCards{Hand: hand}
 
 		game := NewShed(ShedOpts{
-			stage:           clearCards,
-			deck:            deck.Deck{},
-			pile:            pile,
-			playerIDs:       []string{"player-1", "player-2"},
-			currentPlayerID: "player-1",
+			stage:         clearCards,
+			deck:          deck.Deck{},
+			pile:          pile,
+			playerInfo:    twoPlayers(),
+			currentPlayer: twoPlayers()[0],
 			playerCards: map[string]*PlayerCards{
-				"player-1": pc,
-				"player-2": somePlayerCards(3),
+				"p1": pc,
+				"p2": somePlayerCards(3),
 			},
 		})
 
@@ -469,25 +478,25 @@ func TestGameStageTwo(t *testing.T) {
 		utils.AssertNotNil(t, msgs)
 		utils.AssertEqual(t, game.awaitingResponse, protocol.PlayHand)
 
-		moves := getMoves(msgs, game.currentPlayerID)
+		moves := getMoves(msgs, game.currentPlayer.PlayerID)
 
-		oldHandSize := len(game.playerCards[game.currentPlayerID].Hand)
-		oldSeenSize := len(game.playerCards[game.currentPlayerID].Seen)
-		oldUnseenSize := len(game.playerCards[game.currentPlayerID].Unseen)
-		previousPlayerID := game.currentPlayerID
+		oldHandSize := len(game.playerCards[game.currentPlayer.PlayerID].Hand)
+		oldSeenSize := len(game.playerCards[game.currentPlayer.PlayerID].Seen)
+		oldUnseenSize := len(game.playerCards[game.currentPlayer.PlayerID].Unseen)
+		previousPlayerID := game.currentPlayer.PlayerID
 
 		cardChoice := []int{moves[0]}
 		_, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.PlayHand,
 			Decision: cardChoice,
 		}})
 		utils.AssertNoError(t, err)
 		utils.AssertEqual(t, game.awaitingResponse, protocol.EndOfTurn)
 
-		newHandSize := len(game.playerCards[game.currentPlayerID].Hand)
-		newSeenSize := len(game.playerCards[game.currentPlayerID].Seen)
-		newUnseenSize := len(game.playerCards[game.currentPlayerID].Unseen)
+		newHandSize := len(game.playerCards[game.currentPlayer.PlayerID].Hand)
+		newSeenSize := len(game.playerCards[game.currentPlayer.PlayerID].Seen)
+		newUnseenSize := len(game.playerCards[game.currentPlayer.PlayerID].Unseen)
 
 		// Then their hand is smaller, but their remaining cards are unchanged
 		utils.AssertTrue(t, newHandSize < oldHandSize)
@@ -496,7 +505,7 @@ func TestGameStageTwo(t *testing.T) {
 
 		// And when the player releases their turn
 		_, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.EndOfTurn,
 		}})
 		utils.AssertNoError(t, err)
@@ -505,10 +514,11 @@ func TestGameStageTwo(t *testing.T) {
 		utils.AssertEqual(t, game.awaitingResponse, protocol.Null)
 
 		// And it's the next player's turn
-		utils.AssertTrue(t, previousPlayerID != game.currentPlayerID)
+		utils.AssertTrue(t, previousPlayerID != game.currentPlayer.PlayerID)
 	})
 
 	t.Run("stage 2: player has legal moves and no hand cards", func(t *testing.T) {
+
 		// Given a game in stage 2, with a low-value card on the pile
 		lowValueCard := deck.NewCard(deck.Six, deck.Hearts)
 		pile := []deck.Card{lowValueCard}
@@ -523,14 +533,14 @@ func TestGameStageTwo(t *testing.T) {
 			},
 		}
 		game := NewShed(ShedOpts{
-			stage:           clearCards,
-			deck:            deck.Deck{},
-			pile:            pile,
-			playerIDs:       []string{"player-1", "player-2"},
-			currentPlayerID: "player-1",
+			stage:         clearCards,
+			deck:          deck.Deck{},
+			pile:          pile,
+			playerInfo:    twoPlayers(),
+			currentPlayer: twoPlayers()[0],
 			playerCards: map[string]*PlayerCards{
-				"player-1": pc,
-				"player-2": somePlayerCards(3),
+				"p1": pc,
+				"p2": somePlayerCards(3),
 			},
 		})
 
@@ -542,26 +552,26 @@ func TestGameStageTwo(t *testing.T) {
 		// Then everyone is informed
 		checkNextMessages(t, msgs, protocol.PlaySeen, game)
 
-		moves := getMoves(msgs, game.currentPlayerID)
+		moves := getMoves(msgs, game.currentPlayer.PlayerID)
 		utils.AssertTrue(t, len(moves) > 0)
 		utils.AssertDeepEqual(t, moves, []int{0, 1, 2})
 
-		oldSeenSize := len(game.playerCards[game.currentPlayerID].Seen)
-		oldUnseenSize := len(game.playerCards[game.currentPlayerID].Unseen)
+		oldSeenSize := len(game.playerCards[game.currentPlayer.PlayerID].Seen)
+		oldUnseenSize := len(game.playerCards[game.currentPlayer.PlayerID].Unseen)
 		oldPileSize := len(game.pile)
 
 		// And when the player makes their choice
 		cardChoice := []int{moves[0]}
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.PlaySeen,
 			Decision: cardChoice,
 		}})
 		utils.AssertNoError(t, err)
 
-		newHandSize := len(game.playerCards[game.currentPlayerID].Hand)
-		newSeenSize := len(game.playerCards[game.currentPlayerID].Seen)
-		newUnseenSize := len(game.playerCards[game.currentPlayerID].Unseen)
+		newHandSize := len(game.playerCards[game.currentPlayer.PlayerID].Hand)
+		newSeenSize := len(game.playerCards[game.currentPlayer.PlayerID].Seen)
+		newUnseenSize := len(game.playerCards[game.currentPlayer.PlayerID].Unseen)
 		newPileSize := len(game.pile)
 
 		// Then they have one less Seen card
@@ -576,7 +586,7 @@ func TestGameStageTwo(t *testing.T) {
 		for _, m := range msgs {
 			utils.AssertEqual(t, m.Command, protocol.EndOfTurn)
 
-			if m.PlayerID == game.currentPlayerID {
+			if m.PlayerID == game.currentPlayer.PlayerID {
 				utils.AssertTrue(t, m.ShouldRespond)
 			} else {
 				utils.AssertEqual(t, m.ShouldRespond, false)
@@ -586,20 +596,21 @@ func TestGameStageTwo(t *testing.T) {
 		// And the game expects an ack from the player
 		utils.AssertEqual(t, game.awaitingResponse, protocol.EndOfTurn)
 
-		previousPlayerID := game.currentPlayerID
+		previousPlayerID := game.currentPlayer.PlayerID
 		// And when the player sends an ack
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.EndOfTurn,
 		}})
 		utils.AssertNoError(t, err)
 
 		// Then it's the next player's turn
 		utils.AssertEqual(t, game.awaitingResponse, protocol.Null)
-		utils.AssertTrue(t, previousPlayerID != game.currentPlayerID)
+		utils.AssertTrue(t, previousPlayerID != game.currentPlayer.PlayerID)
 	})
 
 	t.Run("stage 2: player has no legal moves and no hand cards", func(t *testing.T) {
+
 		// Given a game in stage 2, with a high-value card on the pile
 		highValueCard := deck.NewCard(deck.Ace, deck.Hearts)
 		pile := []deck.Card{highValueCard}
@@ -615,27 +626,27 @@ func TestGameStageTwo(t *testing.T) {
 		}
 
 		game := NewShed(ShedOpts{
-			stage:           clearCards,
-			deck:            deck.Deck{},
-			pile:            pile,
-			playerIDs:       []string{"player-1", "player-2"},
-			currentPlayerID: "player-1",
+			stage:         clearCards,
+			deck:          deck.Deck{},
+			pile:          pile,
+			playerInfo:    twoPlayers(),
+			currentPlayer: twoPlayers()[0],
 			playerCards: map[string]*PlayerCards{
-				"player-1": pc,
-				"player-2": somePlayerCards(3),
+				"p1": pc,
+				"p2": somePlayerCards(3),
 			},
 		})
-		oldHandSize := len(game.playerCards[game.currentPlayerID].Hand)
+		oldHandSize := len(game.playerCards[game.currentPlayer.PlayerID].Hand)
 		oldPileSize := len(game.pile)
-		oldSeenSize := len(game.playerCards[game.currentPlayerID].Seen)
+		oldSeenSize := len(game.playerCards[game.currentPlayer.PlayerID].Seen)
 
 		// When the player takes their turn
 		msgs, err := game.Next()
 		utils.AssertNoError(t, err)
 
-		newHandSize := len(game.playerCards[game.currentPlayerID].Hand)
+		newHandSize := len(game.playerCards[game.currentPlayer.PlayerID].Hand)
 		newPileSize := len(game.pile)
-		newSeenSize := len(game.playerCards[game.currentPlayerID].Seen)
+		newSeenSize := len(game.playerCards[game.currentPlayer.PlayerID].Seen)
 
 		// then the current player's hand includes the cards from the pile
 		utils.AssertEqual(t, newHandSize, oldHandSize+oldPileSize)
@@ -646,7 +657,7 @@ func TestGameStageTwo(t *testing.T) {
 
 		// then everyone is informed
 		utils.AssertTrue(t, len(msgs) > 0)
-		utils.AssertEqual(t, len(msgs), len(game.playerIDs))
+		utils.AssertEqual(t, len(msgs), len(game.playerInfo))
 
 		// and the current player's OutboundMessage has the expected content
 		utils.AssertTrue(t, msgs[0].ShouldRespond)
@@ -657,9 +668,9 @@ func TestGameStageTwo(t *testing.T) {
 		utils.AssertEqual(t, msgs[1].Command, protocol.SkipTurn)
 
 		// and the current player's response is handled correctly
-		previousPlayerID := game.currentPlayerID
+		previousPlayerID := game.currentPlayer.PlayerID
 		response, err := game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.SkipTurn,
 		}})
 		utils.AssertNoError(t, err)
@@ -667,10 +678,11 @@ func TestGameStageTwo(t *testing.T) {
 		utils.AssertEqual(t, game.awaitingResponse, protocol.Null)
 
 		// and the next player is up
-		utils.AssertTrue(t, game.currentPlayerID != previousPlayerID)
+		utils.AssertTrue(t, game.currentPlayer.PlayerID != previousPlayerID)
 	})
 
 	t.Run("stage 2: player only unseen cards", func(t *testing.T) {
+
 		// Given a game in stage 2, with a low-value card on the pile
 		lowValueCard := deck.NewCard(deck.Six, deck.Hearts)
 		pile := []deck.Card{lowValueCard}
@@ -687,14 +699,14 @@ func TestGameStageTwo(t *testing.T) {
 		}
 
 		game := NewShed(ShedOpts{
-			stage:           clearCards,
-			deck:            deck.Deck{},
-			pile:            pile,
-			playerIDs:       []string{"player-1", "player-2"},
-			currentPlayerID: "player-1",
+			stage:         clearCards,
+			deck:          deck.Deck{},
+			pile:          pile,
+			playerInfo:    twoPlayers(),
+			currentPlayer: twoPlayers()[0],
 			playerCards: map[string]*PlayerCards{
-				"player-1": pc,
-				"player-2": somePlayerCards(3),
+				"p1": pc,
+				"p2": somePlayerCards(3),
 			},
 		})
 		// When the player takes their turn
@@ -705,25 +717,25 @@ func TestGameStageTwo(t *testing.T) {
 		checkNextMessages(t, msgs, protocol.PlayUnseen, game)
 
 		// Then the game selects all Unseen cards (legal moves or not)
-		moves := getMoves(msgs, game.currentPlayerID)
+		moves := getMoves(msgs, game.currentPlayer.PlayerID)
 		utils.AssertTrue(t, len(moves) > 0)
 		utils.AssertDeepEqual(t, moves, []int{0, 1, 2})
 
-		oldUnseenSize := len(game.playerCards[game.currentPlayerID].Unseen)
-		previousPlayerID := game.currentPlayerID
+		oldUnseenSize := len(game.playerCards[game.currentPlayer.PlayerID].Unseen)
+		previousPlayerID := game.currentPlayer.PlayerID
 
 		// And when the player selects a legal move
 		cardChoice := []int{moves[0]}
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.PlayUnseen,
 			Decision: cardChoice,
 		}})
 		utils.AssertNoError(t, err)
 		utils.AssertEqual(t, game.awaitingResponse, protocol.UnseenSuccess)
 
-		newHandSize := len(game.playerCards[game.currentPlayerID].Hand)
-		newUnseenSize := len(game.playerCards[game.currentPlayerID].Unseen)
+		newHandSize := len(game.playerCards[game.currentPlayer.PlayerID].Hand)
+		newUnseenSize := len(game.playerCards[game.currentPlayer.PlayerID].Unseen)
 
 		// Then they have one less Unseen card, but their remaining cards are unchanged
 		utils.AssertEqual(t, newUnseenSize, oldUnseenSize-1)
@@ -734,17 +746,18 @@ func TestGameStageTwo(t *testing.T) {
 
 		// And the game expects an ack from the player
 		_, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.UnseenSuccess,
 		}})
 		utils.AssertNoError(t, err)
 		utils.AssertEqual(t, game.awaitingResponse, protocol.Null)
 
 		// And it's the next player's turn
-		utils.AssertTrue(t, previousPlayerID != game.currentPlayerID)
+		utils.AssertTrue(t, previousPlayerID != game.currentPlayer.PlayerID)
 	})
 
 	t.Run("stage 2: player has no legal moves and only unseen cards", func(t *testing.T) {
+
 		// Given a game in stage 2
 		highValueCard := deck.NewCard(deck.Ace, deck.Spades)
 		pile := []deck.Card{highValueCard}
@@ -761,14 +774,14 @@ func TestGameStageTwo(t *testing.T) {
 		}
 
 		game := NewShed(ShedOpts{
-			stage:           clearCards,
-			deck:            deck.Deck{},
-			pile:            pile,
-			playerIDs:       []string{"player-1", "player-2"},
-			currentPlayerID: "player-1",
+			stage:         clearCards,
+			deck:          deck.Deck{},
+			pile:          pile,
+			playerInfo:    twoPlayers(),
+			currentPlayer: twoPlayers()[0],
 			playerCards: map[string]*PlayerCards{
-				"player-1": pc,
-				"player-2": somePlayerCards(3),
+				"p1": pc,
+				"p2": somePlayerCards(3),
 			},
 		})
 
@@ -780,25 +793,25 @@ func TestGameStageTwo(t *testing.T) {
 		checkNextMessages(t, msgs, protocol.PlayUnseen, game)
 
 		// Then the game selects all Unseen cards (legal moves or not)
-		moves := getMoves(msgs, game.currentPlayerID)
+		moves := getMoves(msgs, game.currentPlayer.PlayerID)
 		utils.AssertTrue(t, len(moves) > 0)
 		utils.AssertDeepEqual(t, moves, []int{0, 1, 2})
 
-		oldUnseenSize := len(game.playerCards[game.currentPlayerID].Unseen)
+		oldUnseenSize := len(game.playerCards[game.currentPlayer.PlayerID].Unseen)
 		oldPileSize := len(game.pile)
 
 		// And when the player selects an illegal move
 		cardChoice := []int{moves[0]}
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.PlayUnseen,
 			Decision: cardChoice,
 		}})
 
 		utils.AssertNoError(t, err)
 
-		newHand := game.playerCards[game.currentPlayerID].Hand
-		newUnseenSize := len(game.playerCards[game.currentPlayerID].Unseen)
+		newHand := game.playerCards[game.currentPlayer.PlayerID].Hand
+		newUnseenSize := len(game.playerCards[game.currentPlayer.PlayerID].Unseen)
 
 		// Then the player picks up the pile which includes the chosen Unseen card
 		utils.AssertEqual(t, len(game.pile), 0)
@@ -810,9 +823,9 @@ func TestGameStageTwo(t *testing.T) {
 		utils.AssertEqual(t, game.awaitingResponse, protocol.UnseenFailure)
 
 		// And when the player's ack is received
-		previousPlayerID := game.currentPlayerID
+		previousPlayerID := game.currentPlayer.PlayerID
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.UnseenFailure,
 		}})
 
@@ -820,10 +833,11 @@ func TestGameStageTwo(t *testing.T) {
 		utils.AssertEqual(t, game.awaitingResponse, protocol.Null)
 
 		// Then it's the next player's turn
-		utils.AssertTrue(t, previousPlayerID != game.currentPlayerID)
+		utils.AssertTrue(t, previousPlayerID != game.currentPlayer.PlayerID)
 	})
 
 	t.Run("stage 2: player finishes with final Unseen card", func(t *testing.T) {
+
 		// Given a game in stage 2
 		lowValueCard := deck.NewCard(deck.Four, deck.Spades)
 		highValueCard := deck.NewCard(deck.Ace, deck.Spades)
@@ -839,15 +853,15 @@ func TestGameStageTwo(t *testing.T) {
 		}
 
 		game := NewShed(ShedOpts{
-			stage:           clearCards,
-			deck:            deck.Deck{},
-			pile:            pile,
-			playerIDs:       []string{"player-1", "player-2", "player-3"},
-			currentPlayerID: "player-1",
+			stage:         clearCards,
+			deck:          deck.Deck{},
+			pile:          pile,
+			playerInfo:    threePlayers(),
+			currentPlayer: threePlayers()[0],
 			playerCards: map[string]*PlayerCards{
-				"player-1": pc,
-				"player-2": somePlayerCards(3),
-				"player-3": somePlayerCards(3),
+				"p1": pc,
+				"p2": somePlayerCards(3),
+				"p3": somePlayerCards(3),
 			},
 		})
 
@@ -855,12 +869,12 @@ func TestGameStageTwo(t *testing.T) {
 		msgs, err := game.Next()
 		utils.AssertNoError(t, err)
 
-		previousPlayerID := game.currentPlayerID
+		previousPlayerID := game.currentPlayer.PlayerID
 		previousNumPlayers := len(game.activePlayers)
 
 		cardChoice := []int{0}
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.PlayUnseen,
 			Decision: cardChoice,
 		}})
@@ -874,20 +888,26 @@ func TestGameStageTwo(t *testing.T) {
 
 		// And when the player acks
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.PlayerFinished,
 		}})
 		utils.AssertNoError(t, err)
 
 		// Then there is one less active players
 		utils.AssertEqual(t, len(game.activePlayers), previousNumPlayers-1)
-		utils.AssertTrue(t, sliceContainsString(game.finishedPlayers, previousPlayerID))
+		for _, fp := range game.finishedPlayers {
+			if fp.PlayerID == previousPlayerID {
+
+			}
+		}
+		utils.AssertTrue(t, sliceContainsPlayerID(game.finishedPlayers, previousPlayerID))
 
 		// And it's the next player's turn
-		utils.AssertTrue(t, game.currentPlayerID != previousPlayerID)
+		utils.AssertTrue(t, game.currentPlayer.PlayerID != previousPlayerID)
 	})
 
 	t.Run("stage 2: player finishes with final Hand card", func(t *testing.T) {
+
 		// Given a game in stage 2
 		lowValueCard := deck.NewCard(deck.Four, deck.Spades)
 		highValueCard := deck.NewCard(deck.Ace, deck.Spades)
@@ -901,15 +921,15 @@ func TestGameStageTwo(t *testing.T) {
 		}
 
 		game := NewShed(ShedOpts{
-			stage:           clearCards,
-			deck:            deck.Deck{},
-			pile:            pile,
-			playerIDs:       []string{"player-1", "player-2", "player-3"},
-			currentPlayerID: "player-1",
+			stage:         clearCards,
+			deck:          deck.Deck{},
+			pile:          pile,
+			playerInfo:    threePlayers(),
+			currentPlayer: threePlayers()[0],
 			playerCards: map[string]*PlayerCards{
-				"player-1": pc,
-				"player-2": somePlayerCards(3),
-				"player-3": somePlayerCards(3),
+				"p1": pc,
+				"p2": somePlayerCards(3),
+				"p3": somePlayerCards(3),
 			},
 		})
 
@@ -918,12 +938,12 @@ func TestGameStageTwo(t *testing.T) {
 		utils.AssertNoError(t, err)
 		utils.AssertEqual(t, game.awaitingResponse, protocol.PlayHand)
 
-		previousPlayerID := game.currentPlayerID
+		previousPlayerID := game.currentPlayer.PlayerID
 		previousNumPlayers := len(game.activePlayers)
 
 		cardChoice := []int{0}
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.PlayHand,
 			Decision: cardChoice,
 		}})
@@ -937,21 +957,22 @@ func TestGameStageTwo(t *testing.T) {
 
 		// And when the player acks
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.PlayerFinished,
 		}})
 		utils.AssertNoError(t, err)
 
 		// Then there is one less active players
 		utils.AssertEqual(t, len(game.activePlayers), previousNumPlayers-1)
-		utils.AssertTrue(t, sliceContainsString(game.finishedPlayers, previousPlayerID))
+		utils.AssertTrue(t, sliceContainsPlayerID(game.finishedPlayers, previousPlayerID))
 
 		// And it's the next player's turn
-		utils.AssertTrue(t, game.currentPlayerID != previousPlayerID)
+		utils.AssertTrue(t, game.currentPlayer.PlayerID != previousPlayerID)
 		utils.AssertEqual(t, game.awaitingResponse, protocol.Null)
 	})
 
 	t.Run("stage 2: game ends when n-1 players have finished (Unseen card)", func(t *testing.T) {
+
 		// Given a game in stage 2
 		lowValueCard := deck.NewCard(deck.Four, deck.Spades)
 		highValueCard := deck.NewCard(deck.Ace, deck.Spades)
@@ -967,14 +988,14 @@ func TestGameStageTwo(t *testing.T) {
 		}
 
 		game := NewShed(ShedOpts{
-			stage:           clearCards,
-			deck:            deck.Deck{},
-			pile:            pile,
-			playerIDs:       []string{"player-1", "player-2"},
-			currentPlayerID: "player-1",
+			stage:         clearCards,
+			deck:          deck.Deck{},
+			pile:          pile,
+			playerInfo:    twoPlayers(),
+			currentPlayer: twoPlayers()[0],
 			playerCards: map[string]*PlayerCards{
-				"player-1": pc,
-				"player-2": somePlayerCards(3),
+				"p1": pc,
+				"p2": somePlayerCards(3),
 			},
 		})
 
@@ -984,7 +1005,7 @@ func TestGameStageTwo(t *testing.T) {
 
 		cardChoice := []int{0}
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.PlayUnseen,
 			Decision: cardChoice,
 		}})
@@ -998,7 +1019,7 @@ func TestGameStageTwo(t *testing.T) {
 
 		// And when the player acks
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.PlayerFinished,
 		}})
 		utils.AssertNoError(t, err)
@@ -1016,6 +1037,7 @@ func TestGameStageTwo(t *testing.T) {
 	})
 
 	t.Run("stage 2: game ends when n-1 players have finished (Hand card)", func(t *testing.T) {
+		//
 		// Given a game in stage 2 with two players remaining
 		lowValueCard := deck.NewCard(deck.Four, deck.Spades)
 		highValueCard := deck.NewCard(deck.Ace, deck.Spades)
@@ -1029,14 +1051,14 @@ func TestGameStageTwo(t *testing.T) {
 		}
 
 		game := NewShed(ShedOpts{
-			stage:           clearCards,
-			deck:            deck.Deck{},
-			pile:            pile,
-			playerIDs:       []string{"player-1", "player-2"},
-			currentPlayerID: "player-1",
+			stage:         clearCards,
+			deck:          deck.Deck{},
+			pile:          pile,
+			playerInfo:    twoPlayers(),
+			currentPlayer: twoPlayers()[0],
 			playerCards: map[string]*PlayerCards{
-				"player-1": pc,
-				"player-2": somePlayerCards(3),
+				"p1": pc,
+				"p2": somePlayerCards(3),
 			},
 		})
 
@@ -1047,7 +1069,7 @@ func TestGameStageTwo(t *testing.T) {
 
 		cardChoice := []int{0}
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.PlayHand,
 			Decision: cardChoice,
 		}})
@@ -1061,7 +1083,7 @@ func TestGameStageTwo(t *testing.T) {
 
 		// And when the player acks
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.PlayerFinished,
 		}})
 		utils.AssertNoError(t, err)
@@ -1083,20 +1105,16 @@ func TestGameStart(t *testing.T) {
 	t.Run("game with no options sets up correctly", func(t *testing.T) {
 
 		game := NewShed(ShedOpts{})
-		playerIDs := []string{
-			"player-1",
-			"player-2",
-			"player-3",
-			"player-4",
-		}
+		playerInfo := fourPlayers()
 
-		err := game.Start(playerIDs)
+		err := game.Start(playerInfo)
 
 		utils.AssertNoError(t, err)
-		utils.AssertTrue(t, len(game.playerIDs) > 1)
-		utils.AssertTrue(t, len(game.activePlayers) == len(game.playerIDs))
+		utils.AssertTrue(t, len(game.playerInfo) > 1)
+		utils.AssertTrue(t, len(game.activePlayers) == len(game.playerInfo))
 
-		for _, id := range playerIDs {
+		for _, info := range playerInfo {
+			id := info.PlayerID
 			playerCards := game.playerCards[id]
 			utils.AssertEqual(t, len(playerCards.Hand), 3)
 			utils.AssertEqual(t, len(playerCards.Seen), 3)
@@ -1114,7 +1132,7 @@ func TestGameNext(t *testing.T) {
 
 	t.Run("game won't progress if waiting for a response", func(t *testing.T) {
 		game := NewShed(ShedOpts{awaitingResponse: protocol.PlaySeen})
-		err := game.Start([]string{"p1", "p2", "p3"})
+		err := game.Start(threePlayers())
 		utils.AssertNoError(t, err)
 
 		_, err = game.Next()
@@ -1125,14 +1143,8 @@ func TestGameNext(t *testing.T) {
 	t.Run("new game: players reorganise cards and stage switches", func(t *testing.T) {
 		// Given a new game
 		game := NewShed(ShedOpts{})
-		playerIDs := []string{
-			"player-1",
-			"player-2",
-			"player-3",
-			"player-4",
-		}
 
-		err := game.Start(playerIDs)
+		err := game.Start(fourPlayers())
 		utils.AssertNoError(t, err)
 
 		// When Next is called
@@ -1144,7 +1156,7 @@ func TestGameNext(t *testing.T) {
 
 		// Then the players' cards are updated in the game
 		for playerIdx, m := range msgs {
-			playerID := game.playerIDs[playerIdx]
+			playerID := game.playerInfo[playerIdx].PlayerID
 			utils.AssertEqual(t, m.PlayerID, playerID)
 
 			if playerIdx == game.currentTurnIdx {
@@ -1169,14 +1181,14 @@ func TestGameNext(t *testing.T) {
 		pile := []deck.Card{lowValueCard}
 
 		game := NewShed(ShedOpts{
-			stage:           clearDeck,
-			deck:            someDeck(1),
-			pile:            pile,
-			playerIDs:       []string{"player-1", "player-2"},
-			currentPlayerID: "player-1",
+			stage:         clearDeck,
+			deck:          someDeck(1),
+			pile:          pile,
+			playerInfo:    twoPlayers(),
+			currentPlayer: twoPlayers()[0],
 			playerCards: map[string]*PlayerCards{
-				"player-1": somePlayerCards(3),
-				"player-2": somePlayerCards(3),
+				"p1": somePlayerCards(3),
+				"p2": somePlayerCards(3),
 			},
 		})
 
@@ -1186,13 +1198,13 @@ func TestGameNext(t *testing.T) {
 		utils.AssertNotNil(t, msgs)
 		utils.AssertEqual(t, game.awaitingResponse, protocol.PlayHand)
 
-		utils.AssertEqual(t, msgs[0].PlayerID, game.currentPlayerID)
+		utils.AssertEqual(t, msgs[0].PlayerID, game.currentPlayer.PlayerID)
 
 		playerMoves := msgs[0].Moves
 		utils.AssertTrue(t, len(playerMoves) > 0)
 
 		_, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.PlayHand,
 			Decision: []int{playerMoves[0]}, // first possible move
 		}})
@@ -1202,7 +1214,7 @@ func TestGameNext(t *testing.T) {
 
 		// And when the game receives the ack
 		_, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.currentPlayerID,
+			PlayerID: game.currentPlayer.PlayerID,
 			Command:  protocol.ReplenishHand,
 		}})
 
@@ -1213,8 +1225,8 @@ func TestGameNext(t *testing.T) {
 
 func TestGameReceiveResponse(t *testing.T) {
 	t.Run("handles unexpected response", func(t *testing.T) {
-		game := NewShed(ShedOpts{stage: 1, currentPlayerID: "p1"})
-		err := game.Start([]string{"p1", "p2", "p3"})
+		game := NewShed(ShedOpts{stage: 1, currentPlayer: threePlayers()[0]})
+		err := game.Start(threePlayers())
 		utils.AssertNoError(t, err)
 		utils.AssertEqual(t, game.awaitingResponse, protocol.Null)
 
@@ -1226,8 +1238,9 @@ func TestGameReceiveResponse(t *testing.T) {
 		game := NewShed(ShedOpts{
 			stage:            1,
 			awaitingResponse: protocol.PlayHand,
-			currentPlayerID:  "p1"})
-		err := game.Start([]string{"p1", "p2", "p3"})
+			currentPlayer:    threePlayers()[0],
+		})
+		err := game.Start(threePlayers())
 		utils.AssertNoError(t, err)
 		utils.AssertEqual(t, game.awaitingResponse, protocol.PlayHand)
 
@@ -1238,7 +1251,7 @@ func TestGameReceiveResponse(t *testing.T) {
 
 	t.Run("expects multiple responses in stage 0", func(t *testing.T) {
 		game := NewShed(ShedOpts{})
-		err := game.Start([]string{"p1", "p2", "p3"})
+		err := game.Start(threePlayers())
 		utils.AssertNoError(t, err)
 
 		_, err = game.Next()
@@ -1291,14 +1304,14 @@ func TestGameBurn(t *testing.T) {
 	pc := &PlayerCards{Hand: hand}
 
 	game := NewShed(ShedOpts{
-		stage:           clearDeck,
-		deck:            someDeck(4),
-		pile:            pile,
-		playerIDs:       []string{"player-1", "player-2"},
-		currentPlayerID: "player-1",
+		stage:         clearDeck,
+		deck:          someDeck(4),
+		pile:          pile,
+		playerInfo:    twoPlayers(),
+		currentPlayer: twoPlayers()[0],
 		playerCards: map[string]*PlayerCards{
-			"player-1": pc,
-			"player-2": somePlayerCards(3),
+			"p1": pc,
+			"p2": somePlayerCards(3),
 		},
 	})
 
@@ -1307,12 +1320,12 @@ func TestGameBurn(t *testing.T) {
 	utils.AssertEqual(t, game.awaitingResponse, protocol.PlayHand)
 
 	checkNextMessages(t, msgs, protocol.PlayHand, game)
-	moves := getMoves(msgs, game.currentPlayerID)
+	moves := getMoves(msgs, game.currentPlayer.PlayerID)
 
 	// When the player plays the final card of that rank
 	oldPileSize := len(game.pile)
 	msgs, err = game.ReceiveResponse([]InboundMessage{{
-		PlayerID: game.currentPlayerID,
+		PlayerID: game.currentPlayer.PlayerID,
 		Command:  protocol.PlayHand,
 		Decision: []int{moves[1]}, // target card is the second one
 	}})
@@ -1323,7 +1336,7 @@ func TestGameBurn(t *testing.T) {
 	// Then the game sends burn messages to all players
 	// expecting a response only from the current player
 	utils.AssertEqual(t, game.awaitingResponse, protocol.Burn)
-	utils.AssertEqual(t, len(msgs), len(game.playerIDs))
+	utils.AssertEqual(t, len(msgs), len(game.playerInfo))
 	checkBurnMessages(t, msgs, game)
 
 	// And the pile contains the selected card
@@ -1331,15 +1344,15 @@ func TestGameBurn(t *testing.T) {
 	utils.AssertTrue(t, containsCard(game.pile, targetCard))
 
 	// And when the current player acks
-	previousPlayerID := game.currentPlayerID
+	previousPlayerID := game.currentPlayer.PlayerID
 	msgs, err = game.ReceiveResponse([]InboundMessage{{
-		PlayerID: game.currentPlayerID,
+		PlayerID: game.currentPlayer.PlayerID,
 		Command:  protocol.Burn,
 	}})
 	utils.AssertNoError(t, err)
 
 	// Then the current player gets another turn
-	utils.AssertEqual(t, game.currentPlayerID, previousPlayerID)
+	utils.AssertEqual(t, game.currentPlayer.PlayerID, previousPlayerID)
 }
 
 func checkNextMessages(t *testing.T, msgs []OutboundMessage, cmd protocol.Cmd, game *shed) {
@@ -1349,7 +1362,7 @@ func checkNextMessages(t *testing.T, msgs []OutboundMessage, cmd protocol.Cmd, g
 		utils.AssertDeepEqual(t, m.Hand, game.playerCards[m.PlayerID].Hand)
 		utils.AssertDeepEqual(t, m.Seen, game.playerCards[m.PlayerID].Seen)
 
-		if m.PlayerID == game.currentPlayerID {
+		if m.PlayerID == game.currentPlayer.PlayerID {
 			// and the current player is asked to make a choice
 			utils.AssertEqual(t, m.Command, cmd)
 			utils.AssertTrue(t, m.ShouldRespond)
@@ -1372,7 +1385,7 @@ func checkReceiveResponseMessages(t *testing.T, msgs []OutboundMessage, currentP
 		utils.AssertDeepEqual(t, m.Hand, game.playerCards[m.PlayerID].Hand)
 		utils.AssertDeepEqual(t, m.Seen, game.playerCards[m.PlayerID].Seen)
 
-		if m.PlayerID == game.currentPlayerID {
+		if m.PlayerID == game.currentPlayer.PlayerID {
 			// and the current player is asked to make a choice
 			utils.AssertEqual(t, m.Command, currentPlayerCmd)
 			utils.AssertTrue(t, m.ShouldRespond)
@@ -1391,7 +1404,7 @@ func checkPlayerFinishedMessages(t *testing.T, msgs []OutboundMessage, game *she
 		utils.AssertDeepEqual(t, m.Seen, game.playerCards[m.PlayerID].Seen)
 		utils.AssertEqual(t, m.Command, protocol.PlayerFinished)
 
-		if m.PlayerID == game.currentPlayerID {
+		if m.PlayerID == game.currentPlayer.PlayerID {
 			utils.AssertTrue(t, m.ShouldRespond)
 		} else {
 			utils.AssertEqual(t, m.ShouldRespond, false)
@@ -1406,7 +1419,7 @@ func checkGameOverMessages(t *testing.T, msgs []OutboundMessage, game *shed) {
 		utils.AssertEqual(t, m.Command, protocol.GameOver)
 		utils.AssertDeepEqual(t, m.Pile, game.pile)
 		utils.AssertEqual(t, m.ShouldRespond, false)
-		utils.AssertTrue(t, len(game.finishedPlayers) == len(game.playerIDs))
+		utils.AssertTrue(t, len(game.finishedPlayers) == len(game.playerInfo))
 	}
 }
 
@@ -1416,7 +1429,7 @@ func checkBurnMessages(t *testing.T, msgs []OutboundMessage, game *shed) {
 	for _, m := range msgs {
 		utils.AssertEqual(t, m.Command, protocol.Burn)
 		utils.AssertDeepEqual(t, m.Pile, game.pile)
-		if m.PlayerID == game.currentPlayerID {
+		if m.PlayerID == game.currentPlayer.PlayerID {
 			utils.AssertTrue(t, m.ShouldRespond)
 		}
 	}

@@ -88,7 +88,7 @@ func TestCreateAndJoinNewGame(t *testing.T) {
 	err = json.Unmarshal(bodyBytes, &joinPayload)
 	utils.AssertNoError(t, err)
 	utils.AssertNotEmptyString(t, joinPayload.PlayerID)
-	utils.AssertDeepEqual(t, joinPayload.Players, []string{createPayload.Name})
+	utils.AssertDeepEqual(t, joinPayload.Players, []shed.PlayerInfo{{createPayload.PlayerID, createPayload.Name}})
 	utils.AssertEqual(t, joinPayload.Admin, false)
 
 	// and a pending player is created
