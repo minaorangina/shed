@@ -81,6 +81,7 @@ func NewShed(opts ShedOpts) *shed {
 
 	if s.deck == nil {
 		s.deck = deck.New()
+		s.deck.Shuffle()
 	}
 	if s.pile == nil {
 		s.pile = []deck.Card{}
@@ -129,8 +130,6 @@ func (s *shed) Start(playerIDs []string) error {
 	s.playerIDs = playerIDs
 	s.activePlayers = s.playerIDs
 
-	s.deck.Shuffle()
-
 	for _, id := range playerIDs {
 		playerCards := &PlayerCards{
 			Hand:   s.deck.Deal(3),
@@ -142,6 +141,7 @@ func (s *shed) Start(playerIDs []string) error {
 
 	rand.Seed(time.Now().UnixNano())
 	s.currentTurnIdx = rand.Intn(len(s.playerIDs) - 1)
+	s.currentPlayerID = s.playerIDs[s.currentTurnIdx]
 
 	return nil
 }

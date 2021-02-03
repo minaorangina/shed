@@ -125,6 +125,14 @@ func TestGameStageZero(t *testing.T) {
 		for id, c := range game.playerCards {
 			utils.AssertDeepEqual(t, *c, *want[id])
 		}
+
+		// and the game moves to stage one
+		utils.AssertEqual(t, game.stage, clearDeck)
+
+		// and when Next() is called, someone is assigned the first turn
+		_, err = game.Next()
+		utils.AssertNoError(t, err)
+		utils.AssertNotEmptyString(t, game.currentPlayerID)
 	})
 }
 
