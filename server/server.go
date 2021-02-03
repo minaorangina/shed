@@ -85,7 +85,6 @@ func enableCors(handler http.HandlerFunc) func(http.ResponseWriter, *http.Reques
 }
 
 func servePage(w http.ResponseWriter, path string) {
-	log.Print(path)
 	tmpl, err := template.ParseFiles(path)
 
 	if err != nil {
@@ -105,7 +104,6 @@ func NewServer(store shed.GameStore) *GameServer {
 	router.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Root endpoint")
 		if r.URL.Path != "/" {
-			log.Println(r.URL.Path)
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
@@ -350,7 +348,7 @@ func (g *GameServer) HandleWaitingRoom(w http.ResponseWriter, r *http.Request) {
 func (g *GameServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	vals, ok := query["game_id"]
-	log.Println(vals, ok)
+
 	if !ok || len(vals) != 1 {
 		log.Println("missing game ID")
 		w.WriteHeader(http.StatusBadRequest)

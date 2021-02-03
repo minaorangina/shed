@@ -3,6 +3,7 @@ package shed
 import (
 	"os"
 	"sort"
+	"sync"
 
 	"github.com/minaorangina/shed/deck"
 	"github.com/minaorangina/shed/protocol"
@@ -10,6 +11,11 @@ import (
 
 type SpyGame struct {
 	startCalled bool
+	mu          *sync.Mutex
+}
+
+func NewSpyGame() *SpyGame {
+	return &SpyGame{mu: &sync.Mutex{}}
 }
 
 func (g *SpyGame) AwaitingResponse() protocol.Cmd {
@@ -17,6 +23,8 @@ func (g *SpyGame) AwaitingResponse() protocol.Cmd {
 }
 
 func (g *SpyGame) Start(playerIDs []string) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	g.startCalled = true
 	return nil
 }

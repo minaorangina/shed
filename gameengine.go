@@ -3,6 +3,7 @@ package shed
 import (
 	"errors"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -167,7 +168,7 @@ func (ge *gameEngine) Listen() {
 	}{
 		mu:              &sync.Mutex{},
 		messages:        []InboundMessage{},
-		expectedCommand: protocol.Start,
+		expectedCommand: protocol.Reorg,
 	}
 
 	for {
@@ -202,8 +203,8 @@ func (ge *gameEngine) Listen() {
 
 		case msg := <-ge.inboundCh:
 			if msg.Command == protocol.Start {
-				err := ge.Start()
-				if err != nil {
+
+				if err := ge.Start(); err != nil {
 					p, _ := ge.players.Find(msg.PlayerID)
 
 					p.Send(OutboundMessage{
@@ -225,16 +226,20 @@ func (ge *gameEngine) Listen() {
 			}
 
 			// Ignore messages that are not expected
-			if msg.Command != commTracker.expectedCommand {
+			if msg.Command != ge.game.AwaitingResponse() {
+				log.Printf("lgr: unexpected cmd %s, ignoring\n", msg.Command)
 				continue
 			}
 
 			switch msg.Command {
 			case protocol.Reorg:
+				commTracker.mu.Lock()
 				commTracker.messages = append(commTracker.messages, msg)
+				commTracker.mu.Unlock()
+
 				if len(commTracker.messages) == len(ge.Players()) {
 					commTracker.mu.Lock()
-
+					log.Printf("lgr %s: all players have reorg'd", time.Now().Format(time.StampMilli))
 					ge.sendToGame(commTracker.messages)
 
 					commTracker.messages = []InboundMessage{}
@@ -245,9 +250,6 @@ func (ge *gameEngine) Listen() {
 
 			default:
 				ge.sendToGame([]InboundMessage{msg}) // handle failures
-				commTracker.mu.Lock()
-				commTracker.expectedCommand = msg.Command
-				commTracker.mu.Unlock()
 			}
 		}
 	}

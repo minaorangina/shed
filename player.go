@@ -145,6 +145,8 @@ func (p *WSPlayer) readPump() {
 			continue
 		}
 
+		log.Printf("lgr (readPump) %s: %+v", time.Now().Format(time.StampMilli), inbound)
+
 		p.engine.Receive(inbound)
 	}
 }

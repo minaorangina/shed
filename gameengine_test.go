@@ -184,7 +184,7 @@ func TestGameEngineStart(t *testing.T) {
 
 func TestGameEngineReceiveMessage(t *testing.T) {
 	t.Run("performs correct action for start game command", func(t *testing.T) {
-		spy := &SpyGame{}
+		spy := NewSpyGame()
 		engine, err := NewGameEngine(GameEngineOpts{Players: SomePlayers(), Game: spy})
 		utils.AssertNoError(t, err)
 		utils.AssertNotNil(t, engine)
