@@ -532,6 +532,7 @@ func (s *shed) buildSkipTurnMessage(playerID string) OutboundMessage {
 		Hand:        s.playerCards[playerID].Hand,
 		Seen:        s.playerCards[playerID].Seen,
 		Pile:        s.pile,
+		Message:     fmt.Sprintf("%s skips a turn!", s.currentPlayer.Name),
 	}
 }
 
@@ -544,6 +545,7 @@ func (s *shed) buildSkipTurnMessages(currentPlayerCmd protocol.Cmd) []OutboundMe
 		Pile:          s.pile,
 		Opponents:     buildOpponents(s.currentPlayer.PlayerID, s.playerCards),
 		ShouldRespond: true,
+		Message:       "You skip a turn!",
 	}
 
 	toSend := []OutboundMessage{currentPlayerMsg}
@@ -565,6 +567,7 @@ func (s *shed) buildTurnMessage(playerID string) OutboundMessage {
 		Seen:        s.playerCards[playerID].Seen,
 		Pile:        s.pile,
 		Opponents:   buildOpponents(playerID, s.playerCards),
+		Message:     fmt.Sprintf("It's %s's turn!", s.currentPlayer.Name),
 	}
 }
 
@@ -578,6 +581,7 @@ func (s *shed) buildTurnMessages(currentPlayerCmd protocol.Cmd, moves []int) []O
 		Moves:         moves,
 		Opponents:     buildOpponents(s.currentPlayer.PlayerID, s.playerCards),
 		ShouldRespond: true,
+		Message:       "It's your turn!",
 	}
 
 	toSend := []OutboundMessage{currentPlayerMsg}
@@ -624,6 +628,7 @@ func (s *shed) buildPlayerFinishedMessage(playerID string) OutboundMessage {
 		Seen:            s.playerCards[playerID].Seen,
 		Pile:            s.pile,
 		FinishedPlayers: s.finishedPlayers,
+		Message:         fmt.Sprintf("%s has finished!", s.currentPlayer.Name),
 	}
 }
 
@@ -633,6 +638,7 @@ func (s *shed) buildPlayerFinishedMessages() []OutboundMessage {
 		msg := s.buildPlayerFinishedMessage(info.PlayerID)
 		if info.PlayerID == s.currentPlayer.PlayerID {
 			msg.ShouldRespond = true
+			msg.Message = "You've finished!"
 		}
 		toSend = append(toSend, msg)
 	}
@@ -648,6 +654,7 @@ func (s *shed) buildGameOverMessages() []OutboundMessage {
 			Command:         protocol.GameOver,
 			FinishedPlayers: s.finishedPlayers,
 			Pile:            s.pile,
+			Message:         "Game over!",
 		})
 	}
 
@@ -663,6 +670,7 @@ func (s *shed) buildBurnMessage(playerID string) OutboundMessage {
 		Seen:            s.playerCards[playerID].Seen,
 		Pile:            s.pile,
 		FinishedPlayers: s.finishedPlayers,
+		Message:         fmt.Sprintf("Burn for %s!", s.currentPlayer.Name),
 	}
 }
 
@@ -672,6 +680,7 @@ func (s *shed) buildBurnMessages() []OutboundMessage {
 		msg := s.buildBurnMessage(info.PlayerID)
 		if info.PlayerID == s.currentPlayer.PlayerID {
 			msg.ShouldRespond = true
+			msg.Message = "Burn!"
 		}
 		toSend = append(toSend, msg)
 	}
