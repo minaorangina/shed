@@ -319,7 +319,7 @@ func buildNewJoinerMessage(joiner, recipient Player) OutboundMessage {
 	return OutboundMessage{
 		PlayerID: recipient.ID(),
 		Name:     recipient.Name(),
-		Joiner:   joiner.Name(),
+		Joiner:   PlayerInfo{Name: joiner.Name(), PlayerID: joiner.ID()},
 		Message:  fmt.Sprintf("%s has joined the game!", joiner.Name()),
 		Command:  protocol.NewJoiner,
 	}

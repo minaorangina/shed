@@ -63,7 +63,8 @@ func TestGameEngineAddPlayer(t *testing.T) {
 			err := json.Unmarshal(msg, &data)
 			utils.AssertNoError(t, err)
 			fmt.Println(data)
-			utils.AssertEqual(t, data.Joiner, joiningPlayer.Name())
+			utils.AssertEqual(t, data.Joiner.Name, joiningPlayer.Name())
+			utils.AssertEqual(t, data.Joiner.PlayerID, joiningPlayer.ID())
 		})
 	})
 }

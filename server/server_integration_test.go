@@ -118,7 +118,7 @@ func TestCreateAndJoinNewGame(t *testing.T) {
 		var payload shed.OutboundMessage
 		err = json.Unmarshal(got, &payload)
 		utils.AssertNoError(t, err)
-		utils.AssertEqual(t, payload.Joiner, joinerName)
+		utils.AssertEqual(t, payload.Joiner.Name, joinerName)
 	})
 }
 
@@ -153,7 +153,7 @@ func TestStartGame(t *testing.T) {
 		var data shed.OutboundMessage
 		err = json.Unmarshal(bytes, &data)
 		utils.AssertNoError(t, err)
-		utils.AssertEqual(t, data.Joiner, player2Name)
+		utils.AssertEqual(t, data.Joiner.Name, player2Name)
 	})
 
 	// When the creator sends the command to start the game
