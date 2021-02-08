@@ -38,89 +38,89 @@ type Game interface {
 }
 
 type shed struct {
-	deck             deck.Deck
-	pile             []deck.Card
-	playerCards      map[string]*PlayerCards
-	playerInfo       []PlayerInfo
-	activePlayers    []PlayerInfo
-	finishedPlayers  []PlayerInfo
-	currentPlayer    PlayerInfo
-	currentTurnIdx   int
-	stage            Stage
-	awaitingResponse protocol.Cmd
-	gameOver         bool
+	Deck            deck.Deck
+	Pile            []deck.Card
+	PlayerCards     map[string]*PlayerCards
+	PlayerInfo      []PlayerInfo
+	ActivePlayers   []PlayerInfo
+	FinishedPlayers []PlayerInfo
+	CurrentPlayer   PlayerInfo
+	CurrentTurnIdx  int
+	Stage           Stage
+	ExpectedCommand protocol.Cmd
+	GameOver        bool
 }
 
 type ShedOpts struct {
-	deck             deck.Deck
-	pile             []deck.Card
-	playerCards      map[string]*PlayerCards
-	playerInfo       []PlayerInfo
-	finishedPlayers  []PlayerInfo
-	currentPlayer    PlayerInfo
-	stage            Stage
-	awaitingResponse protocol.Cmd
+	Deck            deck.Deck
+	Pile            []deck.Card
+	PlayerCards     map[string]*PlayerCards
+	PlayerInfo      []PlayerInfo
+	FinishedPlayers []PlayerInfo
+	CurrentPlayer   PlayerInfo
+	Stage           Stage
+	ExpectedCommand protocol.Cmd
 }
 
 // NewShed constructs a new game of Shed
 func NewShed(opts ShedOpts) *shed {
 	s := &shed{
-		deck:             opts.deck,
-		pile:             opts.pile,
-		playerCards:      opts.playerCards,
-		playerInfo:       opts.playerInfo,
-		finishedPlayers:  opts.finishedPlayers,
-		currentPlayer:    opts.currentPlayer,
-		stage:            opts.stage,
-		awaitingResponse: opts.awaitingResponse,
+		Deck:            opts.Deck,
+		Pile:            opts.Pile,
+		PlayerCards:     opts.PlayerCards,
+		PlayerInfo:      opts.PlayerInfo,
+		FinishedPlayers: opts.FinishedPlayers,
+		CurrentPlayer:   opts.CurrentPlayer,
+		Stage:           opts.Stage,
+		ExpectedCommand: opts.ExpectedCommand,
 	}
 
-	if len(s.playerInfo) > 0 {
-		for i, info := range s.playerInfo {
-			if info.PlayerID == s.currentPlayer.PlayerID {
-				s.currentTurnIdx = i
+	if len(s.PlayerInfo) > 0 {
+		for i, info := range s.PlayerInfo {
+			if info.PlayerID == s.CurrentPlayer.PlayerID {
+				s.CurrentTurnIdx = i
 				break
 			}
 		}
 	}
 
-	if s.deck == nil {
-		s.deck = deck.New()
-		s.deck.Shuffle()
+	if s.Deck == nil {
+		s.Deck = deck.New()
+		s.Deck.Shuffle()
 	}
-	if s.pile == nil {
-		s.pile = []deck.Card{}
+	if s.Pile == nil {
+		s.Pile = []deck.Card{}
 	}
-	if s.playerCards == nil {
-		s.playerCards = map[string]*PlayerCards{}
+	if s.PlayerCards == nil {
+		s.PlayerCards = map[string]*PlayerCards{}
 	}
-	if s.playerInfo == nil {
+	if s.PlayerInfo == nil {
 		// new game
-		s.playerInfo = []PlayerInfo{}
-		s.activePlayers = []PlayerInfo{}
-		s.finishedPlayers = []PlayerInfo{}
-	} else if s.finishedPlayers == nil {
-		s.playerInfo = opts.playerInfo
-		s.activePlayers = opts.playerInfo
+		s.PlayerInfo = []PlayerInfo{}
+		s.ActivePlayers = []PlayerInfo{}
+		s.FinishedPlayers = []PlayerInfo{}
+	} else if s.FinishedPlayers == nil {
+		s.PlayerInfo = opts.PlayerInfo
+		s.ActivePlayers = opts.PlayerInfo
 	} else {
 		// work out who is still playing the game
 		stillPlaying := []PlayerInfo{}
-		for _, pi := range opts.playerInfo {
-			for _, fp := range opts.finishedPlayers {
+		for _, pi := range opts.PlayerInfo {
+			for _, fp := range opts.FinishedPlayers {
 				if fp.PlayerID != pi.PlayerID {
 					stillPlaying = append(stillPlaying, pi)
 				}
 			}
 		}
-		s.playerInfo = opts.playerInfo
-		s.activePlayers = stillPlaying
+		s.PlayerInfo = opts.PlayerInfo
+		s.ActivePlayers = stillPlaying
 	}
 
 	return s
 }
 
 func (s *shed) AwaitingResponse() protocol.Cmd {
-	return s.awaitingResponse
+	return s.ExpectedCommand
 }
 
 func (s *shed) Start(playerInfo []PlayerInfo) error {
@@ -134,21 +134,21 @@ func (s *shed) Start(playerInfo []PlayerInfo) error {
 		return ErrTooManyPlayers
 	}
 
-	s.playerInfo = playerInfo
-	s.activePlayers = s.playerInfo
+	s.PlayerInfo = playerInfo
+	s.ActivePlayers = s.PlayerInfo
 
 	for _, info := range playerInfo {
 		playerCards := &PlayerCards{
-			Hand:   s.deck.Deal(numCardsInGroup),
-			Seen:   s.deck.Deal(numCardsInGroup),
-			Unseen: s.deck.Deal(numCardsInGroup),
+			Hand:   s.Deck.Deal(numCardsInGroup),
+			Seen:   s.Deck.Deal(numCardsInGroup),
+			Unseen: s.Deck.Deal(numCardsInGroup),
 		}
-		s.playerCards[info.PlayerID] = playerCards
+		s.PlayerCards[info.PlayerID] = playerCards
 	}
 
 	rand.Seed(time.Now().UnixNano())
-	s.currentTurnIdx = rand.Intn(len(s.playerInfo) - 1)
-	s.currentPlayer = s.playerInfo[s.currentTurnIdx]
+	s.CurrentTurnIdx = rand.Intn(len(s.PlayerInfo) - 1)
+	s.CurrentPlayer = s.PlayerInfo[s.CurrentTurnIdx]
 
 	return nil
 }
@@ -157,41 +157,42 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 	if s == nil {
 		return nil, ErrNilGame
 	}
-	if s.playerCards == nil || len(s.playerCards) == 0 {
+	if s.PlayerCards == nil || len(s.PlayerCards) == 0 {
 		return nil, ErrNoPlayers
 	}
-	if s.awaitingResponse != protocol.Null {
+	if s.ExpectedCommand != protocol.Null {
 		return nil, ErrGameAwaitingResponse
 	}
-	if s.gameOver {
+	if s.GameOver {
 		return s.buildGameOverMessages(), nil
 	}
 
 	msgs := []OutboundMessage{}
-	currentPlayerCards := s.playerCards[s.currentPlayer.PlayerID]
+	currentPlayerCards := s.PlayerCards[s.CurrentPlayer.PlayerID]
 
-	switch s.stage {
+	switch s.Stage {
 	case preGame:
-		for _, info := range s.playerInfo {
+		for _, info := range s.PlayerInfo {
 			m := OutboundMessage{
 				PlayerID:      info.PlayerID,
+				Message:       "Choose the cards you want in your hand. The remaining cards will become your visible (/face-up) cards.",
 				Command:       protocol.Reorg,
-				Hand:          s.playerCards[info.PlayerID].Hand,
-				Seen:          s.playerCards[info.PlayerID].Seen,
+				Hand:          s.PlayerCards[info.PlayerID].Hand,
+				Seen:          s.PlayerCards[info.PlayerID].Seen,
 				ShouldRespond: true,
 			}
 			msgs = append(msgs, m)
 		}
 
-		s.awaitingResponse = protocol.Reorg
+		s.ExpectedCommand = protocol.Reorg
 		return msgs, nil
 
 	case clearDeck:
 		msgs, legalMoves := s.attemptMove(protocol.PlayHand)
 		if legalMoves {
-			s.awaitingResponse = protocol.PlayHand
+			s.ExpectedCommand = protocol.PlayHand
 		} else {
-			s.awaitingResponse = protocol.SkipTurn
+			s.ExpectedCommand = protocol.SkipTurn
 		}
 		return msgs, nil
 
@@ -199,9 +200,9 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 		if len(currentPlayerCards.Hand) > 0 {
 			msgs, legalMoves := s.attemptMove(protocol.PlayHand)
 			if legalMoves {
-				s.awaitingResponse = protocol.PlayHand
+				s.ExpectedCommand = protocol.PlayHand
 			} else {
-				s.awaitingResponse = protocol.SkipTurn
+				s.ExpectedCommand = protocol.SkipTurn
 			}
 			return msgs, nil
 		}
@@ -209,9 +210,9 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 		if len(currentPlayerCards.Seen) > 0 {
 			msgs, legalMoves := s.attemptMove(protocol.PlaySeen)
 			if legalMoves {
-				s.awaitingResponse = protocol.PlaySeen
+				s.ExpectedCommand = protocol.PlaySeen
 			} else {
-				s.awaitingResponse = protocol.SkipTurn
+				s.ExpectedCommand = protocol.SkipTurn
 			}
 			return msgs, nil
 		}
@@ -223,7 +224,7 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 			}
 
 			toSend := s.buildTurnMessages(protocol.PlayUnseen, unseenIndices)
-			s.awaitingResponse = protocol.PlayUnseen
+			s.ExpectedCommand = protocol.PlayUnseen
 			return toSend, nil
 		}
 
@@ -232,26 +233,26 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 	}
 
 	// this shouldn't happen
-	return nil, fmt.Errorf("could not match game stage %d", s.stage)
+	return nil, fmt.Errorf("could not match game stage %d", s.Stage)
 }
 
 func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage, error) {
 	if s == nil {
 		return nil, ErrNilGame
 	}
-	if s.playerCards == nil {
+	if s.PlayerCards == nil {
 		return nil, ErrNoPlayers
 	}
-	if s.awaitingResponse == protocol.Null {
+	if s.ExpectedCommand == protocol.Null {
 		return nil, ErrGameUnexpectedResponse
 	}
-	if s.gameOver {
+	if s.GameOver {
 		return s.buildGameOverMessages(), nil
 	}
 
 	// stage 0
-	if s.stage == preGame {
-		numPlayers, numMessages := len(s.playerInfo), len(inboundMsgs)
+	if s.Stage == preGame {
+		numPlayers, numMessages := len(s.PlayerInfo), len(inboundMsgs)
 		if numPlayers != numMessages {
 			return nil, fmt.Errorf("expected %d messages, got %d", numMessages, numPlayers)
 		}
@@ -272,38 +273,38 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 				newSeen = append(newSeen, s.getReorgCard(m.PlayerID, v))
 			}
 
-			s.playerCards[m.PlayerID].Hand = newHand
-			s.playerCards[m.PlayerID].Seen = newSeen
+			s.PlayerCards[m.PlayerID].Hand = newHand
+			s.PlayerCards[m.PlayerID].Seen = newSeen
 		}
 
 		// switch to stage 1
-		s.stage = clearDeck
-		s.awaitingResponse = protocol.Null
+		s.Stage = clearDeck
+		s.ExpectedCommand = protocol.Null
 		return nil, nil
 	}
 
 	msg := inboundMsgs[0]
-	if msg.Command != s.awaitingResponse {
-		return nil, fmt.Errorf("unexpected command - got %s, want %s", msg.Command.String(), s.awaitingResponse.String())
+	if msg.Command != s.ExpectedCommand {
+		return nil, fmt.Errorf("unexpected command - got %s, want %s", msg.Command.String(), s.ExpectedCommand.String())
 	}
-	if msg.PlayerID != s.currentPlayer.PlayerID {
+	if msg.PlayerID != s.CurrentPlayer.PlayerID {
 		return nil, fmt.Errorf("unexpected message from player %s", msg.PlayerID)
 	}
 
 	if msg.Command == protocol.Burn { // ack
 		// player gets another turn
-		s.awaitingResponse = protocol.Null
+		s.ExpectedCommand = protocol.Null
 		return nil, nil
 	}
 
 	if msg.Command == protocol.SkipTurn { // ack
-		s.awaitingResponse = protocol.Null
+		s.ExpectedCommand = protocol.Null
 		s.turn()
 		return nil, nil
 	}
 
 	// stage 1
-	if s.stage == clearDeck {
+	if s.Stage == clearDeck {
 		if len(inboundMsgs) != 1 {
 			return nil, fmt.Errorf("expected one message, got %d", len(inboundMsgs))
 		}
@@ -316,51 +317,52 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 			s.completeMove(msg)
 			s.pluckFromDeck(msg)
 
-			if isBurn(s.pile) {
-				s.awaitingResponse = protocol.Burn
+			if isBurn(s.Pile) {
+				s.ExpectedCommand = protocol.Burn
 				return s.buildBurnMessages(), nil
 			}
 
 			toSend := []OutboundMessage{{
-				PlayerID:      s.currentPlayer.PlayerID,
+				PlayerID:      s.CurrentPlayer.PlayerID,
 				Command:       protocol.ReplenishHand,
-				Hand:          s.playerCards[s.currentPlayer.PlayerID].Hand,
-				Seen:          s.playerCards[s.currentPlayer.PlayerID].Seen,
-				Pile:          s.pile,
+				Hand:          s.PlayerCards[s.CurrentPlayer.PlayerID].Hand,
+				Seen:          s.PlayerCards[s.CurrentPlayer.PlayerID].Seen,
+				Pile:          s.Pile,
 				ShouldRespond: true,
 			}}
 
-			for _, info := range s.playerInfo {
-				if info.PlayerID != s.currentPlayer.PlayerID {
+			for _, info := range s.PlayerInfo {
+				if info.PlayerID != s.CurrentPlayer.PlayerID {
 					toSend = append(toSend, s.buildEndOfTurnMessage(info.PlayerID))
 				}
 			}
 
-			s.awaitingResponse = protocol.ReplenishHand
+			s.ExpectedCommand = protocol.ReplenishHand
+			// log.Printf("PILE? %+v", toSend)
 			return toSend, nil
 
 		case protocol.ReplenishHand:
 			// If deck is empty, switch to stage 2
-			if len(s.deck) == 0 {
-				s.stage = clearCards
+			if len(s.Deck) == 0 {
+				s.Stage = clearCards
 			}
 
-			s.awaitingResponse = protocol.Null
+			s.ExpectedCommand = protocol.Null
 			s.turn()
 			return nil, nil
 		}
 	}
 
 	// stage 2
-	if s.stage == clearCards {
+	if s.Stage == clearCards {
 		switch msg.Command {
 
-		case protocol.PlayerFinished:
-			s.awaitingResponse = protocol.Null
+		case protocol.PlayerFinished: // ack
+			s.ExpectedCommand = protocol.Null
 			s.moveToFinishedPlayers() // handles the next turn
 
 			if s.gameIsOver() {
-				s.gameOver = true
+				s.GameOver = true
 				// move the remaining player
 				s.moveToFinishedPlayers()
 				return s.buildGameOverMessages(), nil
@@ -368,10 +370,10 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 
 			return nil, nil
 
-		case protocol.EndOfTurn,
-			protocol.UnseenSuccess,
+		case protocol.EndOfTurn, // ack
+			protocol.UnseenSuccess, // ack
 			protocol.UnseenFailure: // ack
-			s.awaitingResponse = protocol.Null
+			s.ExpectedCommand = protocol.Null
 			s.turn()
 			return nil, nil
 
@@ -379,12 +381,12 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 			s.completeMove(msg)
 
 			if s.playerHasFinished() {
-				s.awaitingResponse = protocol.PlayerFinished
+				s.ExpectedCommand = protocol.PlayerFinished
 				return s.buildPlayerFinishedMessages(), nil
 			}
 
 			toSend := s.buildEndOfTurnMessages(protocol.EndOfTurn)
-			s.awaitingResponse = protocol.EndOfTurn
+			s.ExpectedCommand = protocol.EndOfTurn
 			return toSend, nil
 
 		case protocol.PlayUnseen:
@@ -393,24 +395,24 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 			}
 			// possible optimisation: could precalculate legal Unseen card moves
 			cardIdx := msg.Decision[0]
-			chosenCard := s.playerCards[s.currentPlayer.PlayerID].Unseen[cardIdx]
+			chosenCard := s.PlayerCards[s.CurrentPlayer.PlayerID].Unseen[cardIdx]
 
 			s.completeMove(msg)
 
-			legalMoves := getLegalMoves(s.pile, []deck.Card{chosenCard})
+			legalMoves := getLegalMoves(s.Pile, []deck.Card{chosenCard})
 
 			if len(legalMoves) == 0 {
 				s.pickUpPile()
-				s.awaitingResponse = protocol.UnseenFailure
+				s.ExpectedCommand = protocol.UnseenFailure
 				return s.buildEndOfTurnMessages(protocol.UnseenFailure), nil
 			}
 
 			if s.playerHasFinished() {
-				s.awaitingResponse = protocol.PlayerFinished
+				s.ExpectedCommand = protocol.PlayerFinished
 				return s.buildPlayerFinishedMessages(), nil
 			}
 
-			s.awaitingResponse = protocol.UnseenSuccess
+			s.ExpectedCommand = protocol.UnseenSuccess
 			return s.buildEndOfTurnMessages(protocol.UnseenSuccess), nil
 		}
 	}
@@ -424,16 +426,16 @@ func (s *shed) attemptMove(currentPlayerCmd protocol.Cmd) ([]OutboundMessage, bo
 	switch currentPlayerCmd {
 
 	case protocol.PlayHand:
-		cards = s.playerCards[s.currentPlayer.PlayerID].Hand
+		cards = s.PlayerCards[s.CurrentPlayer.PlayerID].Hand
 
 	case protocol.PlaySeen:
-		cards = s.playerCards[s.currentPlayer.PlayerID].Seen
+		cards = s.PlayerCards[s.CurrentPlayer.PlayerID].Seen
 
 	default:
 		panic(fmt.Sprintf("unrecognised move protocol %s", currentPlayerCmd))
 	}
 
-	legalMoves := getLegalMoves(s.pile, cards)
+	legalMoves := getLegalMoves(s.Pile, cards)
 	if len(legalMoves) > 0 {
 		toSend := s.buildTurnMessages(currentPlayerCmd, legalMoves)
 		return toSend, true
@@ -457,16 +459,16 @@ func (s *shed) completeMove(msg InboundMessage) {
 
 	switch msg.Command {
 	case protocol.PlayHand:
-		newCards = &s.playerCards[s.currentPlayer.PlayerID].Hand
-		newCardsSet = cardSliceToSet(s.playerCards[s.currentPlayer.PlayerID].Hand)
+		newCards = &s.PlayerCards[s.CurrentPlayer.PlayerID].Hand
+		newCardsSet = cardSliceToSet(s.PlayerCards[s.CurrentPlayer.PlayerID].Hand)
 
 	case protocol.PlaySeen:
-		newCards = &s.playerCards[s.currentPlayer.PlayerID].Seen
-		newCardsSet = cardSliceToSet(s.playerCards[s.currentPlayer.PlayerID].Seen)
+		newCards = &s.PlayerCards[s.CurrentPlayer.PlayerID].Seen
+		newCardsSet = cardSliceToSet(s.PlayerCards[s.CurrentPlayer.PlayerID].Seen)
 
 	case protocol.PlayUnseen:
-		newCards = &s.playerCards[s.currentPlayer.PlayerID].Unseen
-		newCardsSet = cardSliceToSet(s.playerCards[s.currentPlayer.PlayerID].Unseen)
+		newCards = &s.PlayerCards[s.CurrentPlayer.PlayerID].Unseen
+		newCardsSet = cardSliceToSet(s.PlayerCards[s.CurrentPlayer.PlayerID].Unseen)
 	}
 
 	for _, cardIdx := range msg.Decision {
@@ -474,83 +476,84 @@ func (s *shed) completeMove(msg InboundMessage) {
 		delete(newCardsSet, (*newCards)[cardIdx])
 	}
 
-	s.pile = append(s.pile, toPile...)
+	s.Pile = append(s.Pile, toPile...)
 	*newCards = setToCardSlice(newCardsSet)
 }
 
 func (s *shed) pluckFromDeck(msg InboundMessage) {
-	if len(s.deck) == 0 {
+	if len(s.Deck) == 0 {
 		return
 	}
-	fromDeck := s.deck.Deal(len(msg.Decision))
-	s.playerCards[s.currentPlayer.PlayerID].Hand = append(s.playerCards[s.currentPlayer.PlayerID].Hand, fromDeck...)
+	fromDeck := s.Deck.Deal(len(msg.Decision))
+	s.PlayerCards[s.CurrentPlayer.PlayerID].Hand = append(s.PlayerCards[s.CurrentPlayer.PlayerID].Hand, fromDeck...)
 }
 
 func (s *shed) pickUpPile() {
-	playerID := s.currentPlayer.PlayerID
-	currentPlayerCards := s.playerCards[playerID]
-	currentPlayerCards.Hand = append(currentPlayerCards.Hand, s.pile...)
-	s.pile = []deck.Card{}
+	playerID := s.CurrentPlayer.PlayerID
+	currentPlayerCards := s.PlayerCards[playerID]
+	currentPlayerCards.Hand = append(currentPlayerCards.Hand, s.Pile...)
+	s.Pile = []deck.Card{}
 }
 
 func (s *shed) playerHasFinished() bool {
-	pc := s.playerCards[s.currentPlayer.PlayerID]
+	pc := s.PlayerCards[s.CurrentPlayer.PlayerID]
 	return len(pc.Hand) == 0 &&
 		len(pc.Seen) == 0 &&
 		len(pc.Unseen) == 0
 }
 
 func (s *shed) gameIsOver() bool {
-	return len(s.activePlayers) == 1
+	return len(s.ActivePlayers) == 1
 }
 
 func (s *shed) turn() {
-	s.currentTurnIdx = (s.currentTurnIdx + 1) % len(s.activePlayers)
-	s.currentPlayer = s.activePlayers[s.currentTurnIdx]
+	s.CurrentTurnIdx = (s.CurrentTurnIdx + 1) % len(s.ActivePlayers)
+	s.CurrentPlayer = s.ActivePlayers[s.CurrentTurnIdx]
 }
 
 func (s *shed) moveToFinishedPlayers() {
-	if len(s.activePlayers) == 1 {
-		s.finishedPlayers = append(s.finishedPlayers, s.activePlayers[0])
-		s.activePlayers = []PlayerInfo{}
+	if len(s.ActivePlayers) == 1 {
+		s.FinishedPlayers = append(s.FinishedPlayers, s.ActivePlayers[0])
+		s.ActivePlayers = []PlayerInfo{}
 		return
 	}
 
-	s.activePlayers = append(s.activePlayers[:s.currentTurnIdx],
-		s.activePlayers[(s.currentTurnIdx+1)%len(s.activePlayers):]...)
+	s.ActivePlayers = append(s.ActivePlayers[:s.CurrentTurnIdx],
+		s.ActivePlayers[(s.CurrentTurnIdx+1)%len(s.ActivePlayers):]...)
 
-	s.finishedPlayers = append(s.finishedPlayers, s.currentPlayer)
+	s.FinishedPlayers = append(s.FinishedPlayers, s.CurrentPlayer)
 
-	s.currentPlayer = s.activePlayers[s.currentTurnIdx]
+	s.CurrentPlayer = s.ActivePlayers[s.CurrentTurnIdx]
 }
 
 func (s *shed) buildSkipTurnMessage(playerID string) OutboundMessage {
 	return OutboundMessage{
 		PlayerID:    playerID,
 		Command:     protocol.SkipTurn,
-		CurrentTurn: s.currentPlayer,
-		Hand:        s.playerCards[playerID].Hand,
-		Seen:        s.playerCards[playerID].Seen,
-		Pile:        s.pile,
-		Message:     fmt.Sprintf("%s skips a turn!", s.currentPlayer.Name),
+		CurrentTurn: s.CurrentPlayer,
+		Hand:        s.PlayerCards[playerID].Hand,
+		Seen:        s.PlayerCards[playerID].Seen,
+		Pile:        s.Pile,
+		Message:     fmt.Sprintf("%s skips a turn!", s.CurrentPlayer.Name),
 	}
 }
 
 func (s *shed) buildSkipTurnMessages(currentPlayerCmd protocol.Cmd) []OutboundMessage {
 	currentPlayerMsg := OutboundMessage{
-		PlayerID:      s.currentPlayer.PlayerID,
+		PlayerID:      s.CurrentPlayer.PlayerID,
 		Command:       currentPlayerCmd, // always SkipTurn
-		Hand:          s.playerCards[s.currentPlayer.PlayerID].Hand,
-		Seen:          s.playerCards[s.currentPlayer.PlayerID].Seen,
-		Pile:          s.pile,
-		Opponents:     buildOpponents(s.currentPlayer.PlayerID, s.playerCards),
+		CurrentTurn:   s.CurrentPlayer,
+		Hand:          s.PlayerCards[s.CurrentPlayer.PlayerID].Hand,
+		Seen:          s.PlayerCards[s.CurrentPlayer.PlayerID].Seen,
+		Pile:          s.Pile,
+		Opponents:     buildOpponents(s.CurrentPlayer.PlayerID, s.PlayerCards),
 		ShouldRespond: true,
 		Message:       "You skip a turn!",
 	}
 
 	toSend := []OutboundMessage{currentPlayerMsg}
-	for _, info := range s.playerInfo {
-		if info.PlayerID != s.currentPlayer.PlayerID {
+	for _, info := range s.PlayerInfo {
+		if info.PlayerID != s.CurrentPlayer.PlayerID {
 			toSend = append(toSend, s.buildSkipTurnMessage(info.PlayerID))
 		}
 	}
@@ -562,31 +565,47 @@ func (s *shed) buildTurnMessage(playerID string) OutboundMessage {
 	return OutboundMessage{
 		PlayerID:    playerID,
 		Command:     protocol.Turn,
-		CurrentTurn: s.currentPlayer,
-		Hand:        s.playerCards[playerID].Hand,
-		Seen:        s.playerCards[playerID].Seen,
-		Pile:        s.pile,
-		Opponents:   buildOpponents(playerID, s.playerCards),
-		Message:     fmt.Sprintf("It's %s's turn!", s.currentPlayer.Name),
+		CurrentTurn: s.CurrentPlayer,
+		Hand:        s.PlayerCards[playerID].Hand,
+		Seen:        s.PlayerCards[playerID].Seen,
+		Pile:        s.Pile,
+		Opponents:   buildOpponents(playerID, s.PlayerCards),
+		Message:     fmt.Sprintf("It's %s's turn!", s.CurrentPlayer.Name),
 	}
 }
 
 func (s *shed) buildTurnMessages(currentPlayerCmd protocol.Cmd, moves []int) []OutboundMessage {
+	var toPlay string
+	switch currentPlayerCmd {
+	case protocol.PlayHand:
+		toPlay = "hand"
+	case protocol.PlaySeen:
+		toPlay = "face-up"
+	case protocol.PlayUnseen:
+		toPlay = "face-down"
+	}
+
+	msg := "It's your turn!"
+	if toPlay != "" {
+		msg += fmt.Sprintf(" Play from your %s cards.", toPlay)
+	}
+
 	currentPlayerMsg := OutboundMessage{
-		PlayerID:      s.currentPlayer.PlayerID,
+		PlayerID:      s.CurrentPlayer.PlayerID,
 		Command:       currentPlayerCmd,
-		Hand:          s.playerCards[s.currentPlayer.PlayerID].Hand,
-		Seen:          s.playerCards[s.currentPlayer.PlayerID].Seen,
-		Pile:          s.pile,
+		CurrentTurn:   s.CurrentPlayer,
+		Hand:          s.PlayerCards[s.CurrentPlayer.PlayerID].Hand,
+		Seen:          s.PlayerCards[s.CurrentPlayer.PlayerID].Seen,
+		Pile:          s.Pile,
 		Moves:         moves,
-		Opponents:     buildOpponents(s.currentPlayer.PlayerID, s.playerCards),
+		Opponents:     buildOpponents(s.CurrentPlayer.PlayerID, s.PlayerCards),
 		ShouldRespond: true,
-		Message:       "It's your turn!",
+		Message:       msg,
 	}
 
 	toSend := []OutboundMessage{currentPlayerMsg}
-	for _, info := range s.playerInfo {
-		if info.PlayerID != s.currentPlayer.PlayerID {
+	for _, info := range s.PlayerInfo {
+		if info.PlayerID != s.CurrentPlayer.PlayerID {
 			toSend = append(toSend, s.buildTurnMessage(info.PlayerID))
 		}
 	}
@@ -598,18 +617,18 @@ func (s *shed) buildEndOfTurnMessage(playerID string) OutboundMessage {
 	return OutboundMessage{
 		PlayerID:    playerID,
 		Command:     protocol.EndOfTurn,
-		CurrentTurn: s.currentPlayer,
-		Hand:        s.playerCards[playerID].Hand,
-		Seen:        s.playerCards[playerID].Seen,
-		Pile:        s.pile,
+		CurrentTurn: s.CurrentPlayer,
+		Hand:        s.PlayerCards[playerID].Hand,
+		Seen:        s.PlayerCards[playerID].Seen,
+		Pile:        s.Pile,
 	}
 }
 
 func (s *shed) buildEndOfTurnMessages(currentPlayerCommand protocol.Cmd) []OutboundMessage {
 	toSend := []OutboundMessage{}
-	for _, info := range s.playerInfo {
+	for _, info := range s.PlayerInfo {
 		msg := s.buildEndOfTurnMessage(info.PlayerID)
-		if info.PlayerID == s.currentPlayer.PlayerID {
+		if info.PlayerID == s.CurrentPlayer.PlayerID {
 			msg.Command = currentPlayerCommand
 			msg.ShouldRespond = true
 		}
@@ -623,20 +642,20 @@ func (s *shed) buildPlayerFinishedMessage(playerID string) OutboundMessage {
 	return OutboundMessage{
 		PlayerID:        playerID,
 		Command:         protocol.PlayerFinished,
-		CurrentTurn:     s.currentPlayer,
-		Hand:            s.playerCards[playerID].Hand,
-		Seen:            s.playerCards[playerID].Seen,
-		Pile:            s.pile,
-		FinishedPlayers: s.finishedPlayers,
-		Message:         fmt.Sprintf("%s has finished!", s.currentPlayer.Name),
+		CurrentTurn:     s.CurrentPlayer,
+		Hand:            s.PlayerCards[playerID].Hand,
+		Seen:            s.PlayerCards[playerID].Seen,
+		Pile:            s.Pile,
+		FinishedPlayers: s.FinishedPlayers,
+		Message:         fmt.Sprintf("%s has finished!", s.CurrentPlayer.Name),
 	}
 }
 
 func (s *shed) buildPlayerFinishedMessages() []OutboundMessage {
 	toSend := []OutboundMessage{}
-	for _, info := range s.playerInfo {
+	for _, info := range s.PlayerInfo {
 		msg := s.buildPlayerFinishedMessage(info.PlayerID)
-		if info.PlayerID == s.currentPlayer.PlayerID {
+		if info.PlayerID == s.CurrentPlayer.PlayerID {
 			msg.ShouldRespond = true
 			msg.Message = "You've finished!"
 		}
@@ -648,12 +667,12 @@ func (s *shed) buildPlayerFinishedMessages() []OutboundMessage {
 
 func (s *shed) buildGameOverMessages() []OutboundMessage {
 	toSend := []OutboundMessage{}
-	for _, info := range s.playerInfo {
+	for _, info := range s.PlayerInfo {
 		toSend = append(toSend, OutboundMessage{
 			PlayerID:        info.PlayerID,
 			Command:         protocol.GameOver,
-			FinishedPlayers: s.finishedPlayers,
-			Pile:            s.pile,
+			FinishedPlayers: s.FinishedPlayers,
+			Pile:            s.Pile,
 			Message:         "Game over!",
 		})
 	}
@@ -665,20 +684,20 @@ func (s *shed) buildBurnMessage(playerID string) OutboundMessage {
 	return OutboundMessage{
 		PlayerID:        playerID,
 		Command:         protocol.Burn,
-		CurrentTurn:     s.currentPlayer,
-		Hand:            s.playerCards[playerID].Hand,
-		Seen:            s.playerCards[playerID].Seen,
-		Pile:            s.pile,
-		FinishedPlayers: s.finishedPlayers,
-		Message:         fmt.Sprintf("Burn for %s!", s.currentPlayer.Name),
+		CurrentTurn:     s.CurrentPlayer,
+		Hand:            s.PlayerCards[playerID].Hand,
+		Seen:            s.PlayerCards[playerID].Seen,
+		Pile:            s.Pile,
+		FinishedPlayers: s.FinishedPlayers,
+		Message:         fmt.Sprintf("Burn for %s!", s.CurrentPlayer.Name),
 	}
 }
 
 func (s *shed) buildBurnMessages() []OutboundMessage {
 	toSend := []OutboundMessage{}
-	for _, info := range s.playerInfo {
+	for _, info := range s.PlayerInfo {
 		msg := s.buildBurnMessage(info.PlayerID)
-		if info.PlayerID == s.currentPlayer.PlayerID {
+		if info.PlayerID == s.CurrentPlayer.PlayerID {
 			msg.ShouldRespond = true
 			msg.Message = "Burn!"
 		}
@@ -689,8 +708,8 @@ func (s *shed) buildBurnMessages() []OutboundMessage {
 }
 
 func (s *shed) getReorgCard(playerID string, choice int) deck.Card {
-	oldHand := s.playerCards[playerID].Hand
-	oldSeen := s.playerCards[playerID].Seen
+	oldHand := s.PlayerCards[playerID].Hand
+	oldSeen := s.PlayerCards[playerID].Seen
 
 	var card deck.Card
 	if choice > 2 {

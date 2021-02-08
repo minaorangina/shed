@@ -92,7 +92,7 @@ func TestGETGameWaitingRoom(t *testing.T) {
 	t.Run("game creator sees a special admin view", func(t *testing.T) {
 		gameID, creatorID := "some-game-id", "i-am-the-creator"
 
-		url := "/waiting-room?game_id=" + gameID + "&player_id=" + creatorID
+		url := "/waiting-room?gameID=" + gameID + "&playerID=" + creatorID
 
 		response := httptest.NewRecorder()
 		request, _ := http.NewRequest(http.MethodGet, url, nil)
@@ -123,7 +123,7 @@ func TestGETGameWaitingRoom(t *testing.T) {
 	t.Run("game joiners see standard view", func(t *testing.T) {
 		gameID, playerID := "some-game-id", "i-am-some-rando"
 
-		url := "/waiting-room?game_id=" + gameID + "&player_id=" + playerID
+		url := "/waiting-room?gameID=" + gameID + "&playerID=" + playerID
 
 		response := httptest.NewRecorder()
 		request, _ := http.NewRequest(http.MethodGet, url, nil)
@@ -229,10 +229,11 @@ func TestJoinGame(t *testing.T) {
 func TestServerGETGame(t *testing.T) {
 	t.Run("returns an existing active game", func(t *testing.T) {
 		testID := "12u34"
+		game := shed.NewShed(shed.ShedOpts{})
 		server := newServerWithGame(newTestGame(t, shed.GameEngineOpts{
 			GameID:    testID,
 			PlayState: shed.InProgress,
-			Game:      shed.NewShed(shed.ShedOpts{}),
+			Game:      game,
 		}))
 
 		request := newGetGameRequest(testID)
@@ -240,7 +241,9 @@ func TestServerGETGame(t *testing.T) {
 
 		server.ServeHTTP(response, request)
 
-		want := GetGameRes{Status: "InProgress", GameID: testID}
+		gameJSON, err := json.Marshal(game)
+		utils.AssertNoError(t, err)
+		want := GetGameRes{State: string(gameJSON), GameID: testID}
 
 		bodyBytes, err := ioutil.ReadAll(response.Result().Body)
 		utils.AssertNoError(t, err)
@@ -261,7 +264,11 @@ func TestServerGETGame(t *testing.T) {
 
 		server.ServeHTTP(response, request)
 
-		want := GetGameRes{Status: "Idle", GameID: pendingID}
+		engine := server.store.FindGame(pendingID)
+		utils.AssertNotNil(t, engine)
+		gameJSON, err := json.Marshal(engine.Game())
+		utils.AssertNoError(t, err)
+		want := GetGameRes{State: string(gameJSON), GameID: pendingID}
 
 		bodyBytes, err := ioutil.ReadAll(response.Result().Body)
 		utils.AssertNoError(t, err)
@@ -310,7 +317,7 @@ func TestWS(t *testing.T) {
 		defer server.Close()
 
 		wsURL := "ws" + strings.Trim(server.URL, "http") +
-			"/ws?game_id=unknowngamelol&player_id=unknownhooman"
+			"/ws?gameID=unknowngamelol&playerID=unknownhooman"
 
 		_, resp, err := websocket.DefaultDialer.Dial(wsURL, nil)
 
@@ -332,7 +339,7 @@ func TestWS(t *testing.T) {
 		defer server.Close()
 
 		wsURL := "ws" + strings.Trim(server.URL, "http") +
-			"/ws?game_id=" + gameID + "&player_id=" + playerID
+			"/ws?gameID=" + gameID + "&playerID=" + playerID
 
 		ws, resp, err := websocket.DefaultDialer.Dial(wsURL, nil)
 

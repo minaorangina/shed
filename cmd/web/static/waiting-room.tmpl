@@ -36,7 +36,7 @@
       if (adminStartButton) {
         adminStartButton.addEventListener("click", () => {
           const data = {
-            player_id: playerID,
+            playerID playerID,
             command: "Start"
           };
           conn.send(JSON.stringify(data));

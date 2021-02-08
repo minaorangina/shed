@@ -53,6 +53,7 @@ type GameEngine interface {
 	RemovePlayer(Player)
 	Receive(InboundMessage)
 	PlayState() PlayState
+	Game() Game
 }
 
 // gameEngine represents the engine of the game
@@ -154,6 +155,7 @@ func (ge *gameEngine) Play() {
 		if err != nil {
 			panic(fmt.Sprintf("error: %s\n%v", err.Error(), outbound))
 		}
+		// log.Printf("outbound: %+v\n", outbound)
 		ge.Send(outbound)
 	}
 }
@@ -235,6 +237,7 @@ func (ge *gameEngine) Listen() {
 			case protocol.Reorg:
 				commTracker.mu.Lock()
 				commTracker.messages = append(commTracker.messages, msg)
+				// send back
 				commTracker.mu.Unlock()
 
 				if len(commTracker.messages) == len(ge.Players()) {
@@ -304,6 +307,10 @@ func (ge *gameEngine) Players() Players {
 
 func (ge *gameEngine) PlayState() PlayState {
 	return ge.playState
+}
+
+func (ge *gameEngine) Game() Game {
+	return ge.game
 }
 
 func buildGameHasStartedMessage(recipient Player) OutboundMessage {

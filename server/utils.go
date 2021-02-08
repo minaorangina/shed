@@ -270,5 +270,5 @@ func mustDialWS(t *testing.T, url string) *websocket.Conn {
 
 func makeWSUrl(serverURL, gameID, playerID string) string {
 	return "ws" + strings.Trim(serverURL, "http") +
-		"/ws?game_id=" + gameID + "&player_id=" + playerID
+		"/ws?gameID=" + gameID + "&playerID=" + playerID
 }

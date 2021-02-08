@@ -34,21 +34,21 @@ type NewGameReq struct {
 }
 
 type PendingGameRes struct {
-	GameID     string            `json:"game_id"`
-	PlayerID   string            `json:"player_id"`
+	GameID     string            `json:"gameID"`
+	PlayerID   string            `json:"playerID"`
 	Name       string            `json:"name"`
-	PlayerInfo shed.PlayerInfo   `json:"player_info"`
-	Admin      bool              `json:"is_admin"`
+	PlayerInfo shed.PlayerInfo   `json:"playerInfo"`
+	Admin      bool              `json:"isAdmin"`
 	Players    []shed.PlayerInfo `json:"players,omitempty"`
 }
 
 type JoinGameReq struct {
-	GameID string `json:"game_id"`
+	GameID string `json:"gameID"`
 	Name   string `json:"name"`
 }
 type GetGameRes struct {
-	Status string `json:"status"`
-	GameID string `json:"game_id"`
+	State  string `json:"state"`
+	GameID string `json:"gameID"`
 }
 
 // GameServer is a game server
@@ -216,17 +216,31 @@ func (g *GameServer) HandleFindGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	game := g.store.FindGame(gameID)
+	engine := g.store.FindGame(gameID)
 
-	if game == nil {
+	if engine == nil {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte(unknownGameIDMsg(gameID)))
 		return
 	}
 
+	game := engine.Game()
+	if game == nil {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("GameEngine had nil game"))
+		return
+	}
+
+	bytes, err := json.Marshal(game)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
 	response := GetGameRes{
-		Status: fmt.Sprint(game.PlayState()),
-		GameID: game.ID(),
+		State:  string(bytes),
+		GameID: engine.ID(),
 	}
 
 	responseBytes, err := json.Marshal(response)
@@ -306,7 +320,7 @@ func (g *GameServer) HandleJoinGame(w http.ResponseWriter, r *http.Request) {
 func (g *GameServer) HandleWaitingRoom(w http.ResponseWriter, r *http.Request) {
 	// check if this person should get the file
 	query := r.URL.Query()
-	vals, ok := query["game_id"]
+	vals, ok := query["gameID"]
 	if !ok || len(vals) != 1 {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("missing game ID"))
@@ -314,7 +328,7 @@ func (g *GameServer) HandleWaitingRoom(w http.ResponseWriter, r *http.Request) {
 	}
 	gameID := vals[0]
 
-	vals, ok = query["player_id"]
+	vals, ok = query["playerID"]
 	if !ok || len(vals) != 1 {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("missing user ID"))
@@ -351,7 +365,7 @@ func (g *GameServer) HandleWaitingRoom(w http.ResponseWriter, r *http.Request) {
 
 func (g *GameServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
-	vals, ok := query["game_id"]
+	vals, ok := query["gameID"]
 
 	if !ok || len(vals) != 1 {
 		log.Println("missing game ID")
@@ -361,7 +375,7 @@ func (g *GameServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 	}
 	gameID := vals[0]
 
-	vals, ok = query["player_id"]
+	vals, ok = query["playerID"]
 	if !ok || len(vals) != 1 {
 		log.Println("missing player ID")
 		w.Write([]byte("missing player ID"))

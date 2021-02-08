@@ -15,7 +15,7 @@ var (
 )
 
 type PlayerInfo struct {
-	PlayerID string `json:"player_id"`
+	PlayerID string `json:"playerID"`
 	Name     string `json:"name"`
 }
 
