@@ -144,7 +144,181 @@ func TestGameStageZero(t *testing.T) {
 	})
 }
 
+func TestGameStageZeroToOne(t *testing.T) {
+	// Given a new game
+	game := NewShed(ShedOpts{})
+
+	// When the game has started and Next is called
+	err := game.Start(twoPlayers())
+	utils.AssertNoError(t, err)
+	_, err = game.Next()
+	utils.AssertNoError(t, err)
+
+	// Then the game enters the reorganisation stage
+	utils.AssertEqual(t, game.Stage, preGame)
+
+	p2Cards := game.PlayerCards["p2"]
+	p2NewCards := &PlayerCards{
+		Hand: []deck.Card{p2Cards.Hand[2], p2Cards.Seen[1], p2Cards.Seen[2]},
+		Seen: []deck.Card{p2Cards.Hand[0], p2Cards.Hand[1], p2Cards.Seen[0]},
+	}
+	p2NewCards.Unseen = game.PlayerCards["p2"].Unseen
+
+	want := map[string]*PlayerCards{
+		"p1": game.PlayerCards["p1"],
+		"p2": p2NewCards,
+	}
+
+	// and the players send their response
+	msgs, err := game.ReceiveResponse([]InboundMessage{
+		{
+			PlayerID: "p1",
+			Command:  protocol.Reorg,
+			Decision: []int{0, 1, 2},
+		},
+		{
+			PlayerID: "p2",
+			Command:  protocol.Reorg,
+			Decision: []int{2, 4, 5},
+		},
+	})
+
+	// and the response is accepted
+	utils.AssertNoError(t, err)
+	utils.AssertDeepEqual(t, msgs, []OutboundMessage(nil))
+
+	// and players' cards are updated
+	for id, c := range game.PlayerCards {
+		utils.AssertDeepEqual(t, *c, *want[id])
+	}
+
+	// and the game moves to stage one
+	utils.AssertEqual(t, game.Stage, clearDeck)
+
+	// and when Next() is called, someone is assigned the first turn
+	preMoveMsgs, err := game.Next()
+	utils.AssertNoError(t, err)
+	currentPlayerID := game.CurrentPlayer.PlayerID
+	utils.AssertNotEmptyString(t, currentPlayerID)
+
+	// And when the current player plays a card
+	preMoveHand := make([]deck.Card, 3)
+	copy(preMoveHand, game.PlayerCards[currentPlayerID].Hand)
+
+	move := getNonBurnMove(game.PlayerCards[currentPlayerID].Hand, preMoveMsgs[0].Moves)
+	chosenCard := preMoveHand[move]
+
+	postMoveMsgs, err := game.ReceiveResponse([]InboundMessage{{
+		PlayerID: game.CurrentPlayer.PlayerID,
+		Command:  protocol.PlayHand,
+		Decision: []int{move},
+	}})
+
+	// Then the current player's hand has changed
+	utils.AssertNotDeepEqual(t, game.PlayerCards[currentPlayerID].Hand, preMoveHand)
+
+	// And the messages reflect this fact
+	utils.AssertNotDeepEqual(t, postMoveMsgs[0].Hand, preMoveHand)
+
+	// And the pile is no longer empty
+	utils.AssertEqual(t, len(game.Pile), 1)
+	utils.AssertDeepEqual(t, game.Pile, []deck.Card{chosenCard})
+
+	// And the messages reflect this fact
+	for _, m := range postMoveMsgs {
+		utils.AssertEqual(t, len(m.Pile), 1)
+		utils.AssertDeepEqual(t, m.Pile, []deck.Card{chosenCard})
+	}
+}
+
 func TestGameStageOne(t *testing.T) {
+	t.Run("stage 1: first move", func(t *testing.T) {
+		// Given a game in stage 1 with an empty pile
+		pile := []deck.Card{}
+
+		// And a player with cards in their hand
+		targetCard := deck.NewCard(deck.Nine, deck.Clubs)
+		hand := []deck.Card{
+			deck.NewCard(deck.Eight, deck.Hearts),
+			targetCard,
+			deck.NewCard(deck.Six, deck.Diamonds),
+		}
+
+		pc := &PlayerCards{Hand: hand}
+
+		game := NewShed(ShedOpts{
+			Stage:         clearDeck,
+			Deck:          someDeck(4),
+			Pile:          pile,
+			PlayerInfo:    twoPlayers(),
+			CurrentPlayer: twoPlayers()[0],
+			PlayerCards: map[string]*PlayerCards{
+				"p1": pc,
+				"p2": somePlayerCards(3),
+			},
+		})
+
+		oldHand := game.PlayerCards[game.CurrentPlayer.PlayerID].Hand
+		oldHandSize, oldPileSize, oldDeckSize := len(oldHand), len(game.Pile), len(game.Deck)
+
+		// When the game progresses, then players are informed of the current turn
+		msgs, err := game.Next()
+		utils.AssertNoError(t, err)
+		utils.AssertNotNil(t, msgs)
+		utils.AssertEqual(t, len(msgs), len(game.PlayerInfo))
+
+		checkNextMessages(t, msgs, protocol.PlayHand, game)
+		moves := getMoves(msgs, game.CurrentPlayer.PlayerID)
+
+		// And the game expects a response
+		utils.AssertEqual(t, game.AwaitingResponse(), protocol.PlayHand)
+
+		// And when player response is received
+		msgs, err = game.ReceiveResponse([]InboundMessage{{
+			PlayerID: game.CurrentPlayer.PlayerID,
+			Command:  protocol.PlayHand,
+			Decision: []int{moves[1]}, // target card is the second one
+		}})
+		utils.AssertNoError(t, err)
+
+		newHand := game.PlayerCards[game.CurrentPlayer.PlayerID].Hand
+		newHandSize, newPileSize, newDeckSize := len(newHand), len(game.Pile), len(game.Deck)
+
+		// Then the pile contains the selected card
+		utils.AssertTrue(t, newPileSize > oldPileSize)
+		utils.AssertTrue(t, containsCard(game.Pile, targetCard))
+
+		// And the deck decreases in size
+		utils.AssertTrue(t, newDeckSize < oldDeckSize)
+
+		// And the size of the player's hand remains the same
+		utils.AssertTrue(t, newHandSize == oldHandSize)
+
+		// But the cards in the player's hand changed
+		utils.AssertEqual(t, reflect.DeepEqual(oldHand, newHand), false)
+
+		// And all cards are unique
+		utils.AssertTrue(t, cardsUnique(newHand)) // this fails sometimes
+		utils.AssertTrue(t, cardsUnique(game.Pile))
+
+		// And the game produces messages to all players
+		// expecting a response only from the current player
+		utils.AssertEqual(t, len(msgs), len(game.PlayerInfo))
+		checkReceiveResponseMessages(t, msgs, protocol.ReplenishHand, game)
+		utils.AssertEqual(t, game.AwaitingResponse(), protocol.ReplenishHand)
+
+		// And when the current player acks
+		previousPlayerID := game.CurrentPlayer.PlayerID
+		msgs, err = game.ReceiveResponse([]InboundMessage{{
+			PlayerID: game.CurrentPlayer.PlayerID,
+			Command:  protocol.ReplenishHand,
+		}})
+		utils.AssertNoError(t, err)
+
+		// Then their turn is released and the next player is up
+		utils.AssertTrue(t, game.CurrentPlayer.PlayerID != previousPlayerID)
+	})
+
 	t.Run("stage 1: player has legal moves", func(t *testing.T) {
 		// Given a game in stage 1, with a low-value card on the pile
 		lowValueCard := deck.NewCard(deck.Four, deck.Hearts)
@@ -1492,4 +1666,13 @@ func getMoves(msgs []OutboundMessage, currentPlayerID string) []int {
 		}
 	}
 	return moves
+}
+
+func getNonBurnMove(cards []deck.Card, moves []int) int {
+	for _, v := range moves {
+		if cards[v].Rank != deck.Ten {
+			return v
+		}
+	}
+	panic(fmt.Sprintf("all cards are a Ten: %v", cards))
 }

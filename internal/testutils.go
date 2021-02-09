@@ -67,6 +67,15 @@ func AssertDeepEqual(t *testing.T, got, want interface{}) {
 	}
 }
 
+// AssertNotDeepEqual checks that the values are not equal
+func AssertNotDeepEqual(t *testing.T, a, b interface{}) {
+	t.Helper()
+
+	if reflect.DeepEqual(a, b) {
+		t.Error("unexpected deep equality")
+	}
+}
+
 // AssertEqualToOneOf checks that at least one of the values are equal
 func AssertEqualToOneOf(t *testing.T, got interface{}, want ...interface{}) {
 	t.Helper()
