@@ -179,6 +179,7 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 				Command:       protocol.Reorg,
 				Hand:          s.PlayerCards[info.PlayerID].Hand,
 				Seen:          s.PlayerCards[info.PlayerID].Seen,
+				Pile:          s.Pile,
 				ShouldRespond: true,
 			}
 			msgs = append(msgs, m)
