@@ -70,7 +70,7 @@ func getLegalMoves(pile, toPlay []deck.Card) []int {
 		}
 	}
 
-	topmostCard := candidates[0]
+	topmostCard := candidates[len(candidates)-1]
 	// two
 	if topmostCard.Rank == deck.Two {
 		for i := range toPlay {

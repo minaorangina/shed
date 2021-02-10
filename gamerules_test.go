@@ -503,6 +503,22 @@ func TestLegalMoves(t *testing.T) {
 	t.Run("mixture", func(t *testing.T) {
 		tt := []legalMoveTest{
 			{
+				name: "Fours and Seven do not beat a Nine",
+				pile: []deck.Card{
+					deck.NewCard(deck.Five, deck.Clubs),
+					deck.NewCard(deck.Five, deck.Diamonds),
+					deck.NewCard(deck.Six, deck.Clubs),
+					deck.NewCard(deck.Six, deck.Hearts),
+					deck.NewCard(deck.Nine, deck.Diamonds),
+				},
+				toPlay: []deck.Card{
+					deck.NewCard(deck.Four, deck.Spades),
+					deck.NewCard(deck.Four, deck.Clubs),
+					deck.NewCard(deck.Seven, deck.Hearts),
+				},
+				moves: []int{},
+			},
+			{
 				name: "Three, Queen and King all beat an Eight",
 				pile: []deck.Card{deck.NewCard(deck.Eight, deck.Spades)},
 				toPlay: []deck.Card{
@@ -513,10 +529,23 @@ func TestLegalMoves(t *testing.T) {
 				moves: []int{0, 1, 2},
 			},
 			{
+				name: "Five, Seven and Eight all beat a Four (with Seven below)",
+				pile: []deck.Card{
+					deck.NewCard(deck.Seven, deck.Hearts),
+					deck.NewCard(deck.Four, deck.Clubs),
+				},
+				toPlay: []deck.Card{
+					deck.NewCard(deck.Five, deck.Spades),
+					deck.NewCard(deck.Seven, deck.Spades),
+					deck.NewCard(deck.Eight, deck.Spades),
+				},
+				moves: []int{0, 1, 2},
+			},
+			{
 				name: "Three and Ten beat a King; Queen does not",
 				pile: []deck.Card{
-					deck.NewCard(deck.King, deck.Diamonds),
 					deck.NewCard(deck.Eight, deck.Spades),
+					deck.NewCard(deck.King, deck.Diamonds),
 				},
 				toPlay: []deck.Card{
 					deck.NewCard(deck.Three, deck.Clubs),
@@ -528,9 +557,9 @@ func TestLegalMoves(t *testing.T) {
 			{
 				name: "Ten beats a King hidden by a Three; Jack and Queen do not",
 				pile: []deck.Card{
-					deck.NewCard(deck.Three, deck.Clubs),
-					deck.NewCard(deck.King, deck.Diamonds),
 					deck.NewCard(deck.Eight, deck.Spades),
+					deck.NewCard(deck.King, deck.Diamonds),
+					deck.NewCard(deck.Three, deck.Clubs),
 				},
 				toPlay: []deck.Card{
 					deck.NewCard(deck.Queen, deck.Diamonds),
@@ -564,8 +593,8 @@ func TestLegalMoves(t *testing.T) {
 			{
 				name: "Three beats a Queen (under a Three); Seven and Jack do not",
 				pile: []deck.Card{
-					deck.NewCard(deck.Three, deck.Spades),
 					deck.NewCard(deck.Queen, deck.Diamonds),
+					deck.NewCard(deck.Three, deck.Spades),
 				},
 				toPlay: []deck.Card{
 					deck.NewCard(deck.Jack, deck.Diamonds),
@@ -577,9 +606,9 @@ func TestLegalMoves(t *testing.T) {
 			{
 				name: "Jack, Jack and Seven cannot beat a Queen (hidden by 2 Threes)",
 				pile: []deck.Card{
+					deck.NewCard(deck.Queen, deck.Diamonds),
 					deck.NewCard(deck.Three, deck.Hearts),
 					deck.NewCard(deck.Three, deck.Spades),
-					deck.NewCard(deck.Queen, deck.Diamonds),
 				},
 				toPlay: []deck.Card{
 					deck.NewCard(deck.Jack, deck.Diamonds),
