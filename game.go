@@ -316,7 +316,10 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 			// check this is a legal move. this has already been done, but worth
 			// double checking in case of client tampering.
 			s.completeMove(msg)
-			s.pluckFromDeck(msg)
+
+			if len(s.PlayerCards[s.CurrentPlayer.PlayerID].Hand) < numCardsInGroup {
+				s.pluckFromDeck(msg)
+			}
 
 			if isBurn(s.Pile) {
 				s.ExpectedCommand = protocol.Burn

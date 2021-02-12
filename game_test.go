@@ -616,6 +616,55 @@ func TestGameStageOne(t *testing.T) {
 		// And the next player is up
 		utils.AssertTrue(t, game.CurrentPlayer.PlayerID != previousPlayerID)
 	})
+
+	t.Run("player has more than 3 hand cards", func(t *testing.T) {
+		// Given a game in stage one
+		lowValueCard := deck.NewCard(deck.Four, deck.Hearts)
+
+		// and a player with 4 cards in their hand
+		pc := &PlayerCards{
+			Hand: someCards(4),
+		}
+
+		game := NewShed(ShedOpts{
+			Stage:         clearDeck,
+			Deck:          someDeck(1),
+			Pile:          []deck.Card{lowValueCard},
+			PlayerInfo:    twoPlayers(),
+			CurrentPlayer: twoPlayers()[0],
+			PlayerCards: map[string]*PlayerCards{
+				"p1": pc,
+				"p2": somePlayerCards(3),
+			},
+		})
+
+		// When the player takes their turn
+		msgs, err := game.Next()
+		utils.AssertNoError(t, err)
+		utils.AssertNotNil(t, msgs)
+
+		moves := msgs[0].Moves
+		utils.AssertTrue(t, len(moves) > 1)
+
+		oldHand := game.PlayerCards[game.CurrentPlayer.PlayerID].Hand
+		oldHandSize, oldDeckSize := len(oldHand), len(game.Deck)
+
+		// And they play one card
+		msgs, err = game.ReceiveResponse([]InboundMessage{{
+			PlayerID: game.CurrentPlayer.PlayerID,
+			Command:  protocol.PlayHand,
+			Decision: []int{0},
+		}})
+		utils.AssertNoError(t, err)
+
+		// Then they do NOT receive a new card
+		newHand := game.PlayerCards[game.CurrentPlayer.PlayerID].Hand
+		newHandSize := len(newHand)
+		newDeckSize := len(game.Deck)
+
+		utils.AssertEqual(t, newDeckSize, oldDeckSize)
+		utils.AssertEqual(t, newHandSize, oldHandSize-1)
+	})
 }
 
 func TestGameStageTwo(t *testing.T) {
