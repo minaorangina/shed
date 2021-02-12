@@ -407,7 +407,7 @@ func TestGameStageOne(t *testing.T) {
 		utils.AssertTrue(t, game.CurrentPlayer.PlayerID != previousPlayerID)
 	})
 
-	t.Run("player plays multiple cards from their hand", func(t *testing.T) {
+	t.Run("player plays multiple cards of the same rank", func(t *testing.T) {
 		// Given a game in stage 1
 		lowValueCard := deck.NewCard(deck.Four, deck.Hearts)
 		pile := []deck.Card{lowValueCard}
@@ -467,6 +467,69 @@ func TestGameStageOne(t *testing.T) {
 
 		// And the deck has two fewer cards
 		utils.AssertTrue(t, newDeckSize == oldDeckSize-2)
+	})
+
+	t.Run("cannot play multiple cards from different ranks", func(t *testing.T) {
+		// Given a game in stage 1
+		lowValueCard := deck.NewCard(deck.Four, deck.Hearts)
+		pile := []deck.Card{lowValueCard}
+		targetCards := []deck.Card{
+			deck.NewCard(deck.Nine, deck.Clubs),
+			deck.NewCard(deck.Six, deck.Clubs),
+		}
+		// And a player with cards different values in their hand
+		pc := &PlayerCards{Hand: append(targetCards, deck.NewCard(deck.Eight, deck.Hearts))}
+
+		game := NewShed(ShedOpts{
+			Stage:         clearDeck,
+			Deck:          someDeck(4),
+			Pile:          pile,
+			PlayerInfo:    twoPlayers(),
+			CurrentPlayer: twoPlayers()[0],
+			PlayerCards: map[string]*PlayerCards{
+				"p1": pc,
+				"p2": somePlayerCards(3),
+			},
+		})
+
+		oldHand := game.PlayerCards[game.CurrentPlayer.PlayerID].Hand
+		oldHandSize := len(oldHand)
+		oldPileSize := len(game.Pile)
+		oldDeckSize := len(game.Deck)
+
+		// When the player takes their turn
+		msgs, err := game.Next()
+		utils.AssertNoError(t, err)
+		utils.AssertNotNil(t, msgs)
+		utils.AssertEqual(t, game.CurrentTurnIdx, 0)
+		utils.AssertTrue(t, game.CurrentPlayer.PlayerID != "")
+
+		moves := msgs[0].Moves
+		utils.AssertTrue(t, len(moves) > 1)
+
+		// And chooses to play two cards
+		_, err = game.ReceiveResponse([]InboundMessage{{
+			PlayerID: game.CurrentPlayer.PlayerID,
+			Command:  protocol.PlayHand,
+			Decision: []int{0, 1},
+		}})
+
+		// Then the game returns an error
+		utils.AssertErrored(t, err)
+		utils.AssertEqual(t, err, ErrInvalidMove)
+		newHand := game.PlayerCards[game.CurrentPlayer.PlayerID].Hand
+		newHandSize := len(newHand)
+		newPileSize := len(game.Pile)
+		newDeckSize := len(game.Deck)
+
+		// And the cards remain unchanged
+
+		// And the hand size remains the same, but the cards have changed
+		utils.AssertEqual(t, containsCard(game.Pile, targetCards...), false)
+		utils.AssertEqual(t, newPileSize, oldPileSize)
+		utils.AssertEqual(t, newDeckSize, oldDeckSize)
+		utils.AssertEqual(t, newHandSize, oldHandSize)
+		utils.AssertDeepEqual(t, newHand, oldHand)
 	})
 
 	t.Run("player picks up pile", func(t *testing.T) {

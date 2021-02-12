@@ -315,6 +315,19 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 		case protocol.PlayHand:
 			// check this is a legal move. this has already been done, but worth
 			// double checking in case of client tampering.
+
+			// If playing more than one card, they must be of the same rank
+			if len(msg.Decision) > 1 {
+				pc := s.PlayerCards[s.CurrentPlayer.PlayerID].Hand
+				referenceCard := pc[msg.Decision[0]]
+
+				for _, idx := range msg.Decision[1:] {
+					if pc[idx].Rank != referenceCard.Rank {
+						return nil, ErrInvalidMove
+					}
+				}
+			}
+
 			s.completeMove(msg)
 
 			if len(s.PlayerCards[s.CurrentPlayer.PlayerID].Hand) < numCardsInGroup {

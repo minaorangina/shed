@@ -17,6 +17,7 @@ var (
 	ErrNoPlayers              = errors.New("game has no players")
 	ErrGameUnexpectedResponse = errors.New("game received unexpected response")
 	ErrGameAwaitingResponse   = errors.New("game is awaiting a response")
+	ErrInvalidMove            = errors.New("invalid move")
 )
 
 // PlayState represents the state of the current game
