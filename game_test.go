@@ -232,7 +232,7 @@ func TestGameStageZeroToOne(t *testing.T) {
 }
 
 func TestGameStageOne(t *testing.T) {
-	t.Run("stage 1: first move", func(t *testing.T) {
+	t.Run("first move", func(t *testing.T) {
 		// Given a game in stage 1 with an empty pile
 		pile := []deck.Card{}
 
@@ -319,7 +319,7 @@ func TestGameStageOne(t *testing.T) {
 		utils.AssertTrue(t, game.CurrentPlayer.PlayerID != previousPlayerID)
 	})
 
-	t.Run("stage 1: player has legal moves", func(t *testing.T) {
+	t.Run("player has legal moves", func(t *testing.T) {
 		// Given a game in stage 1, with a low-value card on the pile
 		lowValueCard := deck.NewCard(deck.Four, deck.Hearts)
 		pile := []deck.Card{lowValueCard}
@@ -407,7 +407,7 @@ func TestGameStageOne(t *testing.T) {
 		utils.AssertTrue(t, game.CurrentPlayer.PlayerID != previousPlayerID)
 	})
 
-	t.Run("stage 1: player plays multiple cards from their hand", func(t *testing.T) {
+	t.Run("player plays multiple cards from their hand", func(t *testing.T) {
 		// Given a game in stage 1
 		lowValueCard := deck.NewCard(deck.Four, deck.Hearts)
 		pile := []deck.Card{lowValueCard}
@@ -469,7 +469,7 @@ func TestGameStageOne(t *testing.T) {
 		utils.AssertTrue(t, newDeckSize == oldDeckSize-2)
 	})
 
-	t.Run("stage 1: player picks up pile", func(t *testing.T) {
+	t.Run("player picks up pile", func(t *testing.T) {
 		// Given a game with a high-value card on the pile
 		highValueCard := deck.NewCard(deck.Ace, deck.Clubs) // Ace of Clubs
 
@@ -538,7 +538,7 @@ func TestGameStageOne(t *testing.T) {
 		utils.AssertTrue(t, game.CurrentPlayer.PlayerID != previousPlayerID)
 	})
 
-	t.Run("stage 1: not enough cards in deck", func(t *testing.T) {
+	t.Run("not enough cards in deck", func(t *testing.T) {
 		// Given a game in stage 1 with one card left on the deck
 		lowValueCard := deck.NewCard(deck.Four, deck.Hearts)
 		targetCards := []deck.Card{

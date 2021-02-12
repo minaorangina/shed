@@ -342,7 +342,6 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 			}
 
 			s.ExpectedCommand = protocol.ReplenishHand
-			// log.Printf("PILE? %+v", toSend)
 			return toSend, nil
 
 		case protocol.ReplenishHand:
