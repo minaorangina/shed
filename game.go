@@ -330,6 +330,7 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 
 			s.completeMove(msg)
 
+			// Pick up a new card if necessary
 			if len(s.PlayerCards[s.CurrentPlayer.PlayerID].Hand) < numCardsInGroup {
 				s.pluckFromDeck(msg)
 			}

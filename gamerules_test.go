@@ -7,13 +7,13 @@ import (
 	utils "github.com/minaorangina/shed/internal"
 )
 
-func TestLegalMoves(t *testing.T) {
-	type legalMoveTest struct {
-		name         string
-		pile, toPlay []deck.Card
-		moves        []int
-	}
+type legalMoveTest struct {
+	name         string
+	pile, toPlay []deck.Card
+	moves        []int
+}
 
+func TestLegalMoves(t *testing.T) {
 	t.Run("four", func(t *testing.T) {
 		tt := []legalMoveTest{
 			{
@@ -640,7 +640,17 @@ func TestGameIsBurn(t *testing.T) {
 			true,
 		},
 		{
-			"four of the same suit (Four)",
+			"four of the same suit (Spades)",
+			[]deck.Card{
+				deck.NewCard(deck.Four, deck.Spades),
+				deck.NewCard(deck.Five, deck.Spades),
+				deck.NewCard(deck.Six, deck.Spades),
+				deck.NewCard(deck.Seven, deck.Spades),
+			},
+			false,
+		},
+		{
+			"four of the same rank (Four)",
 			[]deck.Card{
 				deck.NewCard(deck.Four, deck.Clubs),
 				deck.NewCard(deck.Four, deck.Diamonds),
@@ -650,7 +660,7 @@ func TestGameIsBurn(t *testing.T) {
 			true,
 		},
 		{
-			"four of the same suit (Seven)",
+			"four of the same rank (Seven)",
 			[]deck.Card{
 				deck.NewCard(deck.Seven, deck.Clubs),
 				deck.NewCard(deck.Seven, deck.Diamonds),
@@ -660,7 +670,7 @@ func TestGameIsBurn(t *testing.T) {
 			true,
 		},
 		{
-			"four of the same suit (Three)",
+			"four of the same rank (Three)",
 			[]deck.Card{
 				deck.NewCard(deck.Three, deck.Clubs),
 				deck.NewCard(deck.Three, deck.Diamonds),
@@ -670,7 +680,7 @@ func TestGameIsBurn(t *testing.T) {
 			true,
 		},
 		{
-			"four of the same suit (Two)",
+			"four of the same rank (Two)",
 			[]deck.Card{
 				deck.NewCard(deck.Two, deck.Clubs),
 				deck.NewCard(deck.Two, deck.Diamonds),
@@ -738,14 +748,21 @@ func TestGameIsBurn(t *testing.T) {
 			},
 			false,
 		},
+		{
+			"two of the same suit (Four) and two Threes",
+			[]deck.Card{
+				deck.NewCard(deck.Three, deck.Spades),
+				deck.NewCard(deck.Three, deck.Hearts),
+				deck.NewCard(deck.Four, deck.Diamonds),
+				deck.NewCard(deck.Four, deck.Clubs),
+			},
+			false,
+		},
 	}
 
-	for _, tc := range tt[6:] {
+	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			utils.AssertEqual(t, isBurn(tc.pile), tc.want)
 		})
 	}
-
-	// pile has four of the same suit
-	// play multiple 10s in one move == one burn
 }

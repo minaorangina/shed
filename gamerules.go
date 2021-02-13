@@ -117,6 +117,7 @@ func isBurn(pile []deck.Card) bool {
 		return true
 	}
 
+	// Check for Three burn
 	numThrees := 0
 	for _, c := range pile[len(pile)-burnNum:] {
 		if c.Rank == deck.Three {
@@ -127,6 +128,8 @@ func isBurn(pile []deck.Card) bool {
 		return true
 	}
 
+	// Take the topmost cards, excluding Threes
+	// Will be 4 cards or fewer
 	topCards := []deck.Card{}
 	for i := len(pile) - 1; i >= 0; i-- {
 		if len(topCards) == burnNum {
@@ -138,10 +141,15 @@ func isBurn(pile []deck.Card) bool {
 		}
 	}
 
+	// Reject fewer than 4 cards
+	if len(topCards) < burnNum {
+		return false
+	}
+
 	// From this point the cards are reversed
 	// with the most recently played card at index 0
 	topCard = topCards[0]
-	for _, c := range topCards[0:burnNum] {
+	for _, c := range topCards {
 		if c.Rank != topCard.Rank {
 			return false
 		}
