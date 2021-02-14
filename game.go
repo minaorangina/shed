@@ -414,9 +414,12 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 			cardIdx := msg.Decision[0]
 			chosenCard := s.PlayerCards[s.CurrentPlayer.PlayerID].Unseen[cardIdx]
 
-			s.completeMove(msg)
-
 			legalMoves := getLegalMoves(s.Pile, []deck.Card{chosenCard})
+
+			// The player plays their chosen card regardless of the legality of the move
+			// If it's a legal move, then this is fine.
+			// If it's not a legal move, the player will pick up the pile anyway.
+			s.completeMove(msg)
 
 			if len(legalMoves) == 0 {
 				s.pickUpPile()
