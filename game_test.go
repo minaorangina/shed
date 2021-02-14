@@ -1647,6 +1647,7 @@ func checkNextMessages(t *testing.T, msgs []OutboundMessage, cmd protocol.Cmd, g
 	for _, m := range msgs {
 		utils.AssertDeepEqual(t, m.Hand, game.PlayerCards[m.PlayerID].Hand)
 		utils.AssertDeepEqual(t, m.Seen, game.PlayerCards[m.PlayerID].Seen)
+		utils.AssertEqual(t, m.DeckCount, len(game.Deck))
 
 		if m.PlayerID == game.CurrentPlayer.PlayerID {
 			// and the current player is asked to make a choice

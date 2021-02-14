@@ -17,16 +17,17 @@ type OutboundMessage struct {
 	PlayerID        string       `json:"playerID"`
 	Command         protocol.Cmd `json:"command"`
 	Name            string       `json:"name"` // pointless?
-	Joiner          PlayerInfo   `json:"joiner,omitempty"`
 	Message         string       `json:"message"`
 	Hand            []deck.Card  `json:"hand"`
 	Seen            []deck.Card  `json:"seen"`
 	Pile            []deck.Card  `json:"pile"`
+	DeckCount       int          `json:"deckCount"`
+	ShouldRespond   bool         `json:"shouldRespond"`
+	Joiner          PlayerInfo   `json:"joiner,omitempty"`
 	CurrentTurn     PlayerInfo   `json:"currentTurn,omitempty"`
 	Moves           []int        `json:"moves,omitempty"`
 	Opponents       []Opponent   `json:"opponents,omitempty"`
 	FinishedPlayers []PlayerInfo `json:"finishedPlayers,omitempty"`
-	ShouldRespond   bool         `json:"shouldRespond"`
 	Error           string       `json:"error,omitempty"`
 }
 
