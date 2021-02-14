@@ -1043,7 +1043,6 @@ func TestGameStageTwo(t *testing.T) {
 	})
 
 	t.Run("stage 2: player has no legal moves and only unseen cards", func(t *testing.T) {
-
 		// Given a game in stage 2
 		highValueCard := deck.NewCard(deck.Ace, deck.Spades)
 		pile := []deck.Card{highValueCard}
@@ -1087,7 +1086,7 @@ func TestGameStageTwo(t *testing.T) {
 		oldPileSize := len(game.Pile)
 
 		// And when the player selects an illegal move
-		cardChoice := []int{moves[0]}
+		cardChoice := moves[0:1]
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.PlayUnseen,
@@ -1323,7 +1322,7 @@ func TestGameStageTwo(t *testing.T) {
 	})
 
 	t.Run("stage 2: game ends when n-1 players have finished (Hand card)", func(t *testing.T) {
-		//
+
 		// Given a game in stage 2 with two players remaining
 		lowValueCard := deck.NewCard(deck.Four, deck.Spades)
 		highValueCard := deck.NewCard(deck.Ace, deck.Spades)

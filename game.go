@@ -408,7 +408,7 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 
 		case protocol.PlayUnseen:
 			if len(msg.Decision) != 1 {
-				return nil, errors.New("must play one unseen card only")
+				return nil, ErrPlayOneCard
 			}
 			// possible optimisation: could precalculate legal Unseen card moves
 			cardIdx := msg.Decision[0]
@@ -472,32 +472,32 @@ func (s *shed) attemptMove(currentPlayerCmd protocol.Cmd) ([]OutboundMessage, bo
 func (s *shed) completeMove(msg InboundMessage) {
 
 	var (
-		toPile      = []deck.Card{}
-		newCards    *[]deck.Card
-		newCardsSet = map[deck.Card]struct{}{}
+		toPile       = []deck.Card{}
+		cardGroup    *[]deck.Card
+		cardGroupSet = map[deck.Card]struct{}{}
 	)
 
 	switch msg.Command {
 	case protocol.PlayHand:
-		newCards = &s.PlayerCards[s.CurrentPlayer.PlayerID].Hand
-		newCardsSet = cardSliceToSet(s.PlayerCards[s.CurrentPlayer.PlayerID].Hand)
+		cardGroup = &s.PlayerCards[s.CurrentPlayer.PlayerID].Hand
+		cardGroupSet = cardSliceToSet(s.PlayerCards[s.CurrentPlayer.PlayerID].Hand)
 
 	case protocol.PlaySeen:
-		newCards = &s.PlayerCards[s.CurrentPlayer.PlayerID].Seen
-		newCardsSet = cardSliceToSet(s.PlayerCards[s.CurrentPlayer.PlayerID].Seen)
+		cardGroup = &s.PlayerCards[s.CurrentPlayer.PlayerID].Seen
+		cardGroupSet = cardSliceToSet(s.PlayerCards[s.CurrentPlayer.PlayerID].Seen)
 
 	case protocol.PlayUnseen:
-		newCards = &s.PlayerCards[s.CurrentPlayer.PlayerID].Unseen
-		newCardsSet = cardSliceToSet(s.PlayerCards[s.CurrentPlayer.PlayerID].Unseen)
+		cardGroup = &s.PlayerCards[s.CurrentPlayer.PlayerID].Unseen
+		cardGroupSet = cardSliceToSet(s.PlayerCards[s.CurrentPlayer.PlayerID].Unseen)
 	}
 
 	for _, cardIdx := range msg.Decision {
-		toPile = append(toPile, (*newCards)[cardIdx])
-		delete(newCardsSet, (*newCards)[cardIdx])
+		toPile = append(toPile, (*cardGroup)[cardIdx])
+		delete(cardGroupSet, (*cardGroup)[cardIdx])
 	}
 
 	s.Pile = append(s.Pile, toPile...)
-	*newCards = setToCardSlice(newCardsSet)
+	*cardGroup = setToCardSlice(cardGroupSet)
 }
 
 func (s *shed) pluckFromDeck(msg InboundMessage) {

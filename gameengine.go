@@ -18,6 +18,7 @@ var (
 	ErrGameUnexpectedResponse = errors.New("game received unexpected response")
 	ErrGameAwaitingResponse   = errors.New("game is awaiting a response")
 	ErrInvalidMove            = errors.New("invalid move")
+	ErrPlayOneCard            = errors.New("must play one card only")
 )
 
 // PlayState represents the state of the current game

@@ -44,17 +44,18 @@ var sevenBeaters = map[deck.Rank]bool{
 }
 
 func getLegalMoves(pile, toPlay []deck.Card) []int {
-	candidates := []deck.Card{}
+	pileWithoutThrees := []deck.Card{}
+	// Filter out Threes
 	for _, c := range pile {
 		if c.Rank != deck.Three {
-			candidates = append(candidates, c)
+			pileWithoutThrees = append(pileWithoutThrees, c)
 		}
 	}
 
 	moves := map[int]struct{}{}
 
-	// can play any card on an empty pile
-	if len(candidates) == 0 {
+	// Can play any card on an empty pile
+	if len(pileWithoutThrees) == 0 {
 		for i := range toPlay {
 			moves[i] = struct{}{}
 		}
@@ -62,7 +63,7 @@ func getLegalMoves(pile, toPlay []deck.Card) []int {
 		return setToIntSlice(moves)
 	}
 
-	// tens (and twos and threes) beat anything
+	// Tens beat anything
 	for i, tp := range toPlay {
 		if tp.Rank == deck.Ten {
 			moves[i] = struct{}{}
@@ -70,8 +71,9 @@ func getLegalMoves(pile, toPlay []deck.Card) []int {
 		}
 	}
 
-	topmostCard := candidates[len(candidates)-1]
-	// two
+	topmostCard := pileWithoutThrees[len(pileWithoutThrees)-1]
+
+	// Can play any card on a Two
 	if topmostCard.Rank == deck.Two {
 		for i := range toPlay {
 			moves[i] = struct{}{}
@@ -90,15 +92,14 @@ func getLegalMoves(pile, toPlay []deck.Card) []int {
 	}
 
 	for i, tp := range toPlay {
-		// skip tens (and twos and threes)
+		// skip tens (already checked)
 		if tp.Rank == deck.Ten {
 			continue
 		}
 
 		tpValue := cardValues[tp.Rank]
-		pileValue := cardValues[topmostCard.Rank]
-
-		if tpValue >= pileValue {
+		topmostCardValue := cardValues[topmostCard.Rank]
+		if tpValue >= topmostCardValue {
 			moves[i] = struct{}{}
 		}
 	}
