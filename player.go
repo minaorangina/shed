@@ -176,12 +176,13 @@ func (p *WSPlayer) writePump() {
 				p.conn.WriteMessage(websocket.CloseMessage, []byte("Something went wrong"))
 			}
 
+			log.Printf("lgr (writePump) %s: %+v\n\n", time.Now().Format(time.StampMilli), string(msg))
+
 			err := p.conn.WriteMessage(websocket.TextMessage, msg)
 			if err != nil {
 				panic(err)
 				// return
 			}
-			// fmt.Println("WRITE PUMP", string(msg))
 
 		case <-ticker.C:
 			p.conn.SetWriteDeadline(time.Now().Add(writeWait))
