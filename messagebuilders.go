@@ -33,6 +33,38 @@ func (s *shed) buildOpponents(playerID string) []Opponent {
 	return opponents
 }
 
+func (s *shed) buildReorgMessages() []OutboundMessage {
+	msgs := []OutboundMessage{}
+
+	for _, info := range s.PlayerInfo {
+		m := s.buildBaseMessage(info.PlayerID)
+		m.Command = protocol.Reorg
+		m.Message = "Choose the cards you want in your hand. The remaining cards will become your face-up cards."
+		m.ShouldRespond = true
+
+		msgs = append(msgs, m)
+	}
+
+	return msgs
+}
+
+func (s *shed) buildReplenishHandMessages() []OutboundMessage {
+	msgs := []OutboundMessage{}
+	currentPlayerMsg := s.buildBaseMessage(s.CurrentPlayer.PlayerID)
+	currentPlayerMsg.Command = protocol.ReplenishHand
+	currentPlayerMsg.ShouldRespond = true
+
+	msgs = append(msgs, currentPlayerMsg)
+
+	for _, info := range s.PlayerInfo {
+		if info.PlayerID != s.CurrentPlayer.PlayerID {
+			msgs = append(msgs, s.buildEndOfTurnMessage(info.PlayerID))
+		}
+	}
+
+	return msgs
+}
+
 func (s *shed) buildSkipTurnMessage(playerID string) OutboundMessage {
 	msg := s.buildBaseMessage(playerID)
 	msg.Command = protocol.SkipTurn
@@ -158,16 +190,11 @@ func (s *shed) buildGameOverMessages() []OutboundMessage {
 }
 
 func (s *shed) buildBurnMessage(playerID string) OutboundMessage {
-	return OutboundMessage{
-		PlayerID:        playerID,
-		Command:         protocol.Burn,
-		CurrentTurn:     s.CurrentPlayer,
-		Hand:            s.PlayerCards[playerID].Hand,
-		Seen:            s.PlayerCards[playerID].Seen,
-		Pile:            s.Pile,
-		FinishedPlayers: s.FinishedPlayers,
-		Message:         fmt.Sprintf("Burn for %s!", s.CurrentPlayer.Name),
-	}
+	msg := s.buildBaseMessage(playerID)
+	msg.Command = protocol.Burn
+	msg.Message = fmt.Sprintf("Burn for %s!", s.CurrentPlayer.Name)
+
+	return msg
 }
 
 func (s *shed) buildBurnMessages() []OutboundMessage {

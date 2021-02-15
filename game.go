@@ -167,24 +167,11 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 		return s.buildGameOverMessages(), nil
 	}
 
-	msgs := []OutboundMessage{}
 	currentPlayerCards := s.PlayerCards[s.CurrentPlayer.PlayerID]
 
 	switch s.Stage {
 	case preGame:
-		for _, info := range s.PlayerInfo {
-			m := OutboundMessage{
-				PlayerID:      info.PlayerID,
-				Message:       "Choose the cards you want in your hand. The remaining cards will become your visible (/face-up) cards.",
-				Command:       protocol.Reorg,
-				Hand:          s.PlayerCards[info.PlayerID].Hand,
-				Seen:          s.PlayerCards[info.PlayerID].Seen,
-				Pile:          s.Pile,
-				ShouldRespond: true,
-			}
-			msgs = append(msgs, m)
-		}
-
+		msgs := s.buildReorgMessages()
 		s.ExpectedCommand = protocol.Reorg
 		return msgs, nil
 
@@ -343,23 +330,9 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 				return s.buildBurnMessages(), nil
 			}
 
-			toSend := []OutboundMessage{{
-				PlayerID:      s.CurrentPlayer.PlayerID,
-				Command:       protocol.ReplenishHand,
-				Hand:          s.PlayerCards[s.CurrentPlayer.PlayerID].Hand,
-				Seen:          s.PlayerCards[s.CurrentPlayer.PlayerID].Seen,
-				Pile:          s.Pile,
-				ShouldRespond: true,
-			}}
-
-			for _, info := range s.PlayerInfo {
-				if info.PlayerID != s.CurrentPlayer.PlayerID {
-					toSend = append(toSend, s.buildEndOfTurnMessage(info.PlayerID))
-				}
-			}
-
+			msgs := s.buildReplenishHandMessages()
 			s.ExpectedCommand = protocol.ReplenishHand
-			return toSend, nil
+			return msgs, nil
 
 		case protocol.ReplenishHand:
 			// If deck is empty, switch to stage 2
