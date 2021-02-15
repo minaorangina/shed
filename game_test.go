@@ -1608,7 +1608,6 @@ func TestGameBurn(t *testing.T) {
 	moves := getMoves(msgs, game.CurrentPlayer.PlayerID)
 
 	// When the player plays the final card of that rank
-	oldPileSize := len(game.Pile)
 	msgs, err = game.ReceiveResponse([]InboundMessage{{
 		PlayerID: game.CurrentPlayer.PlayerID,
 		Command:  protocol.PlayHand,
@@ -1616,17 +1615,15 @@ func TestGameBurn(t *testing.T) {
 	}})
 	utils.AssertNoError(t, err)
 
-	newPileSize := len(game.Pile)
-
 	// Then the game sends burn messages to all players
 	// expecting a response only from the current player
 	utils.AssertEqual(t, game.AwaitingResponse(), protocol.Burn)
 	utils.AssertEqual(t, len(msgs), len(game.PlayerInfo))
 	checkBurnMessages(t, msgs, game)
 
-	// And the pile contains the selected card
-	utils.AssertTrue(t, newPileSize > oldPileSize)
-	utils.AssertTrue(t, containsCard(game.Pile, targetCard))
+	// And the selected card has been burned along with the pile
+	utils.AssertEqual(t, len(game.Pile), 0)
+	utils.AssertEqual(t, containsCard(game.PlayerCards[game.CurrentPlayer.PlayerID].Hand, targetCard), false)
 
 	// And when the current player acks
 	previousPlayerID := game.CurrentPlayer.PlayerID
