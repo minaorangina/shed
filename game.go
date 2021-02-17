@@ -1,7 +1,6 @@
 package shed
 
 import (
-	"errors"
 	"fmt"
 	"math/rand"
 	"sort"
@@ -272,11 +271,13 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 	}
 
 	msg := inboundMsgs[0]
-	if msg.Command != s.ExpectedCommand {
-		return nil, fmt.Errorf("unexpected command - got %s, want %s", msg.Command.String(), s.ExpectedCommand.String())
-	}
 	if msg.PlayerID != s.CurrentPlayer.PlayerID {
-		return nil, fmt.Errorf("unexpected message from player %s", msg.PlayerID)
+		err := fmt.Errorf("unexpected message from player %s", msg.PlayerID)
+		return []OutboundMessage{s.buildErrorMessage(msg.PlayerID, err)}, err
+	}
+	if msg.Command != s.ExpectedCommand {
+		err := fmt.Errorf("unexpected command - got %s, want %s", msg.Command.String(), s.ExpectedCommand.String())
+		return []OutboundMessage{s.buildErrorMessage(s.CurrentPlayer.PlayerID, err)}, err
 	}
 
 	if msg.Command == protocol.Burn { // ack
@@ -310,7 +311,7 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 
 				for _, idx := range msg.Decision[1:] {
 					if pc[idx].Rank != referenceCard.Rank {
-						return nil, ErrInvalidMove
+						return s.buildErrorMessages(ErrInvalidMove), ErrInvalidMove
 					}
 				}
 			}
@@ -384,7 +385,9 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 
 		case protocol.PlayUnseen:
 			if len(msg.Decision) != 1 {
-				return nil, ErrPlayOneCard
+				return []OutboundMessage{
+					s.buildErrorMessage(s.CurrentPlayer.PlayerID, ErrPlayOneCard),
+				}, ErrPlayOneCard
 			}
 			// possible optimisation: could precalculate legal Unseen card moves
 			cardIdx := msg.Decision[0]
@@ -413,7 +416,7 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 		}
 	}
 
-	return nil, errors.New("invalid game state")
+	return nil, ErrInvalidGameState
 }
 
 // step 1 of 2 in a player playing their cards (Hand or Seen)

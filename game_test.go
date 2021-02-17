@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -508,7 +509,7 @@ func TestGameStageOne(t *testing.T) {
 		utils.AssertTrue(t, len(moves) > 1)
 
 		// And chooses to play two cards
-		_, err = game.ReceiveResponse([]InboundMessage{{
+		msgs, err = game.ReceiveResponse([]InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.PlayHand,
 			Decision: []int{0, 1},
@@ -517,6 +518,13 @@ func TestGameStageOne(t *testing.T) {
 		// Then the game returns an error
 		utils.AssertErrored(t, err)
 		utils.AssertEqual(t, err, ErrInvalidMove)
+
+		// And players are sent error messages
+		utils.AssertTrue(t, len(msgs) > 0)
+		for _, m := range msgs {
+			utils.AssertEqual(t, m.Command, protocol.Error)
+		}
+
 		newHand := game.PlayerCards[game.CurrentPlayer.PlayerID].Hand
 		newHandSize := len(newHand)
 		newPileSize := len(game.Pile)
@@ -1519,19 +1527,50 @@ func TestGameReceiveResponse(t *testing.T) {
 		utils.AssertErrored(t, err)
 	})
 
+	t.Run("handles response from wrong player", func(t *testing.T) {
+		game := NewShed(ShedOpts{
+			Stage:           1,
+			ExpectedCommand: protocol.PlayHand,
+			CurrentPlayer:   threePlayers()[0],
+			Deck:            []deck.Card{deck.NewCard(deck.Four, deck.Spades)},
+			PlayerCards: map[string]*PlayerCards{
+				"p1": {Hand: someCards(3)},
+				"p2": {Hand: someCards(3)},
+				"p3": {Hand: someCards(3)},
+			},
+		})
+		utils.AssertEqual(t, game.AwaitingResponse(), protocol.PlayHand)
+
+		msgs, err := game.ReceiveResponse([]InboundMessage{{PlayerID: "p2", Command: protocol.PlayHand}})
+		utils.AssertErrored(t, err)
+		utils.AssertContains(t, err.Error(), "unexpected message from player")
+
+		// Player is sent an error message
+		utils.AssertEqual(t, len(msgs), 1)
+		utils.AssertEqual(t, msgs[0].PlayerID, "p2")
+	})
+
 	t.Run("handles response with incorrect command", func(t *testing.T) {
 		game := NewShed(ShedOpts{
 			Stage:           1,
 			ExpectedCommand: protocol.PlayHand,
 			CurrentPlayer:   threePlayers()[0],
+			Deck:            []deck.Card{deck.NewCard(deck.Four, deck.Spades)},
+			PlayerCards: map[string]*PlayerCards{
+				"p1": {Hand: someCards(3)},
+				"p2": {Hand: someCards(3)},
+				"p3": {Hand: someCards(3)},
+			},
 		})
-		err := game.Start(threePlayers())
-		utils.AssertNoError(t, err)
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.PlayHand)
 
-		_, err = game.ReceiveResponse([]InboundMessage{{PlayerID: "p1", Command: protocol.PlayUnseen}})
+		msgs, err := game.ReceiveResponse([]InboundMessage{{PlayerID: "p1", Command: protocol.PlayUnseen}})
 		utils.AssertErrored(t, err)
 		utils.AssertContains(t, err.Error(), "unexpected command")
+
+		// Player is sent an error message
+		utils.AssertEqual(t, len(msgs), 1)
+		utils.AssertEqual(t, msgs[0].PlayerID, game.CurrentPlayer.PlayerID)
 	})
 
 	t.Run("expects multiple responses in stage 0", func(t *testing.T) {
@@ -1566,6 +1605,63 @@ func TestGameReceiveResponse(t *testing.T) {
 
 		utils.AssertNoError(t, err)
 	})
+
+	t.Run("expects one card choice in stage 2 unseen", func(t *testing.T) {
+		game := NewShed(ShedOpts{
+			Stage:           clearCards,
+			ExpectedCommand: protocol.PlayUnseen,
+			CurrentPlayer:   threePlayers()[0],
+			Deck:            []deck.Card{deck.NewCard(deck.Four, deck.Spades)},
+			PlayerCards: map[string]*PlayerCards{
+				"p1": {Unseen: someCards(3)},
+				"p2": {Seen: someCards(3)},
+				"p3": {Seen: someCards(3)},
+			},
+		})
+		utils.AssertEqual(t, game.AwaitingResponse(), protocol.PlayUnseen)
+
+		msgs, err := game.ReceiveResponse([]InboundMessage{{
+			PlayerID: "p1",
+			Decision: []int{0, 1},
+			Command:  protocol.PlayUnseen,
+		}})
+
+		utils.AssertErrored(t, err)
+		utils.AssertEqual(t, err, ErrPlayOneCard)
+		utils.AssertEqual(t, len(msgs), 1)
+		utils.AssertEqual(t, msgs[0].Command, protocol.Error)
+		utils.AssertTrue(t, strings.Contains(msgs[0].Message, ErrPlayOneCard.Error()))
+	})
+
+	t.Run("sends error messages if game in bad state", func(t *testing.T) {
+		game := NewShed(ShedOpts{
+			Stage:           clearDeck,
+			ExpectedCommand: protocol.PlayUnseen, // this is impossible in clearDeck stage
+			CurrentPlayer:   threePlayers()[0],
+			Deck:            []deck.Card{deck.NewCard(deck.Four, deck.Spades)},
+			PlayerCards: map[string]*PlayerCards{
+				"p1": {Unseen: someCards(3)},
+				"p2": {Seen: someCards(3)},
+				"p3": {Seen: someCards(3)},
+			},
+		})
+		utils.AssertEqual(t, game.AwaitingResponse(), protocol.PlayUnseen)
+
+		msgs, err := game.ReceiveResponse([]InboundMessage{{
+			PlayerID: "p1",
+			Decision: []int{0, 1},
+			Command:  protocol.PlayUnseen,
+		}})
+
+		utils.AssertErrored(t, err)
+		utils.AssertEqual(t, err, ErrInvalidGameState)
+		utils.AssertEqual(t, len(msgs), len(game.PlayerInfo))
+		for _, m := range msgs {
+			utils.AssertEqual(t, m.Command, protocol.Error)
+			utils.AssertTrue(t, strings.Contains(m.Message, ErrInvalidGameState.Error()))
+		}
+	})
+
 }
 
 func TestGameBurn(t *testing.T) {

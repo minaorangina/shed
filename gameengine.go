@@ -19,6 +19,7 @@ var (
 	ErrGameAwaitingResponse   = errors.New("game is awaiting a response")
 	ErrInvalidMove            = errors.New("invalid move")
 	ErrPlayOneCard            = errors.New("must play one card only")
+	ErrInvalidGameState       = errors.New("invalid game state")
 )
 
 // PlayState represents the state of the current game
@@ -155,9 +156,9 @@ func (ge *gameEngine) Play() {
 			outbound, err = ge.game.ReceiveResponse(inbound)
 		}
 		if err != nil {
-			panic(fmt.Sprintf("error: %s\n%v", err.Error(), outbound))
+			log.Printf("error: %s\n%v", err.Error(), outbound)
 		}
-		// log.Printf("outbound: %+v\n", outbound)
+		// what happens if outbound == nil?
 		ge.Send(outbound)
 	}
 }

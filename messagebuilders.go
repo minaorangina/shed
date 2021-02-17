@@ -210,3 +210,21 @@ func (s *shed) buildBurnMessages() []OutboundMessage {
 
 	return toSend
 }
+
+func (s *shed) buildErrorMessages(err error) []OutboundMessage {
+	msgs := []OutboundMessage{}
+	for _, p := range s.PlayerInfo {
+		msgs = append(msgs, s.buildErrorMessage(p.PlayerID, err))
+	}
+
+	return msgs
+}
+
+func (s *shed) buildErrorMessage(playerID string, err error) OutboundMessage {
+	msg := s.buildBaseMessage(playerID)
+	msg.Command = protocol.Error
+	msg.Message = fmt.Sprintf("game error: %q", err.Error())
+	msg.ShouldRespond = s.AwaitingResponse() != protocol.Null && s.CurrentPlayer.PlayerID == playerID
+
+	return msg
+}
