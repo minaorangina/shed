@@ -374,6 +374,14 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 		case protocol.PlayHand, protocol.PlaySeen:
 			s.completeMove(msg)
 
+			if isBurn(s.Pile) {
+				// Maybe in future the old cards are banished out of sight but not deleted
+				// Useful for undo mechanism etc
+				s.Pile = []deck.Card{}
+				s.ExpectedCommand = protocol.Burn
+				return s.buildBurnMessages(), nil
+			}
+
 			if s.playerHasFinished() {
 				s.ExpectedCommand = protocol.PlayerFinished
 				return s.buildPlayerFinishedMessages(), nil

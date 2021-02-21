@@ -1665,72 +1665,116 @@ func TestGameReceiveResponse(t *testing.T) {
 }
 
 func TestGameBurn(t *testing.T) {
-	// Given a game in stage 1
-	// with three cards of the same rank on the top of the pile
-	pile := []deck.Card{
-		deck.NewCard(deck.Four, deck.Hearts),
-		deck.NewCard(deck.Two, deck.Spades),
-		deck.NewCard(deck.Six, deck.Hearts),
-		deck.NewCard(deck.Six, deck.Spades),
-		deck.NewCard(deck.Six, deck.Clubs),
-	}
-
-	targetCard := deck.NewCard(deck.Six, deck.Diamonds)
-	hand := []deck.Card{
-		deck.NewCard(deck.Eight, deck.Hearts),
-		targetCard,
-		deck.NewCard(deck.Five, deck.Diamonds),
-	}
-
-	pc := &PlayerCards{Hand: hand}
-
-	game := NewShed(ShedOpts{
-		Stage:         clearDeck,
-		Deck:          someDeck(4),
-		Pile:          pile,
-		PlayerInfo:    twoPlayers(),
-		CurrentPlayer: twoPlayers()[0],
-		PlayerCards: map[string]*PlayerCards{
-			"p1": pc,
-			"p2": somePlayerCards(3),
+	ps1 := twoPlayers()
+	ps2 := twoPlayers()
+	tt := []struct {
+		name     string
+		opts     ShedOpts
+		decision []int
+	}{
+		{
+			name:     "this failed",
+			decision: []int{0},
+			opts: ShedOpts{
+				Stage: clearCards,
+				Deck:  []deck.Card{},
+				Pile: []deck.Card{
+					deck.NewCard(deck.Six, deck.Diamonds),
+					deck.NewCard(deck.Six, deck.Spades),
+					deck.NewCard(deck.Eight, deck.Hearts),
+					deck.NewCard(deck.Nine, deck.Hearts),
+					deck.NewCard(deck.Two, deck.Spades),
+					deck.NewCard(deck.Seven, deck.Clubs),
+					deck.NewCard(deck.Four, deck.Spades),
+				},
+				PlayerInfo:    ps1,
+				CurrentPlayer: ps1[1],
+				PlayerCards: map[string]*PlayerCards{
+					"p1": somePlayerCards(3),
+					"p2": {
+						Hand: []deck.Card{
+							deck.NewCard(deck.Ten, deck.Hearts),
+							deck.NewCard(deck.Ace, deck.Hearts),
+							deck.NewCard(deck.Queen, deck.Clubs),
+						},
+					},
+				},
+			},
 		},
-	})
+		{
+			name:     "play last six",
+			decision: []int{1},
+			opts: ShedOpts{
+				Stage: clearDeck,
+				Deck:  someDeck(4),
+				Pile: []deck.Card{
+					deck.NewCard(deck.Four, deck.Hearts),
+					deck.NewCard(deck.Two, deck.Spades),
+					deck.NewCard(deck.Six, deck.Hearts),
+					deck.NewCard(deck.Six, deck.Spades),
+					deck.NewCard(deck.Six, deck.Clubs),
+				},
+				PlayerInfo:    ps2,
+				CurrentPlayer: ps2[0],
+				PlayerCards: map[string]*PlayerCards{
+					"p1": {
+						Hand: []deck.Card{
+							deck.NewCard(deck.Eight, deck.Hearts),
+							deck.NewCard(deck.Six, deck.Diamonds),
+							deck.NewCard(deck.Five, deck.Diamonds),
+						},
+					},
+					"p2": somePlayerCards(3),
+				},
+			},
+		},
+	}
 
-	msgs, err := game.Next()
-	utils.AssertNoError(t, err)
-	utils.AssertEqual(t, game.AwaitingResponse(), protocol.PlayHand)
+	for _, tc := range tt[0:1] {
+		t.Run(tc.name, func(t *testing.T) {
+			// Given a game in stage
+			game := NewShed(tc.opts)
 
-	checkNextMessages(t, msgs, protocol.PlayHand, game)
-	moves := getMoves(msgs, game.CurrentPlayer.PlayerID)
+			msgs, err := game.Next()
+			utils.AssertNoError(t, err)
+			utils.AssertEqual(t, game.AwaitingResponse(), protocol.PlayHand)
 
-	// When the player plays the final card of that rank
-	msgs, err = game.ReceiveResponse([]InboundMessage{{
-		PlayerID: game.CurrentPlayer.PlayerID,
-		Command:  protocol.PlayHand,
-		Decision: []int{moves[1]}, // target card is the second one
-	}})
-	utils.AssertNoError(t, err)
+			checkNextMessages(t, msgs, protocol.PlayHand, game)
 
-	// Then the game sends burn messages to all players
-	// expecting a response only from the current player
-	utils.AssertEqual(t, game.AwaitingResponse(), protocol.Burn)
-	utils.AssertEqual(t, len(msgs), len(game.PlayerInfo))
-	checkBurnMessages(t, msgs, game)
+			// When the player plays their move
+			msgs, err = game.ReceiveResponse([]InboundMessage{{
+				PlayerID: game.CurrentPlayer.PlayerID,
+				Command:  protocol.PlayHand,
+				Decision: tc.decision, // target card is the second one
+			}})
+			utils.AssertNoError(t, err)
 
-	// And the selected card has been burned along with the pile
-	utils.AssertEqual(t, len(game.Pile), 0)
-	utils.AssertEqual(t, containsCard(game.PlayerCards[game.CurrentPlayer.PlayerID].Hand, targetCard), false)
+			// Then the game sends burn messages to all players
+			// expecting a response only from the current player
+			utils.AssertEqual(t, game.AwaitingResponse(), protocol.Burn)
+			utils.AssertEqual(t, len(msgs), len(game.PlayerInfo))
+			checkBurnMessages(t, msgs, game)
 
-	// And when the current player acks
-	previousPlayerID := game.CurrentPlayer.PlayerID
-	msgs, err = game.ReceiveResponse([]InboundMessage{{
-		PlayerID: game.CurrentPlayer.PlayerID,
-		Command:  protocol.Burn,
-	}})
-	utils.AssertNoError(t, err)
+			// And the selected card has been burned along with the pile
+			utils.AssertEqual(t, len(game.Pile), 0)
+			// utils.AssertEqual(t, containsCard(game.PlayerCards[game.CurrentPlayer.PlayerID].Hand, targetCard), false)
 
-	// Then the current player gets another turn
-	utils.AssertEqual(t, game.CurrentPlayer.PlayerID, previousPlayerID)
+			if len(game.Deck) == 0 {
+				utils.AssertEqual(t, len(game.PlayerCards[game.CurrentPlayer.PlayerID].Hand), 2)
+			}
+
+			// And when the current player acks
+			previousPlayerID := game.CurrentPlayer.PlayerID
+			msgs, err = game.ReceiveResponse([]InboundMessage{{
+				PlayerID: game.CurrentPlayer.PlayerID,
+				Command:  protocol.Burn,
+			}})
+			utils.AssertNoError(t, err)
+
+			// Then the current player gets another turn
+			utils.AssertEqual(t, game.CurrentPlayer.PlayerID, previousPlayerID)
+		})
+	}
 }
 
 func checkNextMessages(t *testing.T, msgs []OutboundMessage, cmd protocol.Cmd, game *shed) {
