@@ -60,6 +60,11 @@ func NewCard(rank Rank, suit Suit) Card {
 	if rank < Rank(0) || rank > King || suit < Suit(0) || suit > Spades {
 		panic("arguments out of range")
 	}
+
+	if (rank == NullRank && suit != NullSuit) || (suit == NullSuit && rank != NullRank) {
+		panic("invalid card")
+	}
+
 	return Card{Rank: Rank(rank), Suit: Suit(suit)}
 }
 

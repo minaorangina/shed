@@ -24,24 +24,11 @@ func TestCard(t *testing.T) {
 		utils.AssertEqual(t, c.card.String(), c.expected)
 	}
 
-	t.Run("Out of range (should panic)", func(t *testing.T) {
-		func() {
-			defer func() {
-				if r := recover(); r == nil {
-					t.Errorf("Expected to panic, but it didn't")
-				}
-			}()
-			NewCard(14, 2)
-		}()
-
-		func() {
-			defer func() {
-				if r := recover(); r == nil {
-					t.Errorf("Expected to panic, but it didn't")
-				}
-			}()
-			NewCard(4, 5)
-		}()
+	t.Run("invalid cards (should panic)", func(t *testing.T) {
+		utils.ShouldPanic(t, func() { NewCard(14, 2) })
+		utils.ShouldPanic(t, func() { NewCard(4, 5) })
+		utils.ShouldPanic(t, func() { NewCard(0, 4) })
+		utils.ShouldPanic(t, func() { NewCard(4, 0) })
 	})
 
 	t.Run("get rank", func(t *testing.T) {
@@ -54,7 +41,6 @@ func TestCard(t *testing.T) {
 		utils.AssertEqual(t, spade.Suit.String(), "Spades")
 	})
 }
-
 func TestWireCard(t *testing.T) {
 	t.Run("type conversion from Card", func(t *testing.T) {
 		tt := []struct {
