@@ -108,7 +108,7 @@ func getLegalMoves(pile, toPlay []deck.Card) []int {
 }
 
 func isBurn(pile []deck.Card) bool {
-	if len(pile) < burnNum {
+	if len(pile) == 0 {
 		return false
 	}
 
@@ -116,6 +116,10 @@ func isBurn(pile []deck.Card) bool {
 	topCard := pile[len(pile)-1]
 	if topCard.Rank == deck.Ten {
 		return true
+	}
+
+	if len(pile) < burnNum {
+		return false
 	}
 
 	// Check for Three burn

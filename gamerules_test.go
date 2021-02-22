@@ -640,6 +640,16 @@ func TestGameIsBurn(t *testing.T) {
 			true,
 		},
 		{
+			"handles an empty pile",
+			[]deck.Card{},
+			false,
+		},
+		{
+			"play a 10 on its own",
+			[]deck.Card{deck.NewCard(deck.Ten, deck.Spades)},
+			true,
+		},
+		{
 			"four of the same suit (Spades)",
 			[]deck.Card{
 				deck.NewCard(deck.Four, deck.Spades),
