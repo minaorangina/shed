@@ -146,3 +146,14 @@ func Within(t *testing.T, d time.Duration, assert func()) {
 	case <-done:
 	}
 }
+
+// ShouldPanic checks if the given function call results in a panic
+func ShouldPanic(t *testing.T, f func()) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("expected to panic, but it didn't")
+		}
+	}()
+
+	f()
+}
