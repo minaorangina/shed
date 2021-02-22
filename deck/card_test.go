@@ -14,9 +14,10 @@ func TestCard(t *testing.T) {
 		card     Card
 		expected string
 	}{
-		{"Lowest value card", NewCard(0, 0), "Ace of Clubs"},
-		{"Specific card", NewCard(11, 2), "Queen of Hearts"},
-		{"Highest value card", NewCard(12, 3), "King of Spades"},
+		{"Lowest value card", NewCard(0, 0), "Null of Null"},
+		{"Lowest value card", NewCard(1, 1), "Ace of Clubs"},
+		{"Specific card", NewCard(12, 3), "Queen of Hearts"},
+		{"Highest value card", NewCard(13, 4), "King of Spades"},
 	}
 
 	for _, c := range cases {
@@ -24,25 +25,32 @@ func TestCard(t *testing.T) {
 	}
 
 	t.Run("Out of range (should panic)", func(t *testing.T) {
-		// out of range (should panic)
 		func() {
 			defer func() {
 				if r := recover(); r == nil {
 					t.Errorf("Expected to panic, but it didn't")
 				}
 			}()
-			NewCard(13, 2)
-			NewCard(4, 4)
+			NewCard(14, 2)
+		}()
+
+		func() {
+			defer func() {
+				if r := recover(); r == nil {
+					t.Errorf("Expected to panic, but it didn't")
+				}
+			}()
+			NewCard(4, 5)
 		}()
 	})
 
 	t.Run("get rank", func(t *testing.T) {
-		six := NewCard(Rank(5), Suit(rand.Intn(4)))
+		six := NewCard(Rank(6), Suit(rand.Intn(4)))
 		utils.AssertEqual(t, six.Rank.String(), "Six")
 	})
 
 	t.Run("get suit", func(t *testing.T) {
-		spade := NewCard(Rank(rand.Intn(13)), Suit(3))
+		spade := NewCard(Rank(rand.Intn(13)), Suit(4))
 		utils.AssertEqual(t, spade.Suit.String(), "Spades")
 	})
 }
@@ -59,6 +67,14 @@ func TestWireCard(t *testing.T) {
 					Rank:          "Ace",
 					Suit:          "Spades",
 					CanonicalName: "Ace of Spades",
+				},
+			},
+			{
+				NewCard(NullRank, NullSuit),
+				WireCard{
+					Rank:          "Null",
+					Suit:          "Null",
+					CanonicalName: "Null of Null",
 				},
 			},
 		}
@@ -84,6 +100,14 @@ func TestWireCard(t *testing.T) {
 				},
 				NewCard(Ace, Spades),
 			},
+			{
+				WireCard{
+					Rank:          "Null",
+					Suit:          "Null",
+					CanonicalName: "Null of Null",
+				},
+				NewCard(NullRank, NullSuit),
+			},
 		}
 
 		for _, tc := range tt {
@@ -95,24 +119,60 @@ func TestWireCard(t *testing.T) {
 	})
 
 	t.Run("unmarshal WireCard json to Card", func(t *testing.T) {
-		wc := WireCard{"Ace", "Spades", "Ace of Spades"}
-		bytes, err := json.Marshal(wc)
-		utils.AssertNoError(t, err)
+		tt := []struct {
+			name string
+			wc   WireCard
+			want Card
+		}{
+			{
+				"Ace of Spades",
+				WireCard{"Ace", "Spades", "Ace of Spades"},
+				NewCard(Ace, Spades),
+			},
+			{
+				"Null of Null",
+				WireCard{"Null", "Null", "Null of Null"},
+				NewCard(NullRank, NullSuit),
+			},
+		}
 
-		want := NewCard(Ace, Spades)
+		for _, tc := range tt {
+			t.Run(tc.name, func(t *testing.T) {
+				bytes, err := json.Marshal(tc.wc)
+				utils.AssertNoError(t, err)
 
-		var got Card
-		err = json.Unmarshal(bytes, &got)
-		utils.AssertNoError(t, err)
-		utils.AssertDeepEqual(t, got, want)
+				var got Card
+				err = json.Unmarshal(bytes, &got)
+				utils.AssertNoError(t, err)
+				utils.AssertDeepEqual(t, got, tc.want)
+			})
+		}
 	})
 
 	t.Run("marshal Card to WireCard json", func(t *testing.T) {
-		want := []byte(`{"rank":"Four","suit":"Diamonds","canonicalName":"Four of Diamonds"}`)
-		card := NewCard(Four, Diamonds)
+		tt := []struct {
+			name string
+			card Card
+			want []byte
+		}{
+			{
+				"Four of Diamonds",
+				NewCard(Four, Diamonds),
+				[]byte(`{"rank":"Four","suit":"Diamonds","canonicalName":"Four of Diamonds"}`),
+			},
+			{
+				"Null of Null",
+				NewCard(NullRank, NullSuit),
+				[]byte(`{"rank":"Null","suit":"Null","canonicalName":"Null of Null"}`),
+			},
+		}
 
-		got, err := json.Marshal(card)
-		utils.AssertNoError(t, err)
-		utils.AssertStringEquality(t, string(got), string(want))
+		for _, tc := range tt {
+			t.Run(tc.name, func(t *testing.T) {
+				got, err := json.Marshal(tc.card)
+				utils.AssertNoError(t, err)
+				utils.AssertStringEquality(t, string(got), string(tc.want))
+			})
+		}
 	})
 }

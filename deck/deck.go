@@ -12,8 +12,8 @@ type Deck []Card
 func New() Deck {
 	// all cards (option to leave out jokers)
 	cards := []Card{}
-	for suit := range suitNames {
-		for rank := range rankNames {
+	for suit := range suitNames[1:] {
+		for rank := range rankNames[1:] {
 			c := NewCard(Rank(rank), Suit(suit))
 			cards = append(cards, c)
 		}

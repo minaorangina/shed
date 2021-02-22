@@ -8,10 +8,11 @@ import (
 // Rank represents a rank in a deck of cards
 type Rank int
 
-var rankNames = []string{"Ace", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Jack", "Queen", "King"}
+var rankNames = []string{"Null", "Ace", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Jack", "Queen", "King"}
 
 const (
-	Ace Rank = iota
+	NullRank Rank = iota
+	Ace
 	Two
 	Three
 	Four
@@ -33,10 +34,11 @@ func (r Rank) String() string {
 // Suit represents a suit in a deck of cards
 type Suit int
 
-var suitNames = []string{"Clubs", "Diamonds", "Hearts", "Spades"}
+var suitNames = []string{"Null", "Clubs", "Diamonds", "Hearts", "Spades"}
 
 const (
-	Clubs Suit = iota
+	NullSuit Suit = iota
+	Clubs
 	Diamonds
 	Hearts
 	Spades
