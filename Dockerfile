@@ -1,17 +1,15 @@
 FROM golang:1.15
 
-RUN mkdir /app
-
-ADD . /app
+LABEL author="Mina Gyimah"
 
 WORKDIR /app
 
-EXPOSE 8000
+ADD . /app
 
 RUN go mod download
 
-RUN ln -s cmd/web/static
+RUN make
 
-RUN cd cmd/web && GOOS=linux GOARCH=amd64 go build -o shed .
+EXPOSE 8000
 
-CMD ["/app/cmd/web/shed"]
+ENTRYPOINT ["/app/cmd/web/shed"]
