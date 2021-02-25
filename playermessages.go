@@ -31,13 +31,6 @@ type OutboundMessage struct {
 	Error           string       `json:"error,omitempty"`
 }
 
-// InitialCards represent the default cards dealt to a Player
-type InitialCards struct {
-	PlayerID string      `json:"playerID"`
-	Hand     []deck.Card `json:"hand"`
-	Seen     []deck.Card `json:"seen"`
-}
-
 // Opponent is a representation of an opponent player
 type Opponent struct {
 	PlayerID string      `json:"playerID"`
