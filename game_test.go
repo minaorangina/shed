@@ -66,6 +66,9 @@ func TestGameStageZero(t *testing.T) {
 
 		err := game.Start(threePlayers())
 		utils.AssertNoError(t, err)
+		for _, p := range game.PlayerCards {
+			utils.AssertEqual(t, len(p.UnseenVisibility), 3)
+		}
 
 		msgs, err := game.Next()
 
@@ -95,11 +98,13 @@ func TestGameStageZero(t *testing.T) {
 		utils.AssertEqual(t, game.Stage, preGame)
 
 		p2Cards := game.PlayerCards["p2"]
-		p2NewCards := &PlayerCards{
-			Hand: []deck.Card{p2Cards.Hand[2], p2Cards.Seen[1], p2Cards.Seen[2]},
-			Seen: []deck.Card{p2Cards.Hand[0], p2Cards.Hand[1], p2Cards.Seen[0]},
-		}
+		p2NewCards := NewPlayerCards(
+			[]deck.Card{p2Cards.Hand[2], p2Cards.Seen[1], p2Cards.Seen[2]},
+			[]deck.Card{p2Cards.Hand[0], p2Cards.Hand[1], p2Cards.Seen[0]},
+			nil, nil,
+		)
 		p2NewCards.Unseen = game.PlayerCards["p2"].Unseen
+		p2NewCards.UnseenVisibility = game.PlayerCards["p2"].UnseenVisibility
 
 		want := map[string]*PlayerCards{
 			"p1": game.PlayerCards["p1"],
@@ -159,11 +164,13 @@ func TestGameStageZeroToOne(t *testing.T) {
 	utils.AssertEqual(t, game.Stage, preGame)
 
 	p2Cards := game.PlayerCards["p2"]
-	p2NewCards := &PlayerCards{
-		Hand: []deck.Card{p2Cards.Hand[2], p2Cards.Seen[1], p2Cards.Seen[2]},
-		Seen: []deck.Card{p2Cards.Hand[0], p2Cards.Hand[1], p2Cards.Seen[0]},
-	}
+	p2NewCards := NewPlayerCards(
+		[]deck.Card{p2Cards.Hand[2], p2Cards.Seen[1], p2Cards.Seen[2]},
+		[]deck.Card{p2Cards.Hand[0], p2Cards.Hand[1], p2Cards.Seen[0]},
+		nil, nil,
+	)
 	p2NewCards.Unseen = game.PlayerCards["p2"].Unseen
+	p2NewCards.UnseenVisibility = game.PlayerCards["p2"].UnseenVisibility
 
 	want := map[string]*PlayerCards{
 		"p1": game.PlayerCards["p1"],
@@ -245,7 +252,7 @@ func TestGameStageOne(t *testing.T) {
 			deck.NewCard(deck.Six, deck.Diamonds),
 		}
 
-		pc := &PlayerCards{Hand: hand}
+		pc := NewPlayerCards(hand, nil, nil, nil)
 
 		game := NewShed(ShedOpts{
 			Stage:         clearDeck,
@@ -333,7 +340,7 @@ func TestGameStageOne(t *testing.T) {
 			deck.NewCard(deck.Six, deck.Diamonds),
 		}
 
-		pc := &PlayerCards{Hand: hand}
+		pc := NewPlayerCards(hand, nil, nil, nil)
 
 		game := NewShed(ShedOpts{
 			Stage:         clearDeck,
@@ -417,7 +424,7 @@ func TestGameStageOne(t *testing.T) {
 			deck.NewCard(deck.Nine, deck.Diamonds),
 		}
 		// And a player with two cards of the same value in their hand
-		pc := &PlayerCards{Hand: append(targetCards, deck.NewCard(deck.Eight, deck.Hearts))}
+		pc := NewPlayerCards(append(targetCards, deck.NewCard(deck.Eight, deck.Hearts)), nil, nil, nil)
 
 		game := NewShed(ShedOpts{
 			Stage:         clearDeck,
@@ -479,7 +486,10 @@ func TestGameStageOne(t *testing.T) {
 			deck.NewCard(deck.Six, deck.Clubs),
 		}
 		// And a player with cards different values in their hand
-		pc := &PlayerCards{Hand: append(targetCards, deck.NewCard(deck.Eight, deck.Hearts))}
+		pc := NewPlayerCards(
+			append(targetCards, deck.NewCard(deck.Eight, deck.Hearts)),
+			nil, nil, nil,
+		)
 
 		game := NewShed(ShedOpts{
 			Stage:         clearDeck,
@@ -618,7 +628,10 @@ func TestGameStageOne(t *testing.T) {
 		}
 
 		// And a player with two cards of the same value in their hand
-		pc := &PlayerCards{Hand: append(targetCards, deck.NewCard(deck.Eight, deck.Hearts))}
+		pc := NewPlayerCards(
+			append(targetCards, deck.NewCard(deck.Eight, deck.Hearts)),
+			nil, nil, nil,
+		)
 
 		game := NewShed(ShedOpts{
 			Stage:         clearDeck,
@@ -693,9 +706,10 @@ func TestGameStageOne(t *testing.T) {
 		lowValueCard := deck.NewCard(deck.Four, deck.Hearts)
 
 		// and a player with 4 cards in their hand
-		pc := &PlayerCards{
-			Hand: someCards(4),
-		}
+		pc := NewPlayerCards(
+			someCards(4),
+			nil, nil, nil,
+		)
 
 		game := NewShed(ShedOpts{
 			Stage:         clearDeck,
@@ -752,7 +766,10 @@ func TestGameStageTwo(t *testing.T) {
 			deck.NewCard(deck.Six, deck.Diamonds),
 		}
 
-		pc := &PlayerCards{Hand: hand}
+		pc := NewPlayerCards(
+			hand,
+			nil, nil, nil,
+		)
 
 		game := NewShed(ShedOpts{
 			Stage:         clearCards,
@@ -818,14 +835,16 @@ func TestGameStageTwo(t *testing.T) {
 		pile := []deck.Card{lowValueCard}
 
 		// And a player with an empty hand and a full set of Seen cards
-		pc := &PlayerCards{
-			Hand: []deck.Card{},
-			Seen: []deck.Card{
+		pc := NewPlayerCards(
+			nil,
+			[]deck.Card{
 				deck.NewCard(deck.Eight, deck.Hearts),
 				deck.NewCard(deck.Nine, deck.Clubs),
 				deck.NewCard(deck.Six, deck.Diamonds),
 			},
-		}
+			someCards(3),
+			nil,
+		)
 		game := NewShed(ShedOpts{
 			Stage:         clearCards,
 			Deck:          deck.Deck{},
@@ -910,14 +929,15 @@ func TestGameStageTwo(t *testing.T) {
 		pile := []deck.Card{highValueCard}
 
 		// And a player with an empty hand and a full set of seen cards
-		pc := &PlayerCards{
-			Hand: []deck.Card{},
-			Seen: []deck.Card{
+		pc := NewPlayerCards(
+			nil,
+			[]deck.Card{
 				deck.NewCard(deck.Eight, deck.Hearts),
 				deck.NewCard(deck.Nine, deck.Clubs),
 				deck.NewCard(deck.Six, deck.Diamonds),
 			},
-		}
+			nil, nil,
+		)
 
 		game := NewShed(ShedOpts{
 			Stage:         clearCards,
@@ -978,19 +998,24 @@ func TestGameStageTwo(t *testing.T) {
 	t.Run("stage 2: player only unseen cards", func(t *testing.T) {
 
 		// Given a game in stage 2, with a low-value card on the pile
-		lowValueCard := deck.NewCard(deck.Six, deck.Hearts)
+		lowValueCard := deck.NewCard(deck.Four, deck.Hearts)
 		pile := []deck.Card{lowValueCard}
+		chosenCard := deck.NewCard(deck.Eight, deck.Hearts)
 
 		// And a player with only a full set of Unseen cards
-		pc := &PlayerCards{
-			Hand: []deck.Card{},
-			Seen: []deck.Card{},
-			Unseen: []deck.Card{
-				deck.NewCard(deck.Eight, deck.Hearts),
+		pc := NewPlayerCards(
+			[]deck.Card{}, []deck.Card{},
+			[]deck.Card{
+				chosenCard,
 				deck.NewCard(deck.Nine, deck.Clubs),
 				deck.NewCard(deck.Six, deck.Diamonds),
 			},
-		}
+			map[deck.Card]bool{
+				chosenCard:                            false,
+				deck.NewCard(deck.Nine, deck.Clubs):   false,
+				deck.NewCard(deck.Six, deck.Diamonds): false,
+			},
+		)
 
 		game := NewShed(ShedOpts{
 			Stage:         clearCards,
@@ -1016,14 +1041,14 @@ func TestGameStageTwo(t *testing.T) {
 		utils.AssertDeepEqual(t, moves, []int{0, 1, 2})
 
 		oldUnseenSize := len(game.PlayerCards[game.CurrentPlayer.PlayerID].Unseen)
-		previousPlayerID := game.CurrentPlayer.PlayerID
 
 		// And when the player selects a legal move
-		cardChoice := []int{moves[0]}
+		decision := []int{moves[0]}
+
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.PlayUnseen,
-			Decision: cardChoice,
+			Decision: decision,
 		}})
 		utils.AssertNoError(t, err)
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.UnseenSuccess)
@@ -1031,40 +1056,61 @@ func TestGameStageTwo(t *testing.T) {
 		newHandSize := len(game.PlayerCards[game.CurrentPlayer.PlayerID].Hand)
 		newUnseenSize := len(game.PlayerCards[game.CurrentPlayer.PlayerID].Unseen)
 
-		// Then they have one less Unseen card, but their remaining cards are unchanged
-		utils.AssertEqual(t, newUnseenSize, oldUnseenSize-1)
+		// Then they have the same number of Unseen cards
+		// but their chosen card is now visible
+		utils.AssertEqual(t, newUnseenSize, oldUnseenSize)
 		utils.AssertEqual(t, newHandSize, 0)
+		for card, visible := range game.PlayerCards["p1"].UnseenVisibility {
+			if card == chosenCard {
+				utils.AssertTrue(t, visible)
+			} else {
+				utils.AssertEqual(t, visible, false)
+			}
+		}
 
-		// And everyone is informed of the end of turn
+		// And everyone is informed of the successful move
 		checkReceiveResponseMessages(t, msgs, protocol.UnseenSuccess, game)
+
+		playerID := game.CurrentPlayer.PlayerID
 
 		// And the game expects an ack from the player
 		_, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.CurrentPlayer.PlayerID,
+			PlayerID: playerID,
 			Command:  protocol.UnseenSuccess,
 		}})
 		utils.AssertNoError(t, err)
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.Null)
 
+		newHandSize = len(game.PlayerCards[playerID].Hand)
+		newUnseenSize = len(game.PlayerCards[playerID].Unseen)
+		// Then they have one less Unseen card, but their remaining cards are unchanged
+		utils.AssertEqual(t, newUnseenSize, oldUnseenSize-1)
+		utils.AssertEqual(t, newHandSize, 0)
 		// And it's the next player's turn
-		utils.AssertTrue(t, previousPlayerID != game.CurrentPlayer.PlayerID)
+		utils.AssertTrue(t, playerID != game.CurrentPlayer.PlayerID)
 	})
 
 	t.Run("stage 2: player has no legal moves and only unseen cards", func(t *testing.T) {
 		// Given a game in stage 2
 		highValueCard := deck.NewCard(deck.Ace, deck.Spades)
 		pile := []deck.Card{highValueCard}
+		chosenCard := deck.NewCard(deck.Eight, deck.Hearts)
 
 		// And a player with only a full set of Unseen cards
-		pc := &PlayerCards{
-			Hand: []deck.Card{},
-			Seen: []deck.Card{},
-			Unseen: []deck.Card{
-				deck.NewCard(deck.Eight, deck.Hearts),
+		pc := NewPlayerCards(
+			[]deck.Card{},
+			[]deck.Card{},
+			[]deck.Card{
+				chosenCard,
 				deck.NewCard(deck.Nine, deck.Clubs),
 				deck.NewCard(deck.Six, deck.Diamonds),
 			},
-		}
+			map[deck.Card]bool{
+				chosenCard:                            false,
+				deck.NewCard(deck.Nine, deck.Clubs):   false,
+				deck.NewCard(deck.Six, deck.Diamonds): false,
+			},
+		)
 
 		game := NewShed(ShedOpts{
 			Stage:         clearCards,
@@ -1081,69 +1127,79 @@ func TestGameStageTwo(t *testing.T) {
 		// When the player takes their turn
 		msgs, err := game.Next()
 		utils.AssertNoError(t, err)
+		playerID := game.CurrentPlayer.PlayerID
 
 		// Then everyone is informed
 		checkNextMessages(t, msgs, protocol.PlayUnseen, game)
 
 		// Then the game selects all Unseen cards (legal moves or not)
-		moves := getMoves(msgs, game.CurrentPlayer.PlayerID)
+		moves := getMoves(msgs, playerID)
 		utils.AssertTrue(t, len(moves) > 0)
 		utils.AssertDeepEqual(t, moves, []int{0, 1, 2})
 
-		oldUnseenSize := len(game.PlayerCards[game.CurrentPlayer.PlayerID].Unseen)
+		oldUnseenSize := len(game.PlayerCards[playerID].Unseen)
 		oldPileSize := len(game.Pile)
+		oldHand := game.PlayerCards[playerID].Hand
 
 		// And when the player selects an illegal move
-		cardChoice := moves[0:1]
+		decision := moves[0:1]
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.CurrentPlayer.PlayerID,
+			PlayerID: playerID,
 			Command:  protocol.PlayUnseen,
-			Decision: cardChoice,
+			Decision: decision,
 		}})
 
 		utils.AssertNoError(t, err)
-
-		newHand := game.PlayerCards[game.CurrentPlayer.PlayerID].Hand
-		newUnseenSize := len(game.PlayerCards[game.CurrentPlayer.PlayerID].Unseen)
-
-		// Then the player picks up the pile which includes the chosen Unseen card
-		utils.AssertEqual(t, len(game.Pile), 0)
-		utils.AssertDeepEqual(t, len(newHand), oldPileSize+1)
-		utils.AssertEqual(t, newUnseenSize, oldUnseenSize-1)
 		checkReceiveResponseMessages(t, msgs, protocol.UnseenFailure, game)
+
+		newUnseenSize := len(game.PlayerCards[playerID].Unseen)
+		newPileSize := len(game.Pile)
+		newHand := game.PlayerCards[playerID].Hand
+
+		// Then none of the cards have changed
+		utils.AssertEqual(t, oldUnseenSize, newUnseenSize)
+		utils.AssertEqual(t, oldPileSize, newPileSize)
+		utils.AssertDeepEqual(t, oldHand, newHand)
+		// And the player's chosen card has been flipped
+		utils.AssertTrue(t, game.PlayerCards[playerID].UnseenVisibility[chosenCard])
+
+		// check which messages are sent out
 
 		// And the game is expecting an ack
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.UnseenFailure)
 
 		// And when the player's ack is received
-		previousPlayerID := game.CurrentPlayer.PlayerID
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.UnseenFailure,
 		}})
+		utils.AssertNoError(t, err)
+		utils.AssertEqual(t, len(msgs), 0)
+
+		newUnseenSize = len(game.PlayerCards[playerID].Unseen)
+		newPileSize = len(game.Pile)
+		newHand = game.PlayerCards[playerID].Hand
+
+		// Then the player picks up the pile which includes the chosen Unseen card
+		utils.AssertEqual(t, len(game.Pile), 0)
+		utils.AssertDeepEqual(t, len(newHand), oldPileSize+1)
+		utils.AssertEqual(t, newUnseenSize, oldUnseenSize-1)
 
 		utils.AssertNoError(t, err)
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.Null)
 
 		// Then it's the next player's turn
-		utils.AssertTrue(t, previousPlayerID != game.CurrentPlayer.PlayerID)
+		utils.AssertTrue(t, playerID != game.CurrentPlayer.PlayerID)
 	})
 
 	t.Run("stage 2: player finishes with final Unseen card", func(t *testing.T) {
-
 		// Given a game in stage 2
 		lowValueCard := deck.NewCard(deck.Four, deck.Spades)
 		highValueCard := deck.NewCard(deck.Ace, deck.Spades)
 		pile := []deck.Card{lowValueCard}
 
 		// And a player with one remaining Unseen card
-		pc := &PlayerCards{
-			Hand: []deck.Card{},
-			Seen: []deck.Card{},
-			Unseen: []deck.Card{
-				highValueCard,
-			},
-		}
+		pc := NewPlayerCards(nil, nil, []deck.Card{highValueCard}, nil)
 
 		game := NewShed(ShedOpts{
 			Stage:         clearCards,
@@ -1162,14 +1218,26 @@ func TestGameStageTwo(t *testing.T) {
 		msgs, err := game.Next()
 		utils.AssertNoError(t, err)
 
-		previousPlayerID := game.CurrentPlayer.PlayerID
-		previousNumPlayers := len(game.ActivePlayers)
+		playerID := game.CurrentPlayer.PlayerID
+		oldNumActivePlayers := len(game.ActivePlayers)
 
 		cardChoice := []int{0}
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
-			PlayerID: game.CurrentPlayer.PlayerID,
+			PlayerID: playerID,
 			Command:  protocol.PlayUnseen,
 			Decision: cardChoice,
+		}})
+		utils.AssertNoError(t, err)
+
+		// Then the players are informed of the successful move
+		checkReceiveResponseMessages(t, msgs, protocol.UnseenSuccess, game)
+		// And the game is expecting a response
+		utils.AssertEqual(t, game.AwaitingResponse(), protocol.UnseenSuccess)
+
+		// And when the player acks
+		msgs, err = game.ReceiveResponse([]InboundMessage{{
+			PlayerID: game.CurrentPlayer.PlayerID,
+			Command:  protocol.UnseenSuccess,
 		}})
 		utils.AssertNoError(t, err)
 
@@ -1179,24 +1247,20 @@ func TestGameStageTwo(t *testing.T) {
 		// And the game is expecting a response
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.PlayerFinished)
 
-		// And when the player acks
+		// And when the player acks again
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.PlayerFinished,
 		}})
 		utils.AssertNoError(t, err)
+		newNumActivePlayers := len(game.ActivePlayers)
 
 		// Then there is one less active players
-		utils.AssertEqual(t, len(game.ActivePlayers), previousNumPlayers-1)
-		for _, fp := range game.FinishedPlayers {
-			if fp.PlayerID == previousPlayerID {
-
-			}
-		}
-		utils.AssertTrue(t, sliceContainsPlayerID(game.FinishedPlayers, previousPlayerID))
+		utils.AssertEqual(t, newNumActivePlayers, oldNumActivePlayers-1)
+		utils.AssertTrue(t, sliceContainsPlayerID(game.FinishedPlayers, playerID))
 
 		// And it's the next player's turn
-		utils.AssertTrue(t, game.CurrentPlayer.PlayerID != previousPlayerID)
+		utils.AssertTrue(t, game.CurrentPlayer.PlayerID != playerID)
 	})
 
 	t.Run("stage 2: player finishes with final Hand card", func(t *testing.T) {
@@ -1207,11 +1271,10 @@ func TestGameStageTwo(t *testing.T) {
 		pile := []deck.Card{lowValueCard}
 
 		// And a player with one remaining Hand card and no Unseen cards
-		pc := &PlayerCards{
-			Hand:   []deck.Card{highValueCard},
-			Seen:   []deck.Card{},
-			Unseen: []deck.Card{},
-		}
+		pc := NewPlayerCards(
+			[]deck.Card{highValueCard},
+			nil, nil, nil,
+		)
 
 		game := NewShed(ShedOpts{
 			Stage:         clearCards,
@@ -1272,13 +1335,7 @@ func TestGameStageTwo(t *testing.T) {
 		pile := []deck.Card{lowValueCard}
 
 		// And a player with one remaining Unseen card
-		pc := &PlayerCards{
-			Hand: []deck.Card{},
-			Seen: []deck.Card{},
-			Unseen: []deck.Card{
-				highValueCard,
-			},
-		}
+		pc := NewPlayerCards(nil, nil, []deck.Card{highValueCard}, nil)
 
 		game := NewShed(ShedOpts{
 			Stage:         clearCards,
@@ -1304,13 +1361,25 @@ func TestGameStageTwo(t *testing.T) {
 		}})
 		utils.AssertNoError(t, err)
 
+		// Then the players are informed of the successful move
+		checkReceiveResponseMessages(t, msgs, protocol.UnseenSuccess, game)
+		// And the game is expecting a response
+		utils.AssertEqual(t, game.AwaitingResponse(), protocol.UnseenSuccess)
+
+		// And when the player acks
+		msgs, err = game.ReceiveResponse([]InboundMessage{{
+			PlayerID: game.CurrentPlayer.PlayerID,
+			Command:  protocol.UnseenSuccess,
+		}})
+		utils.AssertNoError(t, err)
+
 		// Then the game informs everyone the player has finished
 		checkPlayerFinishedMessages(t, msgs, game)
 
 		// And the game is expecting a response
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.PlayerFinished)
 
-		// And when the player acks
+		// And when the player acks again
 		msgs, err = game.ReceiveResponse([]InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.PlayerFinished,
@@ -1337,11 +1406,7 @@ func TestGameStageTwo(t *testing.T) {
 		pile := []deck.Card{lowValueCard}
 
 		// And a player with one remaining Hand card
-		pc := &PlayerCards{
-			Hand:   []deck.Card{highValueCard},
-			Seen:   []deck.Card{},
-			Unseen: []deck.Card{},
-		}
+		pc := NewPlayerCards([]deck.Card{highValueCard}, nil, nil, nil)
 
 		game := NewShed(ShedOpts{
 			Stage:         clearCards,
@@ -1777,13 +1842,20 @@ func TestGameBurn(t *testing.T) {
 	}
 }
 
+func checkBaseMessage(t *testing.T, m OutboundMessage, game *shed) {
+	utils.AssertNotEmptyString(t, m.PlayerID)
+	utils.AssertDeepEqual(t, m.CurrentTurn, game.CurrentPlayer)
+	utils.AssertDeepEqual(t, m.Hand, game.PlayerCards[m.PlayerID].Hand)
+	utils.AssertDeepEqual(t, m.Seen, game.PlayerCards[m.PlayerID].Seen)
+	utils.AssertDeepEqual(t, m.Pile, game.Pile)
+	utils.AssertEqual(t, m.DeckCount, len(game.Deck))
+}
+
 func checkNextMessages(t *testing.T, msgs []OutboundMessage, cmd protocol.Cmd, game *shed) {
 	t.Helper()
 
 	for _, m := range msgs {
-		utils.AssertDeepEqual(t, m.Hand, game.PlayerCards[m.PlayerID].Hand)
-		utils.AssertDeepEqual(t, m.Seen, game.PlayerCards[m.PlayerID].Seen)
-		utils.AssertEqual(t, m.DeckCount, len(game.Deck))
+		checkBaseMessage(t, m, game)
 
 		if m.PlayerID == game.CurrentPlayer.PlayerID {
 			// and the current player is asked to make a choice
@@ -1805,9 +1877,7 @@ func checkReceiveResponseMessages(t *testing.T, msgs []OutboundMessage, currentP
 	t.Helper()
 
 	for _, m := range msgs {
-		utils.AssertDeepEqual(t, m.Hand, game.PlayerCards[m.PlayerID].Hand)
-		utils.AssertDeepEqual(t, m.Seen, game.PlayerCards[m.PlayerID].Seen)
-		utils.AssertDeepEqual(t, m.Pile, game.Pile)
+		checkBaseMessage(t, m, game)
 
 		if m.PlayerID == game.CurrentPlayer.PlayerID {
 			// and the current player is asked to make a choice
@@ -1824,12 +1894,12 @@ func checkPlayerFinishedMessages(t *testing.T, msgs []OutboundMessage, game *she
 	t.Helper()
 
 	for _, m := range msgs {
-		utils.AssertDeepEqual(t, m.Hand, game.PlayerCards[m.PlayerID].Hand)
-		utils.AssertDeepEqual(t, m.Seen, game.PlayerCards[m.PlayerID].Seen)
+		checkBaseMessage(t, m, game)
 		utils.AssertEqual(t, m.Command, protocol.PlayerFinished)
 
 		if m.PlayerID == game.CurrentPlayer.PlayerID {
 			utils.AssertTrue(t, m.ShouldRespond)
+			utils.AssertEqual(t, len(m.Unseen), 0)
 		} else {
 			utils.AssertEqual(t, m.ShouldRespond, false)
 		}
@@ -1840,8 +1910,8 @@ func checkGameOverMessages(t *testing.T, msgs []OutboundMessage, game *shed) {
 	t.Helper()
 
 	for _, m := range msgs {
+		checkBaseMessage(t, m, game)
 		utils.AssertEqual(t, m.Command, protocol.GameOver)
-		utils.AssertDeepEqual(t, m.Pile, game.Pile)
 		utils.AssertEqual(t, m.ShouldRespond, false)
 		utils.AssertTrue(t, len(game.FinishedPlayers) == len(game.PlayerInfo))
 	}
@@ -1851,8 +1921,8 @@ func checkBurnMessages(t *testing.T, msgs []OutboundMessage, game *shed) {
 	t.Helper()
 
 	for _, m := range msgs {
+		checkBaseMessage(t, m, game)
 		utils.AssertEqual(t, m.Command, protocol.Burn)
-		utils.AssertDeepEqual(t, m.Pile, game.Pile)
 		if m.PlayerID == game.CurrentPlayer.PlayerID {
 			utils.AssertTrue(t, m.ShouldRespond)
 		}
@@ -1893,7 +1963,18 @@ func combineCards(cards []deck.Card, toAdd ...deck.Card) []deck.Card {
 }
 
 func somePlayerCards(num int) *PlayerCards {
-	return &PlayerCards{Hand: someDeck(num), Seen: someDeck(num)}
+	unseen := someDeck(num)
+	pc := NewPlayerCards(
+		someDeck(num),
+		someDeck(num),
+		unseen,
+		nil,
+	)
+	for _, c := range unseen {
+		pc.UnseenVisibility[c] = false
+	}
+
+	return pc
 }
 
 func containsCard(s []deck.Card, targets ...deck.Card) bool {

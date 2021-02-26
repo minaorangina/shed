@@ -27,6 +27,35 @@ const (
 
 type PlayerCards struct {
 	Hand, Seen, Unseen []deck.Card
+	UnseenVisibility   map[deck.Card]bool
+}
+
+func NewPlayerCards(
+	hand, seen, unseen []deck.Card,
+	unseenVisibility map[deck.Card]bool,
+) *PlayerCards {
+	if hand == nil {
+		hand = []deck.Card{}
+	}
+	if seen == nil {
+		seen = []deck.Card{}
+	}
+	if unseen == nil {
+		unseen = []deck.Card{}
+	}
+	if unseenVisibility == nil {
+		unseenVisibility = map[deck.Card]bool{}
+		for _, c := range unseen {
+			unseenVisibility[c] = false
+		}
+	}
+
+	return &PlayerCards{
+		Hand:             hand,
+		Seen:             seen,
+		Unseen:           unseen,
+		UnseenVisibility: unseenVisibility,
+	}
 }
 
 type Game interface {
@@ -48,6 +77,7 @@ type shed struct {
 	Stage           Stage
 	ExpectedCommand protocol.Cmd
 	GameOver        bool
+	unseenDecision  *InboundMessage
 }
 
 type ShedOpts struct {
@@ -137,11 +167,12 @@ func (s *shed) Start(playerInfo []PlayerInfo) error {
 	s.ActivePlayers = s.PlayerInfo
 
 	for _, info := range playerInfo {
-		playerCards := &PlayerCards{
-			Hand:   s.Deck.Deal(numCardsInGroup),
-			Seen:   s.Deck.Deal(numCardsInGroup),
-			Unseen: s.Deck.Deal(numCardsInGroup),
-		}
+		playerCards := NewPlayerCards(
+			s.Deck.Deal(numCardsInGroup),
+			s.Deck.Deal(numCardsInGroup),
+			s.Deck.Deal(numCardsInGroup),
+			nil,
+		)
 		s.PlayerCards[info.PlayerID] = playerCards
 	}
 
@@ -364,9 +395,31 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 
 			return nil, nil
 
-		case protocol.EndOfTurn, // ack
-			protocol.UnseenSuccess, // ack
-			protocol.UnseenFailure: // ack
+		case protocol.EndOfTurn: // ack
+			s.ExpectedCommand = protocol.Null
+			s.turn()
+			return nil, nil
+
+		case protocol.UnseenSuccess: // ack
+			s.completeMove(*s.unseenDecision)
+			s.unseenDecision = nil
+
+			if s.playerHasFinished() {
+				s.ExpectedCommand = protocol.PlayerFinished
+				return s.buildPlayerFinishedMessages(), nil
+			}
+
+			s.ExpectedCommand = protocol.Null
+			s.turn()
+			return nil, nil
+
+		case protocol.UnseenFailure: // ack
+			// Must play the card to pick up the card
+			s.completeMove(*s.unseenDecision)
+			s.unseenDecision = nil
+
+			s.pickUpPile()
+
 			s.ExpectedCommand = protocol.Null
 			s.turn()
 			return nil, nil
@@ -398,29 +451,27 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 				}, ErrPlayOneCard
 			}
 			// possible optimisation: could precalculate legal Unseen card moves
-			cardIdx := msg.Decision[0]
-			chosenCard := s.PlayerCards[s.CurrentPlayer.PlayerID].Unseen[cardIdx]
-
-			legalMoves := getLegalMoves(s.Pile, []deck.Card{chosenCard})
 
 			// The player plays their chosen card regardless of the legality of the move
 			// If it's a legal move, then this is fine.
 			// If it's not a legal move, the player will pick up the pile anyway.
-			s.completeMove(msg)
+			s.unseenDecision = &msg
 
-			if len(legalMoves) == 0 {
-				s.pickUpPile()
-				s.ExpectedCommand = protocol.UnseenFailure
-				return s.buildEndOfTurnMessages(protocol.UnseenFailure), nil
+			// Flip chosen card
+			cardIdx := msg.Decision[0]
+			chosenCard := s.PlayerCards[s.CurrentPlayer.PlayerID].Unseen[cardIdx]
+			s.PlayerCards[s.CurrentPlayer.PlayerID].UnseenVisibility[chosenCard] = true
+
+			legalMoves := getLegalMoves(s.Pile, []deck.Card{chosenCard})
+
+			if len(legalMoves) > 0 {
+				s.ExpectedCommand = protocol.UnseenSuccess
+				return s.buildEndOfTurnMessages(protocol.UnseenSuccess), nil
 			}
 
-			if s.playerHasFinished() {
-				s.ExpectedCommand = protocol.PlayerFinished
-				return s.buildPlayerFinishedMessages(), nil
-			}
+			s.ExpectedCommand = protocol.UnseenFailure
+			return s.buildEndOfTurnMessages(protocol.UnseenFailure), nil
 
-			s.ExpectedCommand = protocol.UnseenSuccess
-			return s.buildEndOfTurnMessages(protocol.UnseenSuccess), nil
 		}
 	}
 

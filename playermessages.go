@@ -20,6 +20,7 @@ type OutboundMessage struct {
 	Message         string       `json:"message"`
 	Hand            []deck.Card  `json:"hand"`
 	Seen            []deck.Card  `json:"seen"`
+	Unseen          []deck.Card  `json:"unseen"`
 	Pile            []deck.Card  `json:"pile"`
 	DeckCount       int          `json:"deckCount"`
 	ShouldRespond   bool         `json:"shouldRespond"`
