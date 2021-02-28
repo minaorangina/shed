@@ -1,8 +1,11 @@
-package shed
+package store
 
 import (
 	"errors"
 	"fmt"
+
+	"github.com/minaorangina/shed/engine"
+	"github.com/minaorangina/shed/protocol"
 )
 
 var (
@@ -14,36 +17,31 @@ var (
 	ErrGameAlreadyStarted = errors.New("game has already started")
 )
 
-type PlayerInfo struct {
-	PlayerID string `json:"playerID"`
-	Name     string `json:"name"`
-}
-
 type GameStore interface {
-	FindGame(gameID string) GameEngine
-	FindActiveGame(gameID string) GameEngine
-	FindInactiveGame(gameID string) GameEngine
-	FindPendingPlayer(gameID, playerID string) *PlayerInfo
-	AddInactiveGame(engine GameEngine) error
+	FindGame(gameID string) engine.GameEngine
+	FindActiveGame(gameID string) engine.GameEngine
+	FindInactiveGame(gameID string) engine.GameEngine
+	FindPendingPlayer(gameID, playerID string) *protocol.PlayerInfo
+	AddInactiveGame(engine engine.GameEngine) error
 	AddPendingPlayer(gameID, playerID, name string) error
-	AddPlayerToGame(gameID string, player Player) error
+	AddPlayerToGame(gameID string, player engine.Player) error
 }
 
 // InMemoryGameStore maps game id to game engine
 type InMemoryGameStore struct {
-	Games          map[string]GameEngine
-	PendingPlayers map[string][]PlayerInfo
+	Games          map[string]engine.GameEngine
+	PendingPlayers map[string][]protocol.PlayerInfo
 }
 
 // NewInMemoryGameStore constructs an InMemoryGameStore
 func NewInMemoryGameStore() *InMemoryGameStore {
 	return &InMemoryGameStore{
-		Games:          map[string]GameEngine{},
-		PendingPlayers: map[string][]PlayerInfo{},
+		Games:          map[string]engine.GameEngine{},
+		PendingPlayers: map[string][]protocol.PlayerInfo{},
 	}
 }
 
-func (s *InMemoryGameStore) FindGame(ID string) GameEngine {
+func (s *InMemoryGameStore) FindGame(ID string) engine.GameEngine {
 	game, ok := s.Games[ID]
 	if !ok {
 		return nil
@@ -53,30 +51,30 @@ func (s *InMemoryGameStore) FindGame(ID string) GameEngine {
 }
 
 // does this need a mutex?
-func (s *InMemoryGameStore) FindActiveGame(ID string) GameEngine {
+func (s *InMemoryGameStore) FindActiveGame(ID string) engine.GameEngine {
 	game, ok := s.Games[ID]
 	if !ok {
 		return nil
 	}
-	if game.PlayState() == Idle {
+	if game.PlayState() == engine.Idle {
 		return nil
 	}
 	return game
 }
 
-func (s *InMemoryGameStore) FindInactiveGame(ID string) GameEngine {
+func (s *InMemoryGameStore) FindInactiveGame(ID string) engine.GameEngine {
 	game, ok := s.Games[ID]
 	if !ok {
 		return nil
 	}
 	// to be replaced by something real
-	if game.PlayState() != Idle {
+	if game.PlayState() != engine.Idle {
 		return nil
 	}
 	return game
 }
 
-func (s *InMemoryGameStore) FindPendingPlayer(gameID, playerID string) *PlayerInfo {
+func (s *InMemoryGameStore) FindPendingPlayer(gameID, playerID string) *protocol.PlayerInfo {
 	pendingPlayers, ok := s.PendingPlayers[gameID]
 	if !ok {
 		return nil
@@ -92,7 +90,7 @@ func (s *InMemoryGameStore) FindPendingPlayer(gameID, playerID string) *PlayerIn
 }
 
 // mutex definitely required
-func (s *InMemoryGameStore) AddInactiveGame(game GameEngine) error {
+func (s *InMemoryGameStore) AddInactiveGame(game engine.GameEngine) error {
 	if game, exists := s.Games[game.ID()]; exists {
 		return fmt.Errorf("Game with id %s already exists", game.ID())
 	}
@@ -109,17 +107,17 @@ func (s *InMemoryGameStore) AddPendingPlayer(gameID, playerID, name string) erro
 		return ErrFnUnknownInactiveGameID(gameID)
 	}
 
-	if game.PlayState() != Idle {
+	if game.PlayState() != engine.Idle {
 		return ErrGameAlreadyStarted
 	}
 
 	// mutex required
-	s.PendingPlayers[gameID] = append(s.PendingPlayers[gameID], PlayerInfo{playerID, name})
+	s.PendingPlayers[gameID] = append(s.PendingPlayers[gameID], protocol.PlayerInfo{playerID, name})
 
 	return nil
 }
 
-func (s *InMemoryGameStore) AddPlayerToGame(gameID string, player Player) error {
+func (s *InMemoryGameStore) AddPlayerToGame(gameID string, player engine.Player) error {
 	game := s.FindInactiveGame(gameID)
 	if game == nil {
 		return ErrFnUnknownInactiveGameID(gameID)

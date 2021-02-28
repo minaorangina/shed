@@ -1,10 +1,12 @@
-package shed
+package engine
 
 import (
 	"fmt"
 	"io"
 
 	"github.com/minaorangina/shed/deck"
+	"github.com/minaorangina/shed/game"
+	"github.com/minaorangina/shed/protocol"
 )
 
 const (
@@ -24,7 +26,7 @@ func SendText(w io.Writer, text string, a ...interface{}) {
 	fmt.Fprintf(w, text, a...)
 }
 
-func buildCardDisplayText(cards PlayerCards) string {
+func buildCardDisplayText(cards game.PlayerCards) string {
 	var displayText string
 	handText := fmt.Sprintf("In your hand, you have three cards 🤲\n")
 	seenText := fmt.Sprintf("On the table, there are three more cards \n")
@@ -38,7 +40,7 @@ func buildCardDisplayText(cards PlayerCards) string {
 	return displayText + handText + "\n" + seenText + "\n" + unseenText
 }
 
-func buildReorgDisplayText(msg OutboundMessage, visibleCards []deck.Card) string {
+func buildReorgDisplayText(msg protocol.OutboundMessage, visibleCards []deck.Card) string {
 	displayText := "\nOk, choose the cards you wish to have in your hand\nExample: if you want cards A, C and F, type ACF (the order of the letters does not matter).\n\n"
 	cardsText := ""
 

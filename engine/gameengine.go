@@ -1,12 +1,12 @@
-package shed
+package engine
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"sync"
 	"time"
 
+	gm "github.com/minaorangina/shed/game"
 	"github.com/minaorangina/shed/protocol"
 )
 
@@ -48,15 +48,15 @@ const (
 // GameEngine represents the engine of the game
 type GameEngine interface {
 	Start() error
-	Send([]OutboundMessage)
+	Send([]protocol.OutboundMessage)
 	Players() Players
 	ID() string
 	CreatorID() string
 	AddPlayer(Player) error
 	RemovePlayer(Player)
-	Receive(InboundMessage)
+	Receive(protocol.InboundMessage)
 	PlayState() PlayState
-	Game() Game
+	Game() gm.Game
 }
 
 // gameEngine represents the engine of the game
@@ -67,10 +67,10 @@ type gameEngine struct {
 	playState                PlayState
 	players                  Players
 	registerCh, unregisterCh chan Player
-	inboundCh                chan InboundMessage
-	outboundCh               chan []OutboundMessage
-	gameCh                   chan []InboundMessage
-	game                     Game
+	inboundCh                chan protocol.InboundMessage
+	outboundCh               chan []protocol.OutboundMessage
+	gameCh                   chan []protocol.InboundMessage
+	game                     gm.Game
 }
 
 // GameEngineOpts represents options for constructing a new GameEngine
@@ -79,11 +79,11 @@ type GameEngineOpts struct {
 	CreatorID                string
 	Players                  Players
 	RegisterCh, UnregisterCh chan Player
-	InboundCh                chan InboundMessage
-	OutboundCh               chan []OutboundMessage
-	GameCh                   chan []InboundMessage
+	InboundCh                chan protocol.InboundMessage
+	OutboundCh               chan []protocol.OutboundMessage
+	GameCh                   chan []protocol.InboundMessage
 	PlayState                PlayState
-	Game                     Game
+	Game                     gm.Game
 }
 
 // NewGameEngine constructs a new GameEngine
@@ -95,13 +95,13 @@ func NewGameEngine(opts GameEngineOpts) (*gameEngine, error) {
 		opts.RegisterCh = make(chan Player)
 	}
 	if opts.InboundCh == nil {
-		opts.InboundCh = make(chan InboundMessage)
+		opts.InboundCh = make(chan protocol.InboundMessage)
 	}
 	if opts.OutboundCh == nil {
-		opts.OutboundCh = make(chan []OutboundMessage)
+		opts.OutboundCh = make(chan []protocol.OutboundMessage)
 	}
 	if opts.GameCh == nil {
-		opts.GameCh = make(chan []InboundMessage)
+		opts.GameCh = make(chan []protocol.InboundMessage)
 	}
 	engine := &gameEngine{
 		id:           opts.GameID,
@@ -146,7 +146,7 @@ func (ge *gameEngine) Play() {
 	// this will need some way to shutdown gracefully
 	for inbound := range ge.gameCh {
 		var (
-			outbound []OutboundMessage
+			outbound []protocol.OutboundMessage
 			err      error
 		)
 
@@ -168,11 +168,11 @@ func (ge *gameEngine) Play() {
 func (ge *gameEngine) Listen() {
 	commTracker := struct {
 		mu              *sync.Mutex
-		messages        []InboundMessage
+		messages        []protocol.InboundMessage
 		expectedCommand protocol.Cmd
 	}{
 		mu:              &sync.Mutex{},
-		messages:        []InboundMessage{},
+		messages:        []protocol.InboundMessage{},
 		expectedCommand: protocol.Reorg,
 	}
 
@@ -185,7 +185,7 @@ func (ge *gameEngine) Listen() {
 				if p.ID() == joiner.ID() {
 					continue
 				}
-				outbound := buildNewJoinerMessage(joiner, p)
+				outbound := gm.BuildNewJoinerMessage(p.ID(), p.Name(), joiner.ID(), joiner.Name())
 				p.Send(outbound)
 			}
 
@@ -212,7 +212,7 @@ func (ge *gameEngine) Listen() {
 				if err := ge.Start(); err != nil {
 					p, _ := ge.players.Find(msg.PlayerID)
 
-					p.Send(OutboundMessage{
+					p.Send(protocol.OutboundMessage{
 						PlayerID: msg.PlayerID,
 						Command:  protocol.Error,
 						Error:    err.Error(),
@@ -221,7 +221,7 @@ func (ge *gameEngine) Listen() {
 				}
 
 				for _, p := range ge.players {
-					p.Send(buildGameHasStartedMessage(p))
+					p.Send(gm.BuildGameHasStartedMessage(p.ID(), p.Name()))
 				}
 				// small delay before game starts
 				<-time.After(time.Millisecond * 400)
@@ -248,20 +248,20 @@ func (ge *gameEngine) Listen() {
 					log.Printf("lgr %s: all players have reorg'd", time.Now().Format(time.StampMilli))
 					ge.sendToGame(commTracker.messages)
 
-					commTracker.messages = []InboundMessage{}
+					commTracker.messages = []protocol.InboundMessage{}
 					commTracker.expectedCommand = protocol.Null
 
 					commTracker.mu.Unlock()
 				}
 
 			default:
-				ge.sendToGame([]InboundMessage{msg}) // handle failures
+				ge.sendToGame([]protocol.InboundMessage{msg}) // handle failures
 			}
 		}
 	}
 }
 
-func (ge *gameEngine) messagePlayers(msgs []OutboundMessage) {
+func (ge *gameEngine) messagePlayers(msgs []protocol.OutboundMessage) {
 	for _, m := range msgs {
 		p, ok := ge.players.Find(m.PlayerID)
 		if ok {
@@ -270,16 +270,16 @@ func (ge *gameEngine) messagePlayers(msgs []OutboundMessage) {
 	}
 }
 
-func (ge *gameEngine) sendToGame(msgs []InboundMessage) {
+func (ge *gameEngine) sendToGame(msgs []protocol.InboundMessage) {
 	ge.gameCh <- msgs
 }
 
-func (ge *gameEngine) Send(msgs []OutboundMessage) {
+func (ge *gameEngine) Send(msgs []protocol.OutboundMessage) {
 	ge.outboundCh <- msgs
 }
 
-// Receive forwards InboundMessages from Players for sorting
-func (ge *gameEngine) Receive(msg InboundMessage) {
+// Receive forwards protocol.InboundMessages from Players for sorting
+func (ge *gameEngine) Receive(msg protocol.InboundMessage) {
 	ge.inboundCh <- msg
 }
 
@@ -312,25 +312,6 @@ func (ge *gameEngine) PlayState() PlayState {
 	return ge.playState
 }
 
-func (ge *gameEngine) Game() Game {
+func (ge *gameEngine) Game() gm.Game {
 	return ge.game
-}
-
-func buildGameHasStartedMessage(recipient Player) OutboundMessage {
-	return OutboundMessage{
-		PlayerID: recipient.ID(),
-		Name:     recipient.Name(),
-		Message:  fmt.Sprintf("Game is starting!"),
-		Command:  protocol.HasStarted,
-	}
-}
-
-func buildNewJoinerMessage(joiner, recipient Player) OutboundMessage {
-	return OutboundMessage{
-		PlayerID: recipient.ID(),
-		Name:     recipient.Name(),
-		Joiner:   PlayerInfo{Name: joiner.Name(), PlayerID: joiner.ID()},
-		Message:  fmt.Sprintf("%s has joined the game!", joiner.Name()),
-		Command:  protocol.NewJoiner,
-	}
 }

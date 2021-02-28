@@ -1,4 +1,4 @@
-package shed
+package engine
 
 import (
 	"encoding/json"
@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/minaorangina/shed/game"
 	utils "github.com/minaorangina/shed/internal"
 	"github.com/minaorangina/shed/protocol"
 )
@@ -15,9 +16,9 @@ const gameEngineTestTimeout = time.Duration(200 * time.Millisecond)
 func TestGameEngineConstructor(t *testing.T) {
 	creatorID := "hermione-1"
 	t.Run("keeps track of who created it", func(t *testing.T) {
-		engine, err := NewGameEngine(GameEngineOpts{GameID: "some-id", CreatorID: creatorID, Game: &SpyGame{}})
+		ge, err := NewGameEngine(GameEngineOpts{GameID: "some-id", CreatorID: creatorID, Game: &SpyGame{}})
 		utils.AssertNoError(t, err)
-		utils.AssertEqual(t, engine.CreatorID(), creatorID)
+		utils.AssertEqual(t, ge.CreatorID(), creatorID)
 	})
 }
 
@@ -46,20 +47,20 @@ func TestGameEngineAddPlayer(t *testing.T) {
 			sendCh: sendCh,
 		}
 
-		engine, err := NewGameEngine(GameEngineOpts{GameID: "game-id", CreatorID: player1ID, Game: &SpyGame{}})
+		ge, err := NewGameEngine(GameEngineOpts{GameID: "game-id", CreatorID: player1ID, Game: &SpyGame{}})
 		utils.AssertNoError(t, err)
 
-		player1.engine = engine
-		engine.players = NewPlayers(player1)
+		player1.ge = ge
+		ge.players = NewPlayers(player1)
 
 		joiningPlayer := APlayer("joiner-1", "Ms Joiner")
-		engine.AddPlayer(joiningPlayer)
+		ge.AddPlayer(joiningPlayer)
 
 		utils.Within(t, gameEngineTestTimeout, func() {
 			msg, ok := <-sendCh
 			utils.AssertTrue(t, ok)
 
-			var data OutboundMessage
+			var data protocol.OutboundMessage
 			err := json.Unmarshal(msg, &data)
 			utils.AssertNoError(t, err)
 			fmt.Println(data)
@@ -88,7 +89,7 @@ func TestRemovePlayer(t *testing.T) {
 
 		players := NewPlayers(player1, player2)
 
-		engine, err := NewGameEngine(GameEngineOpts{
+		ge, err := NewGameEngine(GameEngineOpts{
 			GameID:       "game-id",
 			CreatorID:    player1ID,
 			Players:      players,
@@ -96,7 +97,7 @@ func TestRemovePlayer(t *testing.T) {
 			Game:         &SpyGame{},
 		})
 		utils.AssertNoError(t, err)
-		utils.AssertNotNil(t, engine)
+		utils.AssertNotNil(t, ge)
 
 		go func() {
 			unregisterCh <- player1
@@ -105,7 +106,7 @@ func TestRemovePlayer(t *testing.T) {
 		utils.Within(t, gameEngineTestTimeout, func() {
 			_, ok := <-unregisterCh
 			utils.AssertTrue(t, ok)
-			utils.AssertEqual(t, len(engine.players), 1)
+			utils.AssertEqual(t, len(ge.players), 1)
 		})
 	})
 }
@@ -114,27 +115,27 @@ func TestGameEngineInit(t *testing.T) {
 	t.Run("has an ID", func(t *testing.T) {
 		gameID := "thisistheid"
 		playerID := "i created it"
-		engine, err := NewGameEngine(GameEngineOpts{
+		ge, err := NewGameEngine(GameEngineOpts{
 			GameID:    gameID,
 			CreatorID: playerID,
 			Players:   SomePlayers(),
 			Game:      &SpyGame{}})
 		utils.AssertNoError(t, err)
 
-		utils.AssertEqual(t, engine.ID(), gameID)
+		utils.AssertEqual(t, ge.ID(), gameID)
 	})
 
 	t.Run("has the user ID of the creator", func(t *testing.T) {
 		gameID := "thisistheid"
 		playerID := "i created it"
-		engine, err := NewGameEngine(GameEngineOpts{
+		ge, err := NewGameEngine(GameEngineOpts{
 			GameID:    gameID,
 			CreatorID: playerID,
 			Players:   SomePlayers(),
 			Game:      &SpyGame{}})
 		utils.AssertNoError(t, err)
 
-		utils.AssertEqual(t, engine.CreatorID(), playerID)
+		utils.AssertEqual(t, ge.CreatorID(), playerID)
 	})
 }
 
@@ -164,7 +165,7 @@ func TestGameEngineStart(t *testing.T) {
 		}
 
 		for _, et := range testsShouldError {
-			ge, err := NewGameEngine(GameEngineOpts{Players: et.input, Game: NewShed(ShedOpts{})})
+			ge, err := NewGameEngine(GameEngineOpts{Players: et.input, Game: game.NewShed(game.ShedOpts{})})
 			utils.AssertNoError(t, err)
 			utils.AssertNotNil(t, ge)
 			err = ge.Start()
@@ -173,12 +174,12 @@ func TestGameEngineStart(t *testing.T) {
 	})
 
 	t.Run("starting more than once is a no-op", func(t *testing.T) {
-		engine, err := NewGameEngine(GameEngineOpts{Players: SomePlayers(), Game: &SpyGame{}})
+		ge, err := NewGameEngine(GameEngineOpts{Players: SomePlayers(), Game: &SpyGame{}})
 		utils.AssertNoError(t, err)
-		utils.AssertNotNil(t, engine)
+		utils.AssertNotNil(t, ge)
 
-		engine.playState = InProgress
-		err = engine.Start()
+		ge.playState = InProgress
+		err = ge.Start()
 		utils.AssertNoError(t, err)
 	})
 }
@@ -186,20 +187,20 @@ func TestGameEngineStart(t *testing.T) {
 func TestGameEngineReceiveMessage(t *testing.T) {
 	t.Run("performs correct action for start game command", func(t *testing.T) {
 		spy := NewSpyGame()
-		engine, err := NewGameEngine(GameEngineOpts{Players: SomePlayers(), Game: spy})
+		ge, err := NewGameEngine(GameEngineOpts{Players: SomePlayers(), Game: spy})
 		utils.AssertNoError(t, err)
-		utils.AssertNotNil(t, engine)
+		utils.AssertNotNil(t, ge)
 
-		msg := InboundMessage{
+		msg := protocol.InboundMessage{
 			PlayerID: "an-id",
 			Command:  protocol.Start,
 		}
-		engine.Receive(msg)
+		ge.Receive(msg)
 
 		utils.Within(t, gameEngineTestTimeout, func() {
 			utils.AssertTrue(t, spy.startCalled)
 		})
 
-		utils.AssertEqual(t, engine.playState, InProgress)
+		utils.AssertEqual(t, ge.playState, InProgress)
 	})
 }

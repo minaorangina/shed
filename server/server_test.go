@@ -9,8 +9,10 @@ import (
 	"testing"
 
 	"github.com/gorilla/websocket"
-	"github.com/minaorangina/shed"
+	"github.com/minaorangina/shed/engine"
+	"github.com/minaorangina/shed/game"
 	utils "github.com/minaorangina/shed/internal"
+	"github.com/minaorangina/shed/protocol"
 )
 
 func TestServerPing(t *testing.T) {
@@ -98,16 +100,16 @@ func TestGETGameWaitingRoom(t *testing.T) {
 		request, _ := http.NewRequest(http.MethodGet, url, nil)
 
 		store := NewBasicStore()
-		game, err := shed.NewGameEngine(shed.GameEngineOpts{
+		game, err := engine.NewGameEngine(engine.GameEngineOpts{
 			GameID:    gameID,
 			CreatorID: creatorID,
-			Game:      shed.NewShed(shed.ShedOpts{}),
+			Game:      game.NewShed(game.ShedOpts{}),
 		})
 		utils.AssertNoError(t, err)
 		utils.AssertNotNil(t, game)
 
 		store.Games[gameID] = game
-		store.PendingPlayers[gameID] = []shed.PlayerInfo{{PlayerID: creatorID, Name: "Horatio"}}
+		store.PendingPlayers[gameID] = []protocol.PlayerInfo{{PlayerID: creatorID, Name: "Horatio"}}
 
 		server := NewServer(store)
 		server.ServeHTTP(response, request)
@@ -129,16 +131,16 @@ func TestGETGameWaitingRoom(t *testing.T) {
 		request, _ := http.NewRequest(http.MethodGet, url, nil)
 
 		store := NewBasicStore()
-		game, err := shed.NewGameEngine(shed.GameEngineOpts{
+		game, err := engine.NewGameEngine(engine.GameEngineOpts{
 			GameID:    gameID,
 			CreatorID: "i-am-the-creator",
-			Game:      shed.NewShed(shed.ShedOpts{}),
+			Game:      game.NewShed(game.ShedOpts{}),
 		})
 		utils.AssertNoError(t, err)
 		utils.AssertNotNil(t, game)
 
 		store.Games[gameID] = game
-		store.PendingPlayers[gameID] = []shed.PlayerInfo{{PlayerID: playerID, Name: "Horatio"}}
+		store.PendingPlayers[gameID] = []protocol.PlayerInfo{{PlayerID: playerID, Name: "Horatio"}}
 
 		server := NewServer(store)
 		server.ServeHTTP(response, request)
@@ -154,7 +156,7 @@ func TestGETGameWaitingRoom(t *testing.T) {
 
 func TestJoinGame(t *testing.T) {
 	t.Run("POST /join returns 200 for existing game", func(t *testing.T) {
-		server, pendingID := newServerWithInactiveGame(t, shed.SomePlayers())
+		server, pendingID := newServerWithInactiveGame(t, engine.SomePlayers())
 
 		joiningPlayerName := "Heloise"
 		data := mustMakeJson(t, JoinGameReq{pendingID, joiningPlayerName})
@@ -189,7 +191,7 @@ func TestJoinGame(t *testing.T) {
 		response := httptest.NewRecorder()
 		request := newJoinGameRequest(nil)
 
-		game := newTestGame(t, shed.GameEngineOpts{GameID: "some-game-id", Players: shed.SomePlayers(), Game: shed.NewShed(shed.ShedOpts{})})
+		game := newTestGame(t, engine.GameEngineOpts{GameID: "some-game-id", Players: engine.SomePlayers(), Game: game.NewShed(game.ShedOpts{})})
 		server := newServerWithGame(game)
 
 		server.ServeHTTP(response, request)
@@ -198,7 +200,7 @@ func TestJoinGame(t *testing.T) {
 	})
 
 	t.Run("POST /join returns 400 for an unknown game id", func(t *testing.T) {
-		server, _ := newServerWithInactiveGame(t, shed.SomePlayers())
+		server, _ := newServerWithInactiveGame(t, engine.SomePlayers())
 
 		data := mustMakeJson(t, JoinGameReq{"some-game-id", "Heloise"})
 
@@ -229,10 +231,10 @@ func TestJoinGame(t *testing.T) {
 func TestServerGETGame(t *testing.T) {
 	t.Run("returns an existing active game", func(t *testing.T) {
 		testID := "12u34"
-		game := shed.NewShed(shed.ShedOpts{})
-		server := newServerWithGame(newTestGame(t, shed.GameEngineOpts{
+		game := game.NewShed(game.ShedOpts{})
+		server := newServerWithGame(newTestGame(t, engine.GameEngineOpts{
 			GameID:    testID,
-			PlayState: shed.InProgress,
+			PlayState: engine.InProgress,
 			Game:      game,
 		}))
 
@@ -257,16 +259,16 @@ func TestServerGETGame(t *testing.T) {
 	})
 
 	t.Run("returns an existing pending game", func(t *testing.T) {
-		server, pendingID := newServerWithInactiveGame(t, shed.SomePlayers())
+		server, pendingID := newServerWithInactiveGame(t, engine.SomePlayers())
 
 		request := newGetGameRequest(pendingID)
 		response := httptest.NewRecorder()
 
 		server.ServeHTTP(response, request)
 
-		engine := server.store.FindGame(pendingID)
-		utils.AssertNotNil(t, engine)
-		gameJSON, err := json.Marshal(engine.Game())
+		ge := server.store.FindGame(pendingID)
+		utils.AssertNotNil(t, ge)
+		gameJSON, err := json.Marshal(ge.Game())
 		utils.AssertNoError(t, err)
 		want := GetGameRes{State: string(gameJSON), GameID: pendingID}
 
@@ -284,7 +286,7 @@ func TestServerGETGame(t *testing.T) {
 	t.Run("returns a 404 if game doesn't exist", func(t *testing.T) {
 		gameID := "12u34"
 		nonExistentID := "bad-game-id"
-		server := newServerWithGame(newTestGame(t, shed.GameEngineOpts{GameID: gameID, Game: shed.NewShed(shed.ShedOpts{})}))
+		server := newServerWithGame(newTestGame(t, engine.GameEngineOpts{GameID: gameID, Game: game.NewShed(game.ShedOpts{})}))
 
 		request := newGetGameRequest(nonExistentID)
 		response := httptest.NewRecorder()
@@ -305,10 +307,10 @@ func TestWS(t *testing.T) {
 
 	t.Run("Rejects if pending game doesn't exist", func(t *testing.T) {
 		name, playerID := "Delilah", "delilah1"
-		p := shed.APlayer(playerID, name)
-		ps := shed.NewPlayers(p)
+		p := engine.APlayer(playerID, name)
+		ps := engine.NewPlayers(p)
 
-		server, _ := newTestServerWithInactiveGame(t, ps, []shed.PlayerInfo{
+		server, _ := newTestServerWithInactiveGame(t, ps, []protocol.PlayerInfo{
 			{
 				PlayerID: playerID,
 				Name:     name,
@@ -329,7 +331,7 @@ func TestWS(t *testing.T) {
 		gameID := "this-is-a-game-id"
 		name, playerID := "Delilah", "delilah1"
 
-		game := newTestGame(t, shed.GameEngineOpts{GameID: gameID, CreatorID: playerID, Game: shed.NewShed(shed.ShedOpts{})})
+		game := newTestGame(t, engine.GameEngineOpts{GameID: gameID, CreatorID: playerID, Game: game.NewShed(game.ShedOpts{})})
 
 		store := NewBasicStore()
 		store.AddInactiveGame(game)

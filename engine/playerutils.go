@@ -1,4 +1,4 @@
-package shed
+package engine
 
 import (
 	"bytes"
@@ -6,6 +6,9 @@ import (
 	"io/ioutil"
 	"os"
 	"sync"
+
+	"github.com/minaorangina/shed/game"
+	"github.com/minaorangina/shed/protocol"
 )
 
 type FakeConn struct {
@@ -24,7 +27,7 @@ func (c *FakeConn) Receive(data []byte) {
 }
 
 type TestPlayer struct {
-	cards    *PlayerCards
+	cards    *game.PlayerCards
 	id       string
 	name     string
 	conn     *FakeConn
@@ -36,12 +39,12 @@ func NewTestPlayer(id, name string, in io.Reader, out io.Writer) *TestPlayer {
 		id:    id,
 		name:  name,
 		conn:  &FakeConn{in, out, [][]byte{}},
-		cards: &PlayerCards{},
+		cards: &game.PlayerCards{},
 	}
 }
 
-func (tp *TestPlayer) Info() PlayerInfo {
-	return PlayerInfo{
+func (tp *TestPlayer) Info() protocol.PlayerInfo {
+	return protocol.PlayerInfo{
 		PlayerID: tp.id,
 		Name:     tp.name,
 	}
@@ -55,11 +58,11 @@ func (tp *TestPlayer) Name() string {
 	return tp.name
 }
 
-func (tp *TestPlayer) Cards() *PlayerCards {
+func (tp *TestPlayer) Cards() *game.PlayerCards {
 	return tp.cards
 }
 
-func (tp *TestPlayer) Send(msg OutboundMessage) error {
+func (tp *TestPlayer) Send(msg protocol.OutboundMessage) error {
 	return nil
 }
 

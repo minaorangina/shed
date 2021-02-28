@@ -1,4 +1,4 @@
-package shed
+package engine
 
 import (
 	"bufio"
@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/minaorangina/shed/deck"
+	"github.com/minaorangina/shed/game"
+	"github.com/minaorangina/shed/protocol"
 )
 
 var (
@@ -71,8 +73,8 @@ func offerCardSwitch(conn *conn, timeout time.Duration) bool {
 	}
 }
 
-func reorganiseCards(conn *conn, msg OutboundMessage) InboundMessage {
-	defaultResponse := InboundMessage{
+func reorganiseCards(conn *conn, msg protocol.OutboundMessage) protocol.InboundMessage {
+	defaultResponse := protocol.InboundMessage{
 		PlayerID: msg.PlayerID,
 		Command:  msg.Command,
 		Decision: []int{0, 1, 2},
@@ -91,7 +93,7 @@ func reorganiseCards(conn *conn, msg OutboundMessage) InboundMessage {
 	choices := getCardChoices(conn, reorgTimeout)
 	if len(choices) == 3 {
 		newHand, newSeen := choicesToCards(allVisibleCards, choices)
-		playerCards := PlayerCards{
+		playerCards := game.PlayerCards{
 			Seen: newSeen,
 			Hand: newHand,
 		}
@@ -99,7 +101,7 @@ func reorganiseCards(conn *conn, msg OutboundMessage) InboundMessage {
 		SendText(conn.Out, buildCardDisplayText(playerCards))
 		SendText(conn.Out, startGameText)
 
-		return InboundMessage{
+		return protocol.InboundMessage{
 			PlayerID: msg.PlayerID,
 			Command:  msg.Command,
 			Decision: choices,

@@ -3,12 +3,12 @@ package main
 import (
 	"log"
 
-	"github.com/minaorangina/shed"
+	"github.com/minaorangina/shed/engine"
 )
 
 func main() {
-	players := shed.SomePlayers()
-	game, err := shed.NewGameEngine(shed.GameEngineOpts{
+	players := engine.SomePlayers()
+	ge, err := engine.NewGameEngine(engine.GameEngineOpts{
 		GameID:    "some-id",
 		CreatorID: "creator-id",
 		Players:   players,
@@ -18,7 +18,7 @@ func main() {
 		log.Fatal("could not start game")
 	}
 
-	if err := game.Start(); err != nil {
+	if err := ge.Start(); err != nil {
 		log.Fatal("Could not start game")
 	}
 }

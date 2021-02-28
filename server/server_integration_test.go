@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/minaorangina/shed"
 	utils "github.com/minaorangina/shed/internal"
 	"github.com/minaorangina/shed/protocol"
 )
@@ -88,7 +87,7 @@ func TestCreateAndJoinNewGame(t *testing.T) {
 	err = json.Unmarshal(bodyBytes, &joinPayload)
 	utils.AssertNoError(t, err)
 	utils.AssertNotEmptyString(t, joinPayload.PlayerID)
-	utils.AssertDeepEqual(t, joinPayload.Players, []shed.PlayerInfo{{createPayload.PlayerID, createPayload.Name}})
+	utils.AssertDeepEqual(t, joinPayload.Players, []protocol.PlayerInfo{{createPayload.PlayerID, createPayload.Name}})
 	utils.AssertEqual(t, joinPayload.Admin, false)
 
 	// and a pending player is created
@@ -115,7 +114,7 @@ func TestCreateAndJoinNewGame(t *testing.T) {
 		_, got, err := creatorConn.ReadMessage()
 		utils.AssertNoError(t, err)
 		utils.AssertTrue(t, len(got) > 0)
-		var payload shed.OutboundMessage
+		var payload protocol.OutboundMessage
 		err = json.Unmarshal(got, &payload)
 		utils.AssertNoError(t, err)
 		utils.AssertEqual(t, payload.Joiner.Name, joinerName)
@@ -126,7 +125,7 @@ func TestStartGame(t *testing.T) {
 	// Given an inactive game and players with ws connections
 	creatorID, player2ID := "hersha-1", "penny-1"
 	creatorName, player2Name := "Hersha", "Penelope"
-	server, gameID := newTestServerWithInactiveGame(t, nil, []shed.PlayerInfo{
+	server, gameID := newTestServerWithInactiveGame(t, nil, []protocol.PlayerInfo{
 		{
 			PlayerID: creatorID,
 			Name:     creatorName,
@@ -150,14 +149,14 @@ func TestStartGame(t *testing.T) {
 		utils.AssertNoError(t, err)
 		utils.AssertTrue(t, len(bytes) > 0)
 
-		var data shed.OutboundMessage
+		var data protocol.OutboundMessage
 		err = json.Unmarshal(bytes, &data)
 		utils.AssertNoError(t, err)
 		utils.AssertEqual(t, data.Joiner.Name, player2Name)
 	})
 
 	// When the creator sends the command to start the game
-	data, err := json.Marshal(shed.InboundMessage{PlayerID: creatorID, Command: protocol.Start})
+	data, err := json.Marshal(protocol.InboundMessage{PlayerID: creatorID, Command: protocol.Start})
 	utils.AssertNoError(t, err)
 	err = creatorConn.WriteMessage(websocket.TextMessage, data)
 	utils.AssertNoError(t, err)
@@ -165,7 +164,7 @@ func TestStartGame(t *testing.T) {
 	// Then the start event is broadcast to all players
 	utils.Within(t, serverTestTimeout, func() {
 		_, bytes, err := creatorConn.ReadMessage()
-		var data shed.OutboundMessage
+		var data protocol.OutboundMessage
 		err = json.Unmarshal(bytes, &data)
 		utils.AssertNoError(t, err)
 
@@ -192,7 +191,7 @@ func TestStartGame(t *testing.T) {
 
 func TestServerNotEnoughPlayers(t *testing.T) {
 	// Given a server with a game and one player with an active ws connection
-	server, gameID := newTestServerWithInactiveGame(t, nil, []shed.PlayerInfo{
+	server, gameID := newTestServerWithInactiveGame(t, nil, []protocol.PlayerInfo{
 		{
 			PlayerID: "pending-player-id",
 			Name:     "Penelope",
@@ -206,7 +205,7 @@ func TestServerNotEnoughPlayers(t *testing.T) {
 	defer creatorConn.Close()
 
 	// When the player tries to start the game
-	data, err := json.Marshal(shed.InboundMessage{
+	data, err := json.Marshal(protocol.InboundMessage{
 		PlayerID: creatorID,
 		Command:  protocol.Start,
 	})
@@ -219,7 +218,7 @@ func TestServerNotEnoughPlayers(t *testing.T) {
 		utils.AssertNoError(t, err)
 		utils.AssertTrue(t, len(bytes) > 0)
 
-		var data shed.OutboundMessage
+		var data protocol.OutboundMessage
 		err = json.Unmarshal(bytes, &data)
 		utils.AssertNoError(t, err)
 
@@ -231,7 +230,7 @@ func TestServerGameStart(t *testing.T) {
 	// Given a server with an inactive game
 	creatorID := "player-1"
 	otherPlayerID := "player-2"
-	server, gameID := newTestServerWithInactiveGame(t, nil, []shed.PlayerInfo{
+	server, gameID := newTestServerWithInactiveGame(t, nil, []protocol.PlayerInfo{
 		{
 			PlayerID: creatorID,
 			Name:     "Penelope",
@@ -249,7 +248,7 @@ func TestServerGameStart(t *testing.T) {
 	defer p2Conn.Close()
 
 	// When the creator starts the game
-	data, err := json.Marshal(shed.InboundMessage{
+	data, err := json.Marshal(protocol.InboundMessage{
 		PlayerID: creatorID,
 		Command:  protocol.Start,
 	})
@@ -262,7 +261,7 @@ func TestServerGameStart(t *testing.T) {
 		utils.AssertNoError(t, err)
 		utils.AssertTrue(t, len(bytes) > 0)
 
-		var data shed.OutboundMessage
+		var data protocol.OutboundMessage
 		err = json.Unmarshal(bytes, &data)
 		utils.AssertNoError(t, err)
 
@@ -275,7 +274,7 @@ func TestServerGameStart(t *testing.T) {
 		utils.AssertNoError(t, err)
 		utils.AssertTrue(t, len(bytes) > 0)
 
-		var data shed.OutboundMessage
+		var data protocol.OutboundMessage
 		err = json.Unmarshal(bytes, &data)
 		utils.AssertNoError(t, err)
 

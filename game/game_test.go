@@ -1,4 +1,4 @@
-package shed
+package game
 
 import (
 	"fmt"
@@ -14,10 +14,12 @@ import (
 )
 
 var (
-	twoPlayers   = func() []PlayerInfo { return []PlayerInfo{{PlayerID: "p1"}, {PlayerID: "p2"}} }
-	threePlayers = func() []PlayerInfo { return []PlayerInfo{{PlayerID: "p1"}, {PlayerID: "p2"}, {PlayerID: "p3"}} }
-	fourPlayers  = func() []PlayerInfo {
-		return []PlayerInfo{{PlayerID: "p1"}, {PlayerID: "p2"}, {PlayerID: "p3"}, {PlayerID: "p4"}}
+	twoPlayers   = func() []protocol.PlayerInfo { return []protocol.PlayerInfo{{PlayerID: "p1"}, {PlayerID: "p2"}} }
+	threePlayers = func() []protocol.PlayerInfo {
+		return []protocol.PlayerInfo{{PlayerID: "p1"}, {PlayerID: "p2"}, {PlayerID: "p3"}}
+	}
+	fourPlayers = func() []protocol.PlayerInfo {
+		return []protocol.PlayerInfo{{PlayerID: "p1"}, {PlayerID: "p2"}, {PlayerID: "p3"}, {PlayerID: "p4"}}
 	}
 )
 
@@ -27,11 +29,11 @@ func TestGameTurn(t *testing.T) {
 		randomNumberOfPlayers := rand.Intn(2) + 2
 
 		players := map[string]*PlayerCards{}
-		playerInfo := []PlayerInfo{}
+		playerInfo := []protocol.PlayerInfo{}
 
 		for i := 0; i < randomNumberOfPlayers; i++ {
 			id := fmt.Sprintf("player-%d", i)
-			playerInfo = append(playerInfo, PlayerInfo{PlayerID: id})
+			playerInfo = append(playerInfo, protocol.PlayerInfo{PlayerID: id})
 			players[id] = &PlayerCards{}
 		}
 
@@ -113,7 +115,7 @@ func TestGameStageZero(t *testing.T) {
 		}
 
 		// and the players send their response
-		msgs, err := game.ReceiveResponse([]InboundMessage{
+		msgs, err := game.ReceiveResponse([]protocol.InboundMessage{
 			{
 				PlayerID: "p1",
 				Command:  protocol.Reorg,
@@ -133,7 +135,7 @@ func TestGameStageZero(t *testing.T) {
 
 		// and the response is accepted
 		utils.AssertNoError(t, err)
-		utils.AssertDeepEqual(t, msgs, []OutboundMessage(nil))
+		utils.AssertDeepEqual(t, msgs, []protocol.OutboundMessage(nil))
 
 		// and players' cards are updated
 		for id, c := range game.PlayerCards {
@@ -178,7 +180,7 @@ func TestGameStageZeroToOne(t *testing.T) {
 	}
 
 	// and the players send their response
-	msgs, err := game.ReceiveResponse([]InboundMessage{
+	msgs, err := game.ReceiveResponse([]protocol.InboundMessage{
 		{
 			PlayerID: "p1",
 			Command:  protocol.Reorg,
@@ -193,7 +195,7 @@ func TestGameStageZeroToOne(t *testing.T) {
 
 	// and the response is accepted
 	utils.AssertNoError(t, err)
-	utils.AssertDeepEqual(t, msgs, []OutboundMessage(nil))
+	utils.AssertDeepEqual(t, msgs, []protocol.OutboundMessage(nil))
 
 	// and players' cards are updated
 	for id, c := range game.PlayerCards {
@@ -216,7 +218,7 @@ func TestGameStageZeroToOne(t *testing.T) {
 	move := getNonBurnMove(game.PlayerCards[currentPlayerID].Hand, preMoveMsgs[0].Moves)
 	chosenCard := preMoveHand[move]
 
-	postMoveMsgs, err := game.ReceiveResponse([]InboundMessage{{
+	postMoveMsgs, err := game.ReceiveResponse([]protocol.InboundMessage{{
 		PlayerID: game.CurrentPlayer.PlayerID,
 		Command:  protocol.PlayHand,
 		Decision: []int{move},
@@ -282,7 +284,7 @@ func TestGameStageOne(t *testing.T) {
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.PlayHand)
 
 		// And when player response is received
-		msgs, err = game.ReceiveResponse([]InboundMessage{{
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.PlayHand,
 			Decision: []int{moves[1]}, // target card is the second one
@@ -317,7 +319,7 @@ func TestGameStageOne(t *testing.T) {
 
 		// And when the current player acks
 		previousPlayerID := game.CurrentPlayer.PlayerID
-		msgs, err = game.ReceiveResponse([]InboundMessage{{
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.ReplenishHand,
 		}})
@@ -370,7 +372,7 @@ func TestGameStageOne(t *testing.T) {
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.PlayHand)
 
 		// And when player response is received
-		msgs, err = game.ReceiveResponse([]InboundMessage{{
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.PlayHand,
 			Decision: []int{moves[1]}, // target card is the second one
@@ -405,7 +407,7 @@ func TestGameStageOne(t *testing.T) {
 
 		// And when the current player acks and releases their turn
 		previousPlayerID := game.CurrentPlayer.PlayerID
-		msgs, err = game.ReceiveResponse([]InboundMessage{{
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.ReplenishHand,
 		}})
@@ -454,7 +456,7 @@ func TestGameStageOne(t *testing.T) {
 		utils.AssertTrue(t, len(moves) > 1)
 
 		// And chooses to play two of the same card
-		_, err = game.ReceiveResponse([]InboundMessage{{
+		_, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.PlayHand,
 			Decision: []int{0, 1},
@@ -519,7 +521,7 @@ func TestGameStageOne(t *testing.T) {
 		utils.AssertTrue(t, len(moves) > 1)
 
 		// And chooses to play two cards
-		msgs, err = game.ReceiveResponse([]InboundMessage{{
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.PlayHand,
 			Decision: []int{0, 1},
@@ -597,22 +599,22 @@ func TestGameStageOne(t *testing.T) {
 		utils.AssertNotNil(t, msgs)
 		utils.AssertEqual(t, len(msgs), len(game.PlayerInfo))
 
-		// and the current player's OutboundMessage has the expected content
+		// and the current player's protocol.OutboundMessage has the expected content
 		utils.AssertTrue(t, msgs[0].ShouldRespond)
 		utils.AssertEqual(t, msgs[0].Command, protocol.SkipTurn)
 
-		// and the other players' OutboundMessages have the expected content
+		// and the other players' protocol.OutboundMessages have the expected content
 		utils.AssertEqual(t, msgs[1].ShouldRespond, false)
 		utils.AssertEqual(t, msgs[1].Command, protocol.SkipTurn)
 
 		// and the current player's response is handled correctly
 		previousPlayerID := game.CurrentPlayer.PlayerID
-		response, err := game.ReceiveResponse([]InboundMessage{{
+		response, err := game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.SkipTurn,
 		}})
 		utils.AssertNoError(t, err)
-		utils.AssertDeepEqual(t, response, []OutboundMessage(nil))
+		utils.AssertDeepEqual(t, response, []protocol.OutboundMessage(nil))
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.Null)
 
 		// and the next player is up
@@ -657,7 +659,7 @@ func TestGameStageOne(t *testing.T) {
 		utils.AssertTrue(t, len(moves) > 1)
 
 		// And chooses to play two cards of the same value
-		msgs, err = game.ReceiveResponse([]InboundMessage{{
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.PlayHand,
 			Decision: []int{0, 1},
@@ -688,7 +690,7 @@ func TestGameStageOne(t *testing.T) {
 
 		// And when the current player acks and releases their turn
 		previousPlayerID := game.CurrentPlayer.PlayerID
-		msgs, err = game.ReceiveResponse([]InboundMessage{{
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.ReplenishHand,
 		}})
@@ -735,7 +737,7 @@ func TestGameStageOne(t *testing.T) {
 		oldHandSize, oldDeckSize := len(oldHand), len(game.Deck)
 
 		// And they play one card
-		msgs, err = game.ReceiveResponse([]InboundMessage{{
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.PlayHand,
 			Decision: []int{0},
@@ -797,7 +799,7 @@ func TestGameStageTwo(t *testing.T) {
 		previousPlayerID := game.CurrentPlayer.PlayerID
 
 		cardChoice := []int{moves[0]}
-		_, err = game.ReceiveResponse([]InboundMessage{{
+		_, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.PlayHand,
 			Decision: cardChoice,
@@ -815,7 +817,7 @@ func TestGameStageTwo(t *testing.T) {
 		utils.AssertTrue(t, newUnseenSize == oldUnseenSize)
 
 		// And when the player releases their turn
-		_, err = game.ReceiveResponse([]InboundMessage{{
+		_, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.EndOfTurn,
 		}})
@@ -875,7 +877,7 @@ func TestGameStageTwo(t *testing.T) {
 
 		// And when the player makes their choice
 		cardChoice := []int{moves[0]}
-		msgs, err = game.ReceiveResponse([]InboundMessage{{
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.PlaySeen,
 			Decision: cardChoice,
@@ -911,7 +913,7 @@ func TestGameStageTwo(t *testing.T) {
 
 		previousPlayerID := game.CurrentPlayer.PlayerID
 		// And when the player sends an ack
-		msgs, err = game.ReceiveResponse([]InboundMessage{{
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.EndOfTurn,
 		}})
@@ -973,22 +975,22 @@ func TestGameStageTwo(t *testing.T) {
 		utils.AssertTrue(t, len(msgs) > 0)
 		utils.AssertEqual(t, len(msgs), len(game.PlayerInfo))
 
-		// and the current player's OutboundMessage has the expected content
+		// and the current player's protocol.OutboundMessage has the expected content
 		utils.AssertTrue(t, msgs[0].ShouldRespond)
 		utils.AssertEqual(t, msgs[0].Command, protocol.SkipTurn)
 
-		// and the other players' OutboundMessages have the expected content
+		// and the other players' protocol.OutboundMessages have the expected content
 		utils.AssertEqual(t, msgs[1].ShouldRespond, false)
 		utils.AssertEqual(t, msgs[1].Command, protocol.SkipTurn)
 
 		// and the current player's response is handled correctly
 		previousPlayerID := game.CurrentPlayer.PlayerID
-		response, err := game.ReceiveResponse([]InboundMessage{{
+		response, err := game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.SkipTurn,
 		}})
 		utils.AssertNoError(t, err)
-		utils.AssertDeepEqual(t, response, []OutboundMessage(nil))
+		utils.AssertDeepEqual(t, response, []protocol.OutboundMessage(nil))
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.Null)
 
 		// and the next player is up
@@ -1045,7 +1047,7 @@ func TestGameStageTwo(t *testing.T) {
 		// And when the player selects a legal move
 		decision := []int{moves[0]}
 
-		msgs, err = game.ReceiveResponse([]InboundMessage{{
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.PlayUnseen,
 			Decision: decision,
@@ -1074,7 +1076,7 @@ func TestGameStageTwo(t *testing.T) {
 		playerID := game.CurrentPlayer.PlayerID
 
 		// And the game expects an ack from the player
-		_, err = game.ReceiveResponse([]InboundMessage{{
+		_, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: playerID,
 			Command:  protocol.UnseenSuccess,
 		}})
@@ -1143,7 +1145,7 @@ func TestGameStageTwo(t *testing.T) {
 
 		// And when the player selects an illegal move
 		decision := moves[0:1]
-		msgs, err = game.ReceiveResponse([]InboundMessage{{
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: playerID,
 			Command:  protocol.PlayUnseen,
 			Decision: decision,
@@ -1169,7 +1171,7 @@ func TestGameStageTwo(t *testing.T) {
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.UnseenFailure)
 
 		// And when the player's ack is received
-		msgs, err = game.ReceiveResponse([]InboundMessage{{
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.UnseenFailure,
 		}})
@@ -1222,7 +1224,7 @@ func TestGameStageTwo(t *testing.T) {
 		oldNumActivePlayers := len(game.ActivePlayers)
 
 		cardChoice := []int{0}
-		msgs, err = game.ReceiveResponse([]InboundMessage{{
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: playerID,
 			Command:  protocol.PlayUnseen,
 			Decision: cardChoice,
@@ -1235,7 +1237,7 @@ func TestGameStageTwo(t *testing.T) {
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.UnseenSuccess)
 
 		// And when the player acks
-		msgs, err = game.ReceiveResponse([]InboundMessage{{
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.UnseenSuccess,
 		}})
@@ -1248,7 +1250,7 @@ func TestGameStageTwo(t *testing.T) {
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.PlayerFinished)
 
 		// And when the player acks again
-		msgs, err = game.ReceiveResponse([]InboundMessage{{
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.PlayerFinished,
 		}})
@@ -1298,7 +1300,7 @@ func TestGameStageTwo(t *testing.T) {
 		previousNumPlayers := len(game.ActivePlayers)
 
 		cardChoice := []int{0}
-		msgs, err = game.ReceiveResponse([]InboundMessage{{
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.PlayHand,
 			Decision: cardChoice,
@@ -1312,7 +1314,7 @@ func TestGameStageTwo(t *testing.T) {
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.PlayerFinished)
 
 		// And when the player acks
-		msgs, err = game.ReceiveResponse([]InboundMessage{{
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.PlayerFinished,
 		}})
@@ -1354,7 +1356,7 @@ func TestGameStageTwo(t *testing.T) {
 		utils.AssertNoError(t, err)
 
 		cardChoice := []int{0}
-		msgs, err = game.ReceiveResponse([]InboundMessage{{
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.PlayUnseen,
 			Decision: cardChoice,
@@ -1367,7 +1369,7 @@ func TestGameStageTwo(t *testing.T) {
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.UnseenSuccess)
 
 		// And when the player acks
-		msgs, err = game.ReceiveResponse([]InboundMessage{{
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.UnseenSuccess,
 		}})
@@ -1380,7 +1382,7 @@ func TestGameStageTwo(t *testing.T) {
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.PlayerFinished)
 
 		// And when the player acks again
-		msgs, err = game.ReceiveResponse([]InboundMessage{{
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.PlayerFinished,
 		}})
@@ -1426,7 +1428,7 @@ func TestGameStageTwo(t *testing.T) {
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.PlayHand)
 
 		cardChoice := []int{0}
-		msgs, err = game.ReceiveResponse([]InboundMessage{{
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.PlayHand,
 			Decision: cardChoice,
@@ -1440,7 +1442,7 @@ func TestGameStageTwo(t *testing.T) {
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.PlayerFinished)
 
 		// And when the player acks
-		msgs, err = game.ReceiveResponse([]InboundMessage{{
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.PlayerFinished,
 		}})
@@ -1561,7 +1563,7 @@ func TestGameNext(t *testing.T) {
 		playerMoves := msgs[0].Moves
 		utils.AssertTrue(t, len(playerMoves) > 0)
 
-		_, err = game.ReceiveResponse([]InboundMessage{{
+		_, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.PlayHand,
 			Decision: []int{playerMoves[0]}, // first possible move
@@ -1571,7 +1573,7 @@ func TestGameNext(t *testing.T) {
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.ReplenishHand)
 
 		// And when the game receives the ack
-		_, err = game.ReceiveResponse([]InboundMessage{{
+		_, err = game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: game.CurrentPlayer.PlayerID,
 			Command:  protocol.ReplenishHand,
 		}})
@@ -1588,7 +1590,7 @@ func TestGameReceiveResponse(t *testing.T) {
 		utils.AssertNoError(t, err)
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.Null)
 
-		_, err = game.ReceiveResponse([]InboundMessage{{PlayerID: "p1", Command: protocol.PlayHand}})
+		_, err = game.ReceiveResponse([]protocol.InboundMessage{{PlayerID: "p1", Command: protocol.PlayHand}})
 		utils.AssertErrored(t, err)
 	})
 
@@ -1606,7 +1608,7 @@ func TestGameReceiveResponse(t *testing.T) {
 		})
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.PlayHand)
 
-		msgs, err := game.ReceiveResponse([]InboundMessage{{PlayerID: "p2", Command: protocol.PlayHand}})
+		msgs, err := game.ReceiveResponse([]protocol.InboundMessage{{PlayerID: "p2", Command: protocol.PlayHand}})
 		utils.AssertErrored(t, err)
 		utils.AssertContains(t, err.Error(), "unexpected message from player")
 
@@ -1629,7 +1631,7 @@ func TestGameReceiveResponse(t *testing.T) {
 		})
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.PlayHand)
 
-		msgs, err := game.ReceiveResponse([]InboundMessage{{PlayerID: "p1", Command: protocol.PlayUnseen}})
+		msgs, err := game.ReceiveResponse([]protocol.InboundMessage{{PlayerID: "p1", Command: protocol.PlayUnseen}})
 		utils.AssertErrored(t, err)
 		utils.AssertContains(t, err.Error(), "unexpected command")
 
@@ -1650,7 +1652,7 @@ func TestGameReceiveResponse(t *testing.T) {
 		p2NewCards := somePlayerCards(3)
 		p2NewCards.Unseen = game.PlayerCards["p2"].Unseen
 
-		_, err = game.ReceiveResponse([]InboundMessage{
+		_, err = game.ReceiveResponse([]protocol.InboundMessage{
 			{
 				PlayerID: "p1",
 				Command:  protocol.Reorg,
@@ -1685,7 +1687,7 @@ func TestGameReceiveResponse(t *testing.T) {
 		})
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.PlayUnseen)
 
-		msgs, err := game.ReceiveResponse([]InboundMessage{{
+		msgs, err := game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: "p1",
 			Decision: []int{0, 1},
 			Command:  protocol.PlayUnseen,
@@ -1712,7 +1714,7 @@ func TestGameReceiveResponse(t *testing.T) {
 		})
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.PlayUnseen)
 
-		msgs, err := game.ReceiveResponse([]InboundMessage{{
+		msgs, err := game.ReceiveResponse([]protocol.InboundMessage{{
 			PlayerID: "p1",
 			Decision: []int{0, 1},
 			Command:  protocol.PlayUnseen,
@@ -1807,7 +1809,7 @@ func TestGameBurn(t *testing.T) {
 			checkNextMessages(t, msgs, protocol.PlayHand, game)
 
 			// When the player plays their move
-			msgs, err = game.ReceiveResponse([]InboundMessage{{
+			msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 				PlayerID: game.CurrentPlayer.PlayerID,
 				Command:  protocol.PlayHand,
 				Decision: tc.decision, // target card is the second one
@@ -1830,7 +1832,7 @@ func TestGameBurn(t *testing.T) {
 
 			// And when the current player acks
 			previousPlayerID := game.CurrentPlayer.PlayerID
-			msgs, err = game.ReceiveResponse([]InboundMessage{{
+			msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 				PlayerID: game.CurrentPlayer.PlayerID,
 				Command:  protocol.Burn,
 			}})
@@ -1842,7 +1844,7 @@ func TestGameBurn(t *testing.T) {
 	}
 }
 
-func checkBaseMessage(t *testing.T, m OutboundMessage, game *shed) {
+func checkBaseMessage(t *testing.T, m protocol.OutboundMessage, game *shed) {
 	utils.AssertNotEmptyString(t, m.PlayerID)
 	utils.AssertDeepEqual(t, m.CurrentTurn, game.CurrentPlayer)
 	utils.AssertDeepEqual(t, m.Hand, game.PlayerCards[m.PlayerID].Hand)
@@ -1851,7 +1853,7 @@ func checkBaseMessage(t *testing.T, m OutboundMessage, game *shed) {
 	utils.AssertEqual(t, m.DeckCount, len(game.Deck))
 }
 
-func checkNextMessages(t *testing.T, msgs []OutboundMessage, cmd protocol.Cmd, game *shed) {
+func checkNextMessages(t *testing.T, msgs []protocol.OutboundMessage, cmd protocol.Cmd, game *shed) {
 	t.Helper()
 
 	for _, m := range msgs {
@@ -1873,7 +1875,7 @@ func checkNextMessages(t *testing.T, msgs []OutboundMessage, cmd protocol.Cmd, g
 	}
 }
 
-func checkReceiveResponseMessages(t *testing.T, msgs []OutboundMessage, currentPlayerCmd protocol.Cmd, game *shed) {
+func checkReceiveResponseMessages(t *testing.T, msgs []protocol.OutboundMessage, currentPlayerCmd protocol.Cmd, game *shed) {
 	t.Helper()
 
 	for _, m := range msgs {
@@ -1890,7 +1892,7 @@ func checkReceiveResponseMessages(t *testing.T, msgs []OutboundMessage, currentP
 	}
 }
 
-func checkPlayerFinishedMessages(t *testing.T, msgs []OutboundMessage, game *shed) {
+func checkPlayerFinishedMessages(t *testing.T, msgs []protocol.OutboundMessage, game *shed) {
 	t.Helper()
 
 	for _, m := range msgs {
@@ -1906,7 +1908,7 @@ func checkPlayerFinishedMessages(t *testing.T, msgs []OutboundMessage, game *she
 	}
 }
 
-func checkGameOverMessages(t *testing.T, msgs []OutboundMessage, game *shed) {
+func checkGameOverMessages(t *testing.T, msgs []protocol.OutboundMessage, game *shed) {
 	t.Helper()
 
 	for _, m := range msgs {
@@ -1917,7 +1919,7 @@ func checkGameOverMessages(t *testing.T, msgs []OutboundMessage, game *shed) {
 	}
 }
 
-func checkBurnMessages(t *testing.T, msgs []OutboundMessage, game *shed) {
+func checkBurnMessages(t *testing.T, msgs []protocol.OutboundMessage, game *shed) {
 	t.Helper()
 
 	for _, m := range msgs {
@@ -1929,10 +1931,10 @@ func checkBurnMessages(t *testing.T, msgs []OutboundMessage, game *shed) {
 	}
 }
 
-func reorganiseSomeCards(outbound []OutboundMessage) []InboundMessage {
-	inbound := []InboundMessage{}
+func reorganiseSomeCards(outbound []protocol.OutboundMessage) []protocol.InboundMessage {
+	inbound := []protocol.InboundMessage{}
 	for _, m := range outbound {
-		inbound = append(inbound, InboundMessage{
+		inbound = append(inbound, protocol.InboundMessage{
 			PlayerID: m.PlayerID,
 			Command:  protocol.Reorg,
 			// ought to shuffle really...
@@ -1943,52 +1945,7 @@ func reorganiseSomeCards(outbound []OutboundMessage) []InboundMessage {
 	return inbound
 }
 
-func someDeck(num int) deck.Deck {
-	d := deck.New()
-	d.Shuffle()
-	return deck.Deck(d.Deal(num))
-}
-
-func someCards(num int) []deck.Card {
-	d := someDeck(num)
-	return []deck.Card(d)
-}
-
-func combineCards(cards []deck.Card, toAdd ...deck.Card) []deck.Card {
-	for _, c := range toAdd {
-		cards = append(cards, c)
-	}
-
-	return cards
-}
-
-func somePlayerCards(num int) *PlayerCards {
-	unseen := someDeck(num)
-	pc := NewPlayerCards(
-		someDeck(num),
-		someDeck(num),
-		unseen,
-		nil,
-	)
-	for _, c := range unseen {
-		pc.UnseenVisibility[c] = false
-	}
-
-	return pc
-}
-
-func containsCard(s []deck.Card, targets ...deck.Card) bool {
-	for _, c := range s {
-		for _, tg := range targets {
-			if c == tg {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func getMoves(msgs []OutboundMessage, currentPlayerID string) []int {
+func getMoves(msgs []protocol.OutboundMessage, currentPlayerID string) []int {
 	var moves []int
 	for _, m := range msgs {
 		if m.PlayerID == currentPlayerID {

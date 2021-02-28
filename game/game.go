@@ -1,6 +1,7 @@
-package shed
+package game
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"sort"
@@ -9,6 +10,18 @@ import (
 	"github.com/minaorangina/shed/protocol"
 
 	"github.com/minaorangina/shed/deck"
+)
+
+var (
+	ErrNilGame                = errors.New("game is nil")
+	ErrTooFewPlayers          = errors.New("minimum of 2 players required")
+	ErrTooManyPlayers         = errors.New("maximum of 4 players allowed")
+	ErrNoPlayers              = errors.New("game has no players")
+	ErrGameUnexpectedResponse = errors.New("game received unexpected response")
+	ErrGameAwaitingResponse   = errors.New("game is awaiting a response")
+	ErrInvalidMove            = errors.New("invalid move")
+	ErrPlayOneCard            = errors.New("must play one card only")
+	ErrInvalidGameState       = errors.New("invalid game state")
 )
 
 // Stage represents the main stages in the game
@@ -59,9 +72,9 @@ func NewPlayerCards(
 }
 
 type Game interface {
-	Start(playerInfo []PlayerInfo) error
-	Next() ([]OutboundMessage, error)
-	ReceiveResponse([]InboundMessage) ([]OutboundMessage, error)
+	Start(playerInfo []protocol.PlayerInfo) error
+	Next() ([]protocol.OutboundMessage, error)
+	ReceiveResponse([]protocol.InboundMessage) ([]protocol.OutboundMessage, error)
 	AwaitingResponse() protocol.Cmd
 }
 
@@ -69,24 +82,24 @@ type shed struct {
 	Deck            deck.Deck
 	Pile            []deck.Card
 	PlayerCards     map[string]*PlayerCards
-	PlayerInfo      []PlayerInfo
-	ActivePlayers   []PlayerInfo
-	FinishedPlayers []PlayerInfo
-	CurrentPlayer   PlayerInfo
+	PlayerInfo      []protocol.PlayerInfo
+	ActivePlayers   []protocol.PlayerInfo
+	FinishedPlayers []protocol.PlayerInfo
+	CurrentPlayer   protocol.PlayerInfo
 	CurrentTurnIdx  int
 	Stage           Stage
 	ExpectedCommand protocol.Cmd
 	GameOver        bool
-	unseenDecision  *InboundMessage
+	unseenDecision  *protocol.InboundMessage
 }
 
 type ShedOpts struct {
 	Deck            deck.Deck
 	Pile            []deck.Card
 	PlayerCards     map[string]*PlayerCards
-	PlayerInfo      []PlayerInfo
-	FinishedPlayers []PlayerInfo
-	CurrentPlayer   PlayerInfo
+	PlayerInfo      []protocol.PlayerInfo
+	FinishedPlayers []protocol.PlayerInfo
+	CurrentPlayer   protocol.PlayerInfo
 	Stage           Stage
 	ExpectedCommand protocol.Cmd
 }
@@ -125,15 +138,15 @@ func NewShed(opts ShedOpts) *shed {
 	}
 	if s.PlayerInfo == nil {
 		// new game
-		s.PlayerInfo = []PlayerInfo{}
-		s.ActivePlayers = []PlayerInfo{}
-		s.FinishedPlayers = []PlayerInfo{}
+		s.PlayerInfo = []protocol.PlayerInfo{}
+		s.ActivePlayers = []protocol.PlayerInfo{}
+		s.FinishedPlayers = []protocol.PlayerInfo{}
 	} else if s.FinishedPlayers == nil {
 		s.PlayerInfo = opts.PlayerInfo
 		s.ActivePlayers = opts.PlayerInfo
 	} else {
 		// work out who is still playing the game
-		stillPlaying := []PlayerInfo{}
+		stillPlaying := []protocol.PlayerInfo{}
 		for _, pi := range opts.PlayerInfo {
 			for _, fp := range opts.FinishedPlayers {
 				if fp.PlayerID != pi.PlayerID {
@@ -152,7 +165,7 @@ func (s *shed) AwaitingResponse() protocol.Cmd {
 	return s.ExpectedCommand
 }
 
-func (s *shed) Start(playerInfo []PlayerInfo) error {
+func (s *shed) Start(playerInfo []protocol.PlayerInfo) error {
 	if s == nil {
 		return ErrNilGame
 	}
@@ -183,7 +196,7 @@ func (s *shed) Start(playerInfo []PlayerInfo) error {
 	return nil
 }
 
-func (s *shed) Next() ([]OutboundMessage, error) {
+func (s *shed) Next() ([]protocol.OutboundMessage, error) {
 	if s == nil {
 		return nil, ErrNilGame
 	}
@@ -254,7 +267,7 @@ func (s *shed) Next() ([]OutboundMessage, error) {
 	return nil, fmt.Errorf("could not match game stage %d", s.Stage)
 }
 
-func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage, error) {
+func (s *shed) ReceiveResponse(inboundMsgs []protocol.InboundMessage) ([]protocol.OutboundMessage, error) {
 	if s == nil {
 		return nil, ErrNilGame
 	}
@@ -304,11 +317,11 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 	msg := inboundMsgs[0]
 	if msg.PlayerID != s.CurrentPlayer.PlayerID {
 		err := fmt.Errorf("unexpected message from player %s", msg.PlayerID)
-		return []OutboundMessage{s.buildErrorMessage(msg.PlayerID, err)}, err
+		return []protocol.OutboundMessage{s.buildErrorMessage(msg.PlayerID, err)}, err
 	}
 	if msg.Command != s.ExpectedCommand {
 		err := fmt.Errorf("unexpected command - got %s, want %s", msg.Command.String(), s.ExpectedCommand.String())
-		return []OutboundMessage{s.buildErrorMessage(s.CurrentPlayer.PlayerID, err)}, err
+		return []protocol.OutboundMessage{s.buildErrorMessage(s.CurrentPlayer.PlayerID, err)}, err
 	}
 
 	if msg.Command == protocol.Burn { // ack
@@ -446,7 +459,7 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 
 		case protocol.PlayUnseen:
 			if len(msg.Decision) != 1 {
-				return []OutboundMessage{
+				return []protocol.OutboundMessage{
 					s.buildErrorMessage(s.CurrentPlayer.PlayerID, ErrPlayOneCard),
 				}, ErrPlayOneCard
 			}
@@ -479,7 +492,7 @@ func (s *shed) ReceiveResponse(inboundMsgs []InboundMessage) ([]OutboundMessage,
 }
 
 // step 1 of 2 in a player playing their cards (Hand or Seen)
-func (s *shed) attemptMove(currentPlayerCmd protocol.Cmd) ([]OutboundMessage, bool) {
+func (s *shed) attemptMove(currentPlayerCmd protocol.Cmd) ([]protocol.OutboundMessage, bool) {
 	var cards []deck.Card
 	switch currentPlayerCmd {
 
@@ -507,7 +520,7 @@ func (s *shed) attemptMove(currentPlayerCmd protocol.Cmd) ([]OutboundMessage, bo
 }
 
 // step 2 of 2 of a player playing their cards (Hand or Seen)
-func (s *shed) completeMove(msg InboundMessage) {
+func (s *shed) completeMove(msg protocol.InboundMessage) {
 
 	var (
 		toPile       = []deck.Card{}
@@ -538,7 +551,7 @@ func (s *shed) completeMove(msg InboundMessage) {
 	*cardGroup = setToCardSlice(cardGroupSet)
 }
 
-func (s *shed) pluckFromDeck(msg InboundMessage) {
+func (s *shed) pluckFromDeck(msg protocol.InboundMessage) {
 	if len(s.Deck) == 0 {
 		return
 	}
@@ -572,7 +585,7 @@ func (s *shed) turn() {
 func (s *shed) moveToFinishedPlayers() {
 	if len(s.ActivePlayers) == 1 {
 		s.FinishedPlayers = append(s.FinishedPlayers, s.ActivePlayers[0])
-		s.ActivePlayers = []PlayerInfo{}
+		s.ActivePlayers = []protocol.PlayerInfo{}
 		return
 	}
 

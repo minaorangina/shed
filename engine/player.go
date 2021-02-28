@@ -1,4 +1,4 @@
-package shed
+package engine
 
 import (
 	"encoding/json"
@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/minaorangina/shed/game"
+	"github.com/minaorangina/shed/protocol"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -50,19 +52,19 @@ type Conn interface {
 type Player interface {
 	ID() string
 	Name() string
-	Info() PlayerInfo
-	Cards() *PlayerCards
-	Send(msg OutboundMessage) error
+	Info() protocol.PlayerInfo
+	Cards() *game.PlayerCards
+	Send(msg protocol.OutboundMessage) error
 	Receive(data []byte)
 }
 
 type WSPlayer struct {
-	PlayerCards
+	game.PlayerCards
 	id     string
 	name   string
 	conn   *websocket.Conn // think about how to mock this out
 	sendCh chan []byte
-	engine GameEngine
+	ge     GameEngine
 }
 
 // NewPlayer constructs a new player
@@ -72,7 +74,7 @@ func NewWSPlayer(id, name string, ws *websocket.Conn, sendCh chan []byte, engine
 		name:   name,
 		conn:   ws,
 		sendCh: sendCh,
-		engine: engine,
+		ge:     engine,
 	}
 
 	go player.writePump()
@@ -81,8 +83,8 @@ func NewWSPlayer(id, name string, ws *websocket.Conn, sendCh chan []byte, engine
 	return player
 }
 
-func (p *WSPlayer) Info() PlayerInfo {
-	return PlayerInfo{
+func (p *WSPlayer) Info() protocol.PlayerInfo {
+	return protocol.PlayerInfo{
 		PlayerID: p.id,
 		Name:     p.name,
 	}
@@ -97,16 +99,16 @@ func (p *WSPlayer) Name() string {
 }
 
 // Cards returns all of a player's cards
-func (p *WSPlayer) Cards() *PlayerCards {
-	return &PlayerCards{
+func (p *WSPlayer) Cards() *game.PlayerCards {
+	return &game.PlayerCards{
 		Hand:   p.Hand,
 		Seen:   p.Seen,
 		Unseen: p.Unseen,
 	}
 }
 
-// Send formats a OutboundMessage and forwards to ws connection
-func (p *WSPlayer) Send(msg OutboundMessage) error {
+// Send formats a protocol.OutboundMessage and forwards to ws connection
+func (p *WSPlayer) Send(msg protocol.OutboundMessage) error {
 	var formattedMsg []byte
 
 	payload, err := json.Marshal(msg)
@@ -129,7 +131,7 @@ func (p *WSPlayer) Receive(msg []byte) {
 
 func (p *WSPlayer) readPump() {
 	defer func() {
-		p.engine.RemovePlayer(p)
+		p.ge.RemovePlayer(p)
 		p.conn.Close()
 	}()
 
@@ -145,7 +147,7 @@ func (p *WSPlayer) readPump() {
 			break
 		}
 		// switch on message contents
-		var inbound InboundMessage
+		var inbound protocol.InboundMessage
 
 		err = json.Unmarshal(message, &inbound)
 		if err != nil {
@@ -155,7 +157,7 @@ func (p *WSPlayer) readPump() {
 
 		log.Printf("lgr (readPump) %s: %+v", time.Now().Format(time.StampMilli), inbound)
 
-		p.engine.Receive(inbound)
+		p.ge.Receive(inbound)
 	}
 }
 
@@ -188,7 +190,7 @@ func (p *WSPlayer) writePump() {
 			p.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := p.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				log.Printf("removing player %s", p.ID())
-				p.engine.RemovePlayer(p)
+				p.ge.RemovePlayer(p)
 				// return
 			}
 		}
@@ -229,8 +231,8 @@ func (ps Players) IDs() []string {
 	return ids
 }
 
-func (ps Players) Info() []PlayerInfo {
-	info := []PlayerInfo{}
+func (ps Players) Info() []protocol.PlayerInfo {
+	info := []protocol.PlayerInfo{}
 	for _, p := range ps {
 		info = append(info, p.Info())
 	}

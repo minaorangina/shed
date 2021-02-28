@@ -1,4 +1,4 @@
-package shed
+package engine
 
 import (
 	"reflect"
@@ -22,7 +22,7 @@ func TestWSPlayer(t *testing.T) {
 	// 	spy := &spyWSConn{} // mock with a mocking library?
 	// 	player := &WSPlayer{id: "an-id", name: "a name", conn: spy}
 
-	// 	err := player.Send(OutboundMessage{Message: "Amber"})
+	// 	err := player.Send(protocol.OutboundMessage{Message: "Amber"})
 	// 	utils.AssertNoError(t, err)
 	// 	utils.AssertTrue(t, len(spy.calls) > 0)
 	// })

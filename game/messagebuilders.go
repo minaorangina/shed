@@ -1,4 +1,4 @@
-package shed
+package game
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 	"github.com/minaorangina/shed/protocol"
 )
 
-func (s *shed) buildBaseMessage(playerID string) OutboundMessage {
-	return OutboundMessage{
+func (s *shed) buildBaseMessage(playerID string) protocol.OutboundMessage {
+	return protocol.OutboundMessage{
 		PlayerID:    playerID,
 		CurrentTurn: s.CurrentPlayer,
 		Hand:        s.PlayerCards[playerID].Hand,
@@ -17,12 +17,12 @@ func (s *shed) buildBaseMessage(playerID string) OutboundMessage {
 	}
 }
 
-func (s *shed) buildOpponents(playerID string) []Opponent {
-	opponents := []Opponent{}
+func (s *shed) buildOpponents(playerID string) []protocol.Opponent {
+	opponents := []protocol.Opponent{}
 
 	for _, p := range s.PlayerInfo {
 		if p.PlayerID != playerID {
-			opponents = append(opponents, Opponent{
+			opponents = append(opponents, protocol.Opponent{
 				PlayerID: p.PlayerID,
 				Name:     p.Name,
 				Seen:     s.PlayerCards[p.PlayerID].Seen,
@@ -33,8 +33,8 @@ func (s *shed) buildOpponents(playerID string) []Opponent {
 	return opponents
 }
 
-func (s *shed) buildReorgMessages() []OutboundMessage {
-	msgs := []OutboundMessage{}
+func (s *shed) buildReorgMessages() []protocol.OutboundMessage {
+	msgs := []protocol.OutboundMessage{}
 
 	for _, info := range s.PlayerInfo {
 		m := s.buildBaseMessage(info.PlayerID)
@@ -48,8 +48,8 @@ func (s *shed) buildReorgMessages() []OutboundMessage {
 	return msgs
 }
 
-func (s *shed) buildReplenishHandMessages() []OutboundMessage {
-	msgs := []OutboundMessage{}
+func (s *shed) buildReplenishHandMessages() []protocol.OutboundMessage {
+	msgs := []protocol.OutboundMessage{}
 	currentPlayerMsg := s.buildBaseMessage(s.CurrentPlayer.PlayerID)
 	currentPlayerMsg.Command = protocol.ReplenishHand
 	currentPlayerMsg.ShouldRespond = true
@@ -65,7 +65,7 @@ func (s *shed) buildReplenishHandMessages() []OutboundMessage {
 	return msgs
 }
 
-func (s *shed) buildSkipTurnMessage(playerID string) OutboundMessage {
+func (s *shed) buildSkipTurnMessage(playerID string) protocol.OutboundMessage {
 	msg := s.buildBaseMessage(playerID)
 	msg.Command = protocol.SkipTurn
 	msg.Message = fmt.Sprintf("%s skips a turn!", s.CurrentPlayer.Name)
@@ -74,14 +74,14 @@ func (s *shed) buildSkipTurnMessage(playerID string) OutboundMessage {
 	return msg
 }
 
-func (s *shed) buildSkipTurnMessages(currentPlayerCmd protocol.Cmd) []OutboundMessage {
+func (s *shed) buildSkipTurnMessages(currentPlayerCmd protocol.Cmd) []protocol.OutboundMessage {
 	currentPlayerMsg := s.buildBaseMessage(s.CurrentPlayer.PlayerID)
 	currentPlayerMsg.Command = protocol.SkipTurn
 	currentPlayerMsg.Message = "You skip a turn!"
 	currentPlayerMsg.Opponents = s.buildOpponents(s.CurrentPlayer.PlayerID)
 	currentPlayerMsg.ShouldRespond = true
 
-	toSend := []OutboundMessage{currentPlayerMsg}
+	toSend := []protocol.OutboundMessage{currentPlayerMsg}
 	for _, info := range s.PlayerInfo {
 		if info.PlayerID != s.CurrentPlayer.PlayerID {
 			toSend = append(toSend, s.buildSkipTurnMessage(info.PlayerID))
@@ -91,7 +91,7 @@ func (s *shed) buildSkipTurnMessages(currentPlayerCmd protocol.Cmd) []OutboundMe
 	return toSend
 }
 
-func (s *shed) buildTurnMessage(playerID string) OutboundMessage {
+func (s *shed) buildTurnMessage(playerID string) protocol.OutboundMessage {
 	msg := s.buildBaseMessage(playerID)
 	msg.Command = protocol.Turn
 	msg.Message = fmt.Sprintf("It's %s's turn!", s.CurrentPlayer.Name)
@@ -100,7 +100,7 @@ func (s *shed) buildTurnMessage(playerID string) OutboundMessage {
 	return msg
 }
 
-func (s *shed) buildTurnMessages(currentPlayerCmd protocol.Cmd, moves []int) []OutboundMessage {
+func (s *shed) buildTurnMessages(currentPlayerCmd protocol.Cmd, moves []int) []protocol.OutboundMessage {
 	var toPlay string
 	switch currentPlayerCmd {
 	case protocol.PlayHand:
@@ -123,7 +123,7 @@ func (s *shed) buildTurnMessages(currentPlayerCmd protocol.Cmd, moves []int) []O
 	currentPlayerMsg.Moves = moves
 	currentPlayerMsg.ShouldRespond = true
 
-	toSend := []OutboundMessage{currentPlayerMsg}
+	toSend := []protocol.OutboundMessage{currentPlayerMsg}
 	for _, info := range s.PlayerInfo {
 		if info.PlayerID != s.CurrentPlayer.PlayerID {
 			toSend = append(toSend, s.buildTurnMessage(info.PlayerID))
@@ -133,15 +133,15 @@ func (s *shed) buildTurnMessages(currentPlayerCmd protocol.Cmd, moves []int) []O
 	return toSend
 }
 
-func (s *shed) buildEndOfTurnMessage(playerID string) OutboundMessage {
+func (s *shed) buildEndOfTurnMessage(playerID string) protocol.OutboundMessage {
 	msg := s.buildBaseMessage(playerID)
 	msg.Command = protocol.EndOfTurn
 
 	return msg
 }
 
-func (s *shed) buildEndOfTurnMessages(currentPlayerCommand protocol.Cmd) []OutboundMessage {
-	toSend := []OutboundMessage{}
+func (s *shed) buildEndOfTurnMessages(currentPlayerCommand protocol.Cmd) []protocol.OutboundMessage {
+	toSend := []protocol.OutboundMessage{}
 	for _, info := range s.PlayerInfo {
 		msg := s.buildEndOfTurnMessage(info.PlayerID)
 		if info.PlayerID == s.CurrentPlayer.PlayerID {
@@ -154,7 +154,7 @@ func (s *shed) buildEndOfTurnMessages(currentPlayerCommand protocol.Cmd) []Outbo
 	return toSend
 }
 
-func (s *shed) buildPlayerFinishedMessage(playerID string) OutboundMessage {
+func (s *shed) buildPlayerFinishedMessage(playerID string) protocol.OutboundMessage {
 	msg := s.buildBaseMessage(playerID)
 	msg.Command = protocol.PlayerFinished
 	msg.Message = fmt.Sprintf("%s has finished!", s.CurrentPlayer.Name)
@@ -163,8 +163,8 @@ func (s *shed) buildPlayerFinishedMessage(playerID string) OutboundMessage {
 	return msg
 }
 
-func (s *shed) buildPlayerFinishedMessages() []OutboundMessage {
-	toSend := []OutboundMessage{}
+func (s *shed) buildPlayerFinishedMessages() []protocol.OutboundMessage {
+	toSend := []protocol.OutboundMessage{}
 	for _, info := range s.PlayerInfo {
 		msg := s.buildPlayerFinishedMessage(info.PlayerID)
 		if info.PlayerID == s.CurrentPlayer.PlayerID {
@@ -177,8 +177,8 @@ func (s *shed) buildPlayerFinishedMessages() []OutboundMessage {
 	return toSend
 }
 
-func (s *shed) buildGameOverMessages() []OutboundMessage {
-	toSend := []OutboundMessage{}
+func (s *shed) buildGameOverMessages() []protocol.OutboundMessage {
+	toSend := []protocol.OutboundMessage{}
 	for _, info := range s.PlayerInfo {
 		msg := s.buildBaseMessage(info.PlayerID)
 		msg.Command = protocol.GameOver
@@ -189,7 +189,7 @@ func (s *shed) buildGameOverMessages() []OutboundMessage {
 	return toSend
 }
 
-func (s *shed) buildBurnMessage(playerID string) OutboundMessage {
+func (s *shed) buildBurnMessage(playerID string) protocol.OutboundMessage {
 	msg := s.buildBaseMessage(playerID)
 	msg.Command = protocol.Burn
 	msg.Message = fmt.Sprintf("Burn for %s!", s.CurrentPlayer.Name)
@@ -197,8 +197,8 @@ func (s *shed) buildBurnMessage(playerID string) OutboundMessage {
 	return msg
 }
 
-func (s *shed) buildBurnMessages() []OutboundMessage {
-	toSend := []OutboundMessage{}
+func (s *shed) buildBurnMessages() []protocol.OutboundMessage {
+	toSend := []protocol.OutboundMessage{}
 	for _, info := range s.PlayerInfo {
 		msg := s.buildBurnMessage(info.PlayerID)
 		if info.PlayerID == s.CurrentPlayer.PlayerID {
@@ -211,8 +211,8 @@ func (s *shed) buildBurnMessages() []OutboundMessage {
 	return toSend
 }
 
-func (s *shed) buildErrorMessages(err error) []OutboundMessage {
-	msgs := []OutboundMessage{}
+func (s *shed) buildErrorMessages(err error) []protocol.OutboundMessage {
+	msgs := []protocol.OutboundMessage{}
 	for _, p := range s.PlayerInfo {
 		msgs = append(msgs, s.buildErrorMessage(p.PlayerID, err))
 	}
@@ -220,11 +220,30 @@ func (s *shed) buildErrorMessages(err error) []OutboundMessage {
 	return msgs
 }
 
-func (s *shed) buildErrorMessage(playerID string, err error) OutboundMessage {
+func (s *shed) buildErrorMessage(playerID string, err error) protocol.OutboundMessage {
 	msg := s.buildBaseMessage(playerID)
 	msg.Command = protocol.Error
 	msg.Message = fmt.Sprintf("game error: %q", err.Error())
 	msg.ShouldRespond = s.AwaitingResponse() != protocol.Null && s.CurrentPlayer.PlayerID == playerID
 
 	return msg
+}
+
+func BuildGameHasStartedMessage(playerID, name string) protocol.OutboundMessage {
+	return protocol.OutboundMessage{
+		PlayerID: playerID,
+		Name:     name,
+		Message:  fmt.Sprintf("Game is starting!"),
+		Command:  protocol.HasStarted,
+	}
+}
+
+func BuildNewJoinerMessage(playerID, name, joinerPlayerID, joinerName string) protocol.OutboundMessage {
+	return protocol.OutboundMessage{
+		PlayerID: playerID,
+		Name:     name,
+		Joiner:   protocol.PlayerInfo{Name: joinerName, PlayerID: joinerPlayerID},
+		Message:  fmt.Sprintf("%s has joined the game!", joinerName),
+		Command:  protocol.NewJoiner,
+	}
 }

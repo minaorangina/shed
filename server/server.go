@@ -12,7 +12,11 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/minaorangina/shed"
+	"github.com/minaorangina/shed/engine"
+	"github.com/minaorangina/shed/game"
+	"github.com/minaorangina/shed/protocol"
+	"github.com/minaorangina/shed/store"
+	str "github.com/minaorangina/shed/store"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -34,12 +38,12 @@ type NewGameReq struct {
 }
 
 type PendingGameRes struct {
-	GameID     string            `json:"gameID"`
-	PlayerID   string            `json:"playerID"`
-	Name       string            `json:"name"`
-	PlayerInfo shed.PlayerInfo   `json:"playerInfo"`
-	Admin      bool              `json:"isAdmin"`
-	Players    []shed.PlayerInfo `json:"players,omitempty"`
+	GameID     string                `json:"gameID"`
+	PlayerID   string                `json:"playerID"`
+	Name       string                `json:"name"`
+	PlayerInfo protocol.PlayerInfo   `json:"playerInfo"`
+	Admin      bool                  `json:"isAdmin"`
+	Players    []protocol.PlayerInfo `json:"players,omitempty"`
 }
 
 type JoinGameReq struct {
@@ -53,7 +57,7 @@ type GetGameRes struct {
 
 // GameServer is a game server
 type GameServer struct {
-	store shed.GameStore
+	store str.GameStore
 	http.Server
 }
 
@@ -97,7 +101,7 @@ func servePage(w http.ResponseWriter, path string) {
 }
 
 // NewServer creates a new GameServer
-func NewServer(store shed.GameStore) *GameServer {
+func NewServer(str store.GameStore) *GameServer {
 	s := new(GameServer)
 
 	router := http.NewServeMux()
@@ -121,7 +125,7 @@ func NewServer(store shed.GameStore) *GameServer {
 	router.Handle("/waiting-room", http.HandlerFunc(s.HandleWaitingRoom))
 	router.Handle("/ws", http.HandlerFunc(enableCors(s.HandleWS)))
 
-	s.store = store
+	s.store = str
 
 	s.Handler = router
 
@@ -151,10 +155,10 @@ func (g *GameServer) HandleNewGame(w http.ResponseWriter, r *http.Request) {
 	// generate game ID
 	gameID := NewGameID()
 	playerID := NewID()
-	game, err := shed.NewGameEngine(shed.GameEngineOpts{
+	game, err := engine.NewGameEngine(engine.GameEngineOpts{
 		GameID:    gameID,
 		CreatorID: playerID,
-		Game:      shed.NewShed(shed.ShedOpts{}),
+		Game:      game.NewShed(game.ShedOpts{}),
 	})
 	if err != nil {
 		log.Println(err.Error())
@@ -185,9 +189,9 @@ func (g *GameServer) HandleNewGame(w http.ResponseWriter, r *http.Request) {
 	payload := PendingGameRes{
 		GameID:     gameID,
 		PlayerID:   playerID,
-		PlayerInfo: shed.PlayerInfo{PlayerID: playerID, Name: data.Name},
+		PlayerInfo: protocol.PlayerInfo{PlayerID: playerID, Name: data.Name},
 		Name:       data.Name,
-		Players:    []shed.PlayerInfo{{PlayerID: playerID, Name: data.Name}},
+		Players:    []protocol.PlayerInfo{{PlayerID: playerID, Name: data.Name}},
 		Admin:      true,
 	}
 
@@ -292,16 +296,16 @@ func (g *GameServer) HandleJoinGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	playerInfos := []shed.PlayerInfo{}
+	playerInfos := []protocol.PlayerInfo{}
 	ps := game.Players()
 	for _, p := range ps {
-		playerInfos = append(playerInfos, shed.PlayerInfo{p.ID(), p.Name()})
+		playerInfos = append(playerInfos, protocol.PlayerInfo{p.ID(), p.Name()})
 	}
 
 	payload := PendingGameRes{
 		PlayerID:   playerID,
 		GameID:     data.GameID,
-		PlayerInfo: shed.PlayerInfo{PlayerID: playerID, Name: data.Name},
+		PlayerInfo: protocol.PlayerInfo{PlayerID: playerID, Name: data.Name},
 		Name:       data.Name,
 		Players:    playerInfos,
 	}
@@ -408,7 +412,7 @@ func (g *GameServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// create player
-	player := shed.NewWSPlayer(playerID, pendingPlayer.Name, rawConn, make(chan []byte), game)
+	player := engine.NewWSPlayer(playerID, pendingPlayer.Name, rawConn, make(chan []byte), game)
 	// reference to hub etc
 	err = game.AddPlayer(player)
 	if err != nil {
