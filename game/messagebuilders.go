@@ -7,11 +7,15 @@ import (
 )
 
 func (s *shed) buildBaseMessage(playerID string) protocol.OutboundMessage {
+	playerCards := s.PlayerCards[playerID]
+	publicUnseen := s.mapUnseenToPublicUnseen(playerID)
+
 	return protocol.OutboundMessage{
 		PlayerID:    playerID,
 		CurrentTurn: s.CurrentPlayer,
-		Hand:        s.PlayerCards[playerID].Hand,
-		Seen:        s.PlayerCards[playerID].Seen,
+		Hand:        playerCards.Hand,
+		Seen:        playerCards.Seen,
+		Unseen:      publicUnseen,
 		Pile:        s.Pile,
 		DeckCount:   len(s.Deck),
 	}

@@ -610,3 +610,17 @@ func (s *shed) getReorgCard(playerID string, choice int) deck.Card {
 
 	return card
 }
+
+func (s *shed) mapUnseenToPublicUnseen(playerID string) []deck.Card {
+	playerCards := s.PlayerCards[playerID]
+	publicUnseen := []deck.Card{}
+	for _, c := range playerCards.Unseen {
+		if playerCards.UnseenVisibility[c] {
+			publicUnseen = append(publicUnseen, c)
+		} else {
+			publicUnseen = append(publicUnseen, deck.NewCard(deck.NullRank, deck.NullSuit))
+		}
+	}
+
+	return publicUnseen
+}

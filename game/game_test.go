@@ -1845,10 +1845,15 @@ func TestGameBurn(t *testing.T) {
 }
 
 func checkBaseMessage(t *testing.T, m protocol.OutboundMessage, game *shed) {
+	t.Helper()
+
+	publicUnseen := game.mapUnseenToPublicUnseen(m.PlayerID)
+
 	utils.AssertNotEmptyString(t, m.PlayerID)
 	utils.AssertDeepEqual(t, m.CurrentTurn, game.CurrentPlayer)
 	utils.AssertDeepEqual(t, m.Hand, game.PlayerCards[m.PlayerID].Hand)
 	utils.AssertDeepEqual(t, m.Seen, game.PlayerCards[m.PlayerID].Seen)
+	utils.AssertDeepEqual(t, m.Unseen, publicUnseen)
 	utils.AssertDeepEqual(t, m.Pile, game.Pile)
 	utils.AssertEqual(t, m.DeckCount, len(game.Deck))
 }

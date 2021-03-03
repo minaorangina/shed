@@ -14,7 +14,7 @@ func TestCard(t *testing.T) {
 		card     Card
 		expected string
 	}{
-		{"Lowest value card", NewCard(0, 0), "Null of Null"},
+		{"Lowest value card", NewCard(0, 0), "NullRank of NullSuit"},
 		{"Lowest value card", NewCard(1, 1), "Ace of Clubs"},
 		{"Specific card", NewCard(12, 3), "Queen of Hearts"},
 		{"Highest value card", NewCard(13, 4), "King of Spades"},
@@ -58,9 +58,9 @@ func TestWireCard(t *testing.T) {
 			{
 				NewCard(NullRank, NullSuit),
 				WireCard{
-					Rank:          "Null",
-					Suit:          "Null",
-					CanonicalName: "Null of Null",
+					Rank:          "NullRank",
+					Suit:          "NullSuit",
+					CanonicalName: "NullRank of NullSuit",
 				},
 			},
 		}
@@ -88,9 +88,9 @@ func TestWireCard(t *testing.T) {
 			},
 			{
 				WireCard{
-					Rank:          "Null",
-					Suit:          "Null",
-					CanonicalName: "Null of Null",
+					Rank:          "NullRank",
+					Suit:          "NullSuit",
+					CanonicalName: "NullRank of NullSuit",
 				},
 				NewCard(NullRank, NullSuit),
 			},
@@ -116,8 +116,8 @@ func TestWireCard(t *testing.T) {
 				NewCard(Ace, Spades),
 			},
 			{
-				"Null of Null",
-				WireCard{"Null", "Null", "Null of Null"},
+				"NullRank of NullSuit",
+				WireCard{"NullRank", "NullSuit", "NullRank of NullSuit"},
 				NewCard(NullRank, NullSuit),
 			},
 		}
@@ -147,9 +147,9 @@ func TestWireCard(t *testing.T) {
 				[]byte(`{"rank":"Four","suit":"Diamonds","canonicalName":"Four of Diamonds"}`),
 			},
 			{
-				"Null of Null",
+				"NullRank of NullSuit",
 				NewCard(NullRank, NullSuit),
-				[]byte(`{"rank":"Null","suit":"Null","canonicalName":"Null of Null"}`),
+				[]byte(`{"rank":"NullRank","suit":"NullSuit","canonicalName":"NullRank of NullSuit"}`),
 			},
 		}
 
