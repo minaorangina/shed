@@ -76,6 +76,7 @@ type Game interface {
 	Next() ([]protocol.OutboundMessage, error)
 	ReceiveResponse([]protocol.InboundMessage) ([]protocol.OutboundMessage, error)
 	AwaitingResponse() protocol.Cmd
+	GameOver() bool
 }
 
 type shed struct {
@@ -89,7 +90,7 @@ type shed struct {
 	CurrentTurnIdx  int
 	Stage           Stage
 	ExpectedCommand protocol.Cmd
-	GameOver        bool
+	gameOver        bool
 	unseenDecision  *protocol.InboundMessage
 }
 
@@ -165,6 +166,10 @@ func (s *shed) AwaitingResponse() protocol.Cmd {
 	return s.ExpectedCommand
 }
 
+func (s *shed) GameOver() bool {
+	return s.gameOver
+}
+
 func (s *shed) Start(playerInfo []protocol.PlayerInfo) error {
 	if s == nil {
 		return ErrNilGame
@@ -206,7 +211,7 @@ func (s *shed) Next() ([]protocol.OutboundMessage, error) {
 	if s.ExpectedCommand != protocol.Null {
 		return nil, ErrGameAwaitingResponse
 	}
-	if s.GameOver {
+	if s.gameOver {
 		return s.buildGameOverMessages(), nil
 	}
 
@@ -277,7 +282,7 @@ func (s *shed) ReceiveResponse(inboundMsgs []protocol.InboundMessage) ([]protoco
 	if s.ExpectedCommand == protocol.Null {
 		return nil, ErrGameUnexpectedResponse
 	}
-	if s.GameOver {
+	if s.gameOver {
 		return s.buildGameOverMessages(), nil
 	}
 
@@ -399,8 +404,8 @@ func (s *shed) ReceiveResponse(inboundMsgs []protocol.InboundMessage) ([]protoco
 			s.ExpectedCommand = protocol.Null
 			s.moveToFinishedPlayers() // handles the next turn
 
-			if s.gameIsOver() {
-				s.GameOver = true
+			if s.onePlayerLeft() {
+				s.gameOver = true
 				// move the remaining player
 				s.moveToFinishedPlayers()
 				return s.buildGameOverMessages(), nil
@@ -573,7 +578,7 @@ func (s *shed) playerHasFinished() bool {
 		len(pc.Unseen) == 0
 }
 
-func (s *shed) gameIsOver() bool {
+func (s *shed) onePlayerLeft() bool {
 	return len(s.ActivePlayers) == 1
 }
 

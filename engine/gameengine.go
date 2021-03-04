@@ -202,7 +202,7 @@ func (ge *gameEngine) Listen() {
 
 		case msgs := <-ge.outboundCh:
 			ge.messagePlayers(msgs)
-			if ge.game.AwaitingResponse() == protocol.Null {
+			if !ge.game.GameOver() && ge.game.AwaitingResponse() == protocol.Null {
 				ge.sendToGame(nil)
 			}
 

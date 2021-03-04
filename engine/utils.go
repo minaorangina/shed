@@ -36,6 +36,10 @@ func (g *SpyGame) ReceiveResponse(messages []protocol.InboundMessage) ([]protoco
 	return nil, nil
 }
 
+func (g *SpyGame) GameOver() bool {
+	return false
+}
+
 func namesToPlayers(names []string) Players {
 	ps := []Player{}
 	for _, n := range names {
