@@ -1998,6 +1998,7 @@ func checkGameOverMessages(t *testing.T, msgs []protocol.OutboundMessage, game *
 		utils.AssertEqual(t, m.Command, protocol.GameOver)
 		utils.AssertEqual(t, m.ShouldRespond, false)
 		utils.AssertTrue(t, len(game.FinishedPlayers) == len(game.PlayerInfo))
+		utils.AssertDeepEqual(t, m.FinishedPlayers, game.FinishedPlayers)
 	}
 }
 
