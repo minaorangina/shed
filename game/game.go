@@ -330,7 +330,9 @@ func (s *shed) ReceiveResponse(inboundMsgs []protocol.InboundMessage) ([]protoco
 	}
 
 	if msg.Command == protocol.Burn { // ack
-		// player gets another turn
+		// Maybe in future the old cards are banished out of sight but not deleted
+		// Useful for undo mechanism etc
+		s.Pile = []deck.Card{}
 		s.ExpectedCommand = protocol.Null
 		return nil, nil
 	}
@@ -373,9 +375,6 @@ func (s *shed) ReceiveResponse(inboundMsgs []protocol.InboundMessage) ([]protoco
 			}
 
 			if isBurn(s.Pile) {
-				// Maybe in future the old cards are banished out of sight but not deleted
-				// Useful for undo mechanism etc
-				s.Pile = []deck.Card{}
 				s.ExpectedCommand = protocol.Burn
 				return s.buildBurnMessages(), nil
 			}
@@ -422,6 +421,12 @@ func (s *shed) ReceiveResponse(inboundMsgs []protocol.InboundMessage) ([]protoco
 			s.completeMove(*s.unseenDecision)
 			s.unseenDecision = nil
 
+			if isBurn(s.Pile) {
+				// Delay burn until after ack
+				s.ExpectedCommand = protocol.Burn
+				return s.buildBurnMessages(), nil
+			}
+
 			if s.playerHasFinished() {
 				s.ExpectedCommand = protocol.PlayerFinished
 				return s.buildPlayerFinishedMessages(), nil
@@ -446,9 +451,6 @@ func (s *shed) ReceiveResponse(inboundMsgs []protocol.InboundMessage) ([]protoco
 			s.completeMove(msg)
 
 			if isBurn(s.Pile) {
-				// Maybe in future the old cards are banished out of sight but not deleted
-				// Useful for undo mechanism etc
-				s.Pile = []deck.Card{}
 				s.ExpectedCommand = protocol.Burn
 				return s.buildBurnMessages(), nil
 			}

@@ -1735,13 +1735,15 @@ func TestGameBurn(t *testing.T) {
 	ps1 := twoPlayers()
 	ps2 := twoPlayers()
 	tt := []struct {
-		name     string
-		opts     ShedOpts
-		decision []int
+		name            string
+		opts            ShedOpts
+		decision        []int
+		expectedCommand protocol.Cmd
 	}{
 		{
-			name:     "this failed",
-			decision: []int{0},
+			name:            "ten on a four",
+			decision:        []int{0},
+			expectedCommand: protocol.PlayHand,
 			opts: ShedOpts{
 				Stage: clearCards,
 				Deck:  []deck.Card{},
@@ -1769,8 +1771,9 @@ func TestGameBurn(t *testing.T) {
 			},
 		},
 		{
-			name:     "play last six",
-			decision: []int{1},
+			name:            "play last six",
+			decision:        []int{1},
+			expectedCommand: protocol.PlayHand,
 			opts: ShedOpts{
 				Stage: clearDeck,
 				Deck:  someDeck(4),
@@ -1797,21 +1800,21 @@ func TestGameBurn(t *testing.T) {
 		},
 	}
 
-	for _, tc := range tt[0:1] {
+	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			// Given a game in stage
 			game := NewShed(tc.opts)
 
 			msgs, err := game.Next()
 			utils.AssertNoError(t, err)
-			utils.AssertEqual(t, game.AwaitingResponse(), protocol.PlayHand)
+			utils.AssertEqual(t, game.AwaitingResponse(), tc.expectedCommand)
 
-			checkNextMessages(t, msgs, protocol.PlayHand, game)
+			checkNextMessages(t, msgs, tc.expectedCommand, game)
 
 			// When the player plays their move
 			msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
 				PlayerID: game.CurrentPlayer.PlayerID,
-				Command:  protocol.PlayHand,
+				Command:  tc.expectedCommand,
 				Decision: tc.decision, // target card is the second one
 			}})
 			utils.AssertNoError(t, err)
@@ -1822,13 +1825,8 @@ func TestGameBurn(t *testing.T) {
 			utils.AssertEqual(t, len(msgs), len(game.PlayerInfo))
 			checkBurnMessages(t, msgs, game)
 
-			// And the selected card has been burned along with the pile
-			utils.AssertEqual(t, len(game.Pile), 0)
-			// utils.AssertEqual(t, containsCard(game.PlayerCards[game.CurrentPlayer.PlayerID].Hand, targetCard), false)
-
-			if len(game.Deck) == 0 {
-				utils.AssertEqual(t, len(game.PlayerCards[game.CurrentPlayer.PlayerID].Hand), 2)
-			}
+			// But the deck has not been burned yet
+			utils.AssertTrue(t, len(game.Pile) > 0)
 
 			// And when the current player acks
 			previousPlayerID := game.CurrentPlayer.PlayerID
@@ -1838,10 +1836,89 @@ func TestGameBurn(t *testing.T) {
 			}})
 			utils.AssertNoError(t, err)
 
-			// Then the current player gets another turn
+			// Then the selected card has been burned along with the pile
+			utils.AssertEqual(t, len(game.Pile), 0)
+			// utils.AssertEqual(t, containsCard(game.PlayerCards[game.CurrentPlayer.PlayerID].Hand, targetCard), false)
+
+			if len(game.Deck) == 0 {
+				utils.AssertEqual(t, len(game.PlayerCards[game.CurrentPlayer.PlayerID].Hand), 2)
+			}
+
+			// And the current player gets another turn
 			utils.AssertEqual(t, game.CurrentPlayer.PlayerID, previousPlayerID)
 		})
 	}
+
+	t.Run("Burn on UnseenSuccess", func(t *testing.T) {
+		// Given a game
+		ps3 := twoPlayers()
+		game := NewShed(ShedOpts{
+			Stage:         clearCards,
+			Deck:          []deck.Card{},
+			Pile:          []deck.Card{deck.NewCard(deck.Four, deck.Diamonds)},
+			PlayerInfo:    ps3,
+			CurrentPlayer: ps3[0],
+			PlayerCards: map[string]*PlayerCards{
+				"p1": NewPlayerCards(nil, nil, []deck.Card{
+					deck.NewCard(deck.Ten, deck.Diamonds),
+					deck.NewCard(deck.Seven, deck.Diamonds),
+				}, nil),
+				"p2": somePlayerCards(3),
+			},
+		})
+
+		expectedCommand := protocol.PlayUnseen
+		decision := []int{0}
+
+		msgs, err := game.Next()
+		utils.AssertNoError(t, err)
+		utils.AssertEqual(t, game.AwaitingResponse(), expectedCommand)
+
+		checkNextMessages(t, msgs, expectedCommand, game)
+
+		// When the player plays their move
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
+			PlayerID: game.CurrentPlayer.PlayerID,
+			Command:  expectedCommand,
+			Decision: decision, // target card is the second one
+		}})
+		utils.AssertNoError(t, err)
+
+		// Then the game sends UnseenSuccess to everyone
+		// expecting a response only from the current player
+		utils.AssertEqual(t, game.AwaitingResponse(), protocol.UnseenSuccess)
+		utils.AssertEqual(t, len(msgs), len(game.PlayerInfo))
+
+		// And when the player acks
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
+			PlayerID: game.CurrentPlayer.PlayerID,
+			Command:  protocol.UnseenSuccess,
+		}})
+		utils.AssertNoError(t, err)
+
+		// Then the game sends burn messages to all players
+		// expecting a response only from the current player
+		utils.AssertEqual(t, game.AwaitingResponse(), protocol.Burn)
+		utils.AssertEqual(t, len(msgs), len(game.PlayerInfo))
+		checkBurnMessages(t, msgs, game)
+
+		// But the deck has not been burned yet
+		utils.AssertTrue(t, len(game.Pile) > 0)
+
+		// And when the current player acks
+		previousPlayerID := game.CurrentPlayer.PlayerID
+		msgs, err = game.ReceiveResponse([]protocol.InboundMessage{{
+			PlayerID: game.CurrentPlayer.PlayerID,
+			Command:  protocol.Burn,
+		}})
+		utils.AssertNoError(t, err)
+
+		// Then the deck has been burned
+		utils.AssertEqual(t, len(game.Deck), 0)
+
+		// Then the current player gets another turn
+		utils.AssertEqual(t, game.CurrentPlayer.PlayerID, previousPlayerID)
+	})
 }
 
 func checkBaseMessage(t *testing.T, m protocol.OutboundMessage, game *shed) {
