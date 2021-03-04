@@ -148,10 +148,26 @@ func (s *shed) buildEndOfTurnMessages(currentPlayerCommand protocol.Cmd) []proto
 	toSend := []protocol.OutboundMessage{}
 	for _, info := range s.PlayerInfo {
 		msg := s.buildEndOfTurnMessage(info.PlayerID)
+
 		if info.PlayerID == s.CurrentPlayer.PlayerID {
 			msg.Command = currentPlayerCommand
 			msg.ShouldRespond = true
+
+			if currentPlayerCommand == protocol.UnseenSuccess {
+				msg.Message = "Good move!"
+			}
+			if currentPlayerCommand == protocol.UnseenFailure {
+				msg.Message = "Bad luck!"
+			}
+		} else {
+			if currentPlayerCommand == protocol.UnseenSuccess {
+				msg.Message = fmt.Sprintf("%s's card choice succeeds!", s.CurrentPlayer.Name)
+			}
+			if currentPlayerCommand == protocol.UnseenFailure {
+				msg.Message = fmt.Sprintf("%s's card choice fails!", s.CurrentPlayer.Name)
+			}
 		}
+
 		toSend = append(toSend, msg)
 	}
 
@@ -186,7 +202,22 @@ func (s *shed) buildGameOverMessages() []protocol.OutboundMessage {
 	for _, info := range s.PlayerInfo {
 		msg := s.buildBaseMessage(info.PlayerID)
 		msg.Command = protocol.GameOver
-		msg.Message = "Game over!"
+
+		var result string
+		for position, finshedPlayer := range s.FinishedPlayers {
+			if info.PlayerID == finshedPlayer.PlayerID {
+				switch position {
+				case 0: // first place
+					result = "won!"
+				case len(s.FinishedPlayers) - 1: // last place
+					result = "lost :("
+				default:
+					result = "didn't win, but most importantly, you didn't lose :)"
+				}
+			}
+		}
+
+		msg.Message = fmt.Sprintf("Game over! You %s", result)
 		toSend = append(toSend, msg)
 	}
 
