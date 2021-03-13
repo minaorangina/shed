@@ -205,7 +205,12 @@ func (s *shed) buildGameOverMessages() []protocol.OutboundMessage {
 		msg.FinishedPlayers = s.FinishedPlayers
 
 		var result string
+		leagueTable := "Results:\n"
+		ordinalNumbers := []string{"1st", "2nd", "3rd", "4th"}
+
 		for position, finshedPlayer := range s.FinishedPlayers {
+			leagueTable += fmt.Sprintf("%s - %s\n", ordinalNumbers[position], finshedPlayer.Name)
+
 			if info.PlayerID == finshedPlayer.PlayerID {
 				switch position {
 				case 0: // first place
@@ -218,7 +223,7 @@ func (s *shed) buildGameOverMessages() []protocol.OutboundMessage {
 			}
 		}
 
-		msg.Message = fmt.Sprintf("Game over! You %s", result)
+		msg.Message = fmt.Sprintf("Game over! You %s\n%s", result, leagueTable)
 		toSend = append(toSend, msg)
 	}
 
