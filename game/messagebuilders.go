@@ -202,6 +202,7 @@ func (s *shed) buildGameOverMessages() []protocol.OutboundMessage {
 	for _, info := range s.PlayerInfo {
 		msg := s.buildBaseMessage(info.PlayerID)
 		msg.Command = protocol.GameOver
+		msg.FinishedPlayers = s.FinishedPlayers
 
 		var result string
 		for position, finshedPlayer := range s.FinishedPlayers {
