@@ -8,7 +8,11 @@ ADD . /app
 
 RUN go mod download
 
-RUN make
+RUN go build -o ./cmd/web/shed cmd/web/main.go
+
+WORKDIR /app/cmd/web
+
+RUN go install
 
 EXPOSE 8000
 
