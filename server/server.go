@@ -106,17 +106,8 @@ func NewServer(str store.GameStore) *GameServer {
 
 	router := http.NewServeMux()
 
-	router.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Println("Root endpoint")
-		if r.URL.Path != "/" {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-
-		servePage(w, homepage)
-	}))
-
 	fileServer := http.FileServer(http.Dir("./build"))
+	router.Handle("/", fileServer)
 	router.Handle("/static/", fileServer)
 	router.Handle("/build/", http.StripPrefix("/build/", fileServer))
 	router.Handle("/new", http.HandlerFunc(enableCors(s.HandleNewGame)))
