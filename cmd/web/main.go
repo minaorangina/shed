@@ -44,6 +44,12 @@ func main() {
 		}
 	}()
 
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("recovered from panic:", r)
+		}
+	}()
+
 	signalCh := make(chan os.Signal)
 	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
 
