@@ -30,6 +30,7 @@ type OutboundMessage struct {
 	ShouldRespond   bool         `json:"shouldRespond"`
 	Joiner          PlayerInfo   `json:"joiner,omitempty"`
 	CurrentTurn     PlayerInfo   `json:"currentTurn,omitempty"`
+	NextTurn        PlayerInfo   `json:"nextTurn,omitempty"`
 	Moves           []int        `json:"moves,omitempty"`
 	Opponents       []Opponent   `json:"opponents,omitempty"`
 	FinishedPlayers []PlayerInfo `json:"finishedPlayers,omitempty"`

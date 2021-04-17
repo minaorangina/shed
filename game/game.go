@@ -87,6 +87,7 @@ type shed struct {
 	ActivePlayers   []protocol.PlayerInfo
 	FinishedPlayers []protocol.PlayerInfo
 	CurrentPlayer   protocol.PlayerInfo
+	NextPlayer      protocol.PlayerInfo
 	CurrentTurnIdx  int
 	Stage           Stage
 	ExpectedCommand protocol.Cmd
@@ -586,7 +587,10 @@ func (s *shed) onePlayerLeft() bool {
 
 func (s *shed) turn() {
 	s.CurrentTurnIdx = (s.CurrentTurnIdx + 1) % len(s.ActivePlayers)
+	nextTurnIdx := (s.CurrentTurnIdx + 2) % len(s.ActivePlayers)
+
 	s.CurrentPlayer = s.ActivePlayers[s.CurrentTurnIdx]
+	s.NextPlayer = s.ActivePlayers[nextTurnIdx]
 }
 
 func (s *shed) moveToFinishedPlayers() {
