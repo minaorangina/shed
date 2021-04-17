@@ -131,7 +131,7 @@ func (g *GameServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // HandleNewGame handles a request to create a new game
 func (g *GameServer) HandleNewGame(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusNotFound)
+		writePathNotFoundError(w, fmt.Sprintf("%s %s not found", r.Method, r.URL.Path))
 		return
 	}
 
@@ -153,27 +153,27 @@ func (g *GameServer) HandleNewGame(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		log.Println(err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	if game == nil {
 		log.Println(err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	err = g.store.AddInactiveGame(game)
 	if err != nil {
 		log.Println(err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	err = g.store.AddPendingPlayer(gameID, playerID, data.Name)
 	if err != nil {
 		log.Println(err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -188,8 +188,7 @@ func (g *GameServer) HandleNewGame(w http.ResponseWriter, r *http.Request) {
 
 	bytes, err := json.Marshal(payload)
 	if err != nil {
-		log.Println(err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
+		writeMarshalError(w, err)
 		return
 	}
 
@@ -200,36 +199,32 @@ func (g *GameServer) HandleNewGame(w http.ResponseWriter, r *http.Request) {
 
 func (g *GameServer) HandleFindGame(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusNotFound)
+		writePathNotFoundError(w, fmt.Sprintf("path %s %s not found", r.Method, r.URL.Path))
 		return
 	}
 
 	gameID := strings.Replace(r.URL.String(), "/game/", "", 1)
 	if gameID == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("missing game ID"))
+		http.Error(w, "Missing game ID", http.StatusBadRequest)
 		return
 	}
 
 	engine := g.store.FindGame(gameID)
 
 	if engine == nil {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(unknownGameIDMsg(gameID)))
+		http.Error(w, unknownGameIDMsg(gameID), http.StatusNotFound)
 		return
 	}
 
 	game := engine.Game()
 	if game == nil {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("GameEngine had nil game"))
+		http.Error(w, "GameEngine had nil game", http.StatusNotFound)
 		return
 	}
 
 	bytes, err := json.Marshal(game)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		writeMarshalError(w, err)
 		return
 	}
 
@@ -240,8 +235,7 @@ func (g *GameServer) HandleFindGame(w http.ResponseWriter, r *http.Request) {
 
 	responseBytes, err := json.Marshal(response)
 	if err != nil {
-		log.Println(err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
+		writeMarshalError(w, err)
 		return
 	}
 
@@ -260,22 +254,19 @@ func (g *GameServer) HandleJoinGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if data.GameID == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Missing game ID"))
+		http.Error(w, "Missing game ID", http.StatusBadRequest)
 		return
 	}
 
 	if data.Name == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Missing player name"))
+		http.Error(w, "Missing player name", http.StatusBadRequest)
 		return
 	}
 
 	// This step is repeated in AddPendingPlayer. One of these will have to go eventually.
 	game := g.store.FindInactiveGame(data.GameID)
 	if game == nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(unknownGameIDMsg(data.GameID)))
+		http.Error(w, unknownGameIDMsg(data.GameID), http.StatusBadRequest)
 		return
 	}
 
@@ -283,14 +274,18 @@ func (g *GameServer) HandleJoinGame(w http.ResponseWriter, r *http.Request) {
 
 	err = g.store.AddPendingPlayer(data.GameID, playerID, data.Name)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		log.Println("error adding player to game", err)
+		http.Error(w, "Could not add player to game", http.StatusInternalServerError)
 		return
 	}
 
 	playerInfos := []protocol.PlayerInfo{}
 	ps := game.Players()
 	for _, p := range ps {
-		playerInfos = append(playerInfos, protocol.PlayerInfo{p.ID(), p.Name()})
+		playerInfos = append(playerInfos, protocol.PlayerInfo{
+			PlayerID: p.ID(),
+			Name:     p.Name(),
+		})
 	}
 
 	payload := PendingGameRes{
@@ -303,7 +298,7 @@ func (g *GameServer) HandleJoinGame(w http.ResponseWriter, r *http.Request) {
 
 	bytes, err := json.Marshal(payload)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		writeMarshalError(w, err)
 		return
 	}
 
@@ -317,16 +312,14 @@ func (g *GameServer) HandleWaitingRoom(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	vals, ok := query["gameID"]
 	if !ok || len(vals) != 1 {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("missing game ID"))
+		http.Error(w, "missing game ID", http.StatusBadRequest)
 		return
 	}
 	gameID := vals[0]
 
 	vals, ok = query["playerID"]
 	if !ok || len(vals) != 1 {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("missing user ID"))
+		http.Error(w, "missing player ID", http.StatusBadRequest)
 		return
 	}
 
@@ -335,15 +328,14 @@ func (g *GameServer) HandleWaitingRoom(w http.ResponseWriter, r *http.Request) {
 
 	game := g.store.FindInactiveGame(gameID)
 	if game == nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(unknownGameIDMsg(gameID)))
+		http.Error(w, unknownGameIDMsg(gameID), http.StatusUnauthorized)
 		return
 	}
 
 	tmpl, err := template.ParseFiles(waitingRoomTemplate)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("something went wrong"))
+		log.Println(err)
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
 
@@ -364,41 +356,35 @@ func (g *GameServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 
 	if !ok || len(vals) != 1 {
 		log.Println("missing game ID")
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("missing game ID"))
+		http.Error(w, "missing game ID", http.StatusBadRequest)
 		return
 	}
 	gameID := vals[0]
 
 	vals, ok = query["playerID"]
 	if !ok || len(vals) != 1 {
-		log.Println("missing player ID")
-		w.Write([]byte("missing player ID"))
-		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "missing player ID", http.StatusInternalServerError)
 		return
 	}
 
 	playerID := vals[0]
 	game := g.store.FindInactiveGame(gameID)
 	if game == nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(unknownGameIDMsg(gameID)))
+		http.Error(w, unknownGameIDMsg(gameID), http.StatusBadRequest)
 		return
 	}
 
 	pendingPlayer := g.store.FindPendingPlayer(gameID, playerID)
 	if pendingPlayer == nil {
-		log.Println("missing player ID")
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("unknown player ID"))
+		log.Println("unknown player ID")
+		http.Error(w, "unknown player ID", http.StatusBadRequest)
 		return
 	}
 
 	rawConn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(fmt.Sprintf("could not upgrade to websocket: %v", err)))
+		http.Error(w, fmt.Sprintf("could not upgrade to websocket: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -408,24 +394,25 @@ func (g *GameServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 	err = game.AddPlayer(player)
 	if err != nil {
 		log.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(fmt.Sprintf("could not add player to game: %v", err)))
+		http.Error(w, fmt.Sprintf("could not add player to game: %v", err), http.StatusInternalServerError)
 		return
 	}
 }
 
 func writeParseError(err error, w http.ResponseWriter, r *http.Request) {
+	log.Println(err.Error())
 	if err == io.EOF {
-		log.Println(err.Error())
-		w.Header().Add("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Missing body"))
+		http.Error(w, "Missing body", http.StatusBadRequest)
 		return
 	}
-	if err != nil {
-		log.Println(err.Error())
-		w.Header().Add("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	http.Error(w, "Could not parse data", http.StatusInternalServerError)
+}
+
+func writePathNotFoundError(w http.ResponseWriter, msg string) {
+	http.Error(w, msg, http.StatusNotFound)
+}
+
+func writeMarshalError(w http.ResponseWriter, err error) {
+	log.Println("error marshalling json", err)
+	http.Error(w, "Something went wrong", http.StatusInternalServerError)
 }
