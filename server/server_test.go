@@ -29,22 +29,6 @@ func TestServerPing(t *testing.T) {
 	utils.AssertTrue(t, strings.Contains(strings.ToLower(string(bodyBytes)), "<!doctype html>"))
 }
 
-func TestStatic(t *testing.T) {
-	t.Skip()
-	t.Run("fetches css", func(t *testing.T) {
-		response := httptest.NewRecorder()
-		request, _ := http.NewRequest(http.MethodGet, "/static/index.css", nil)
-
-		server := NewServer(NewBasicStore())
-		server.ServeHTTP(response, request)
-
-		assertStatus(t, response.Code, http.StatusOK)
-
-		bodyBytes, err := ioutil.ReadAll(response.Body)
-		utils.AssertNoError(t, err)
-		utils.AssertTrue(t, strings.Contains(string(bodyBytes), ".form-error"))
-	})
-}
 func TestServerPOSTNewGame(t *testing.T) {
 	t.Run("succeeds and returns expected data", func(t *testing.T) {
 		data := mustMakeJson(t, NewGameReq{"Elton"})
@@ -89,68 +73,6 @@ func TestGETGameWaitingRoom(t *testing.T) {
 		server.ServeHTTP(response, request)
 
 		assertStatus(t, response.Code, http.StatusBadRequest)
-	})
-
-	t.Run("game creator sees a special admin view", func(t *testing.T) {
-		gameID, creatorID := "some-game-id", "i-am-the-creator"
-
-		url := "/waiting-room?gameID=" + gameID + "&playerID=" + creatorID
-
-		response := httptest.NewRecorder()
-		request, _ := http.NewRequest(http.MethodGet, url, nil)
-
-		store := NewBasicStore()
-		game, err := engine.NewGameEngine(engine.GameEngineOpts{
-			GameID:    gameID,
-			CreatorID: creatorID,
-			Game:      game.NewShed(game.ShedOpts{}),
-		})
-		utils.AssertNoError(t, err)
-		utils.AssertNotNil(t, game)
-
-		store.Games[gameID] = game
-		store.PendingPlayers[gameID] = []protocol.PlayerInfo{{PlayerID: creatorID, Name: "Horatio"}}
-
-		server := NewServer(store)
-		server.ServeHTTP(response, request)
-
-		assertStatus(t, response.Code, http.StatusOK)
-		bodyBytes, err := ioutil.ReadAll(response.Body)
-		utils.AssertNoError(t, err)
-		utils.AssertTrue(t, strings.Contains(string(bodyBytes), "<!DOCTYPE html>"))
-		utils.AssertTrue(t, strings.Contains(string(bodyBytes), "</html>"))
-		utils.AssertTrue(t, strings.Contains(string(bodyBytes), "created"))
-	})
-
-	t.Run("game joiners see standard view", func(t *testing.T) {
-		gameID, playerID := "some-game-id", "i-am-some-rando"
-
-		url := "/waiting-room?gameID=" + gameID + "&playerID=" + playerID
-
-		response := httptest.NewRecorder()
-		request, _ := http.NewRequest(http.MethodGet, url, nil)
-
-		store := NewBasicStore()
-		game, err := engine.NewGameEngine(engine.GameEngineOpts{
-			GameID:    gameID,
-			CreatorID: "i-am-the-creator",
-			Game:      game.NewShed(game.ShedOpts{}),
-		})
-		utils.AssertNoError(t, err)
-		utils.AssertNotNil(t, game)
-
-		store.Games[gameID] = game
-		store.PendingPlayers[gameID] = []protocol.PlayerInfo{{PlayerID: playerID, Name: "Horatio"}}
-
-		server := NewServer(store)
-		server.ServeHTTP(response, request)
-
-		assertStatus(t, response.Code, http.StatusOK)
-		bodyBytes, err := ioutil.ReadAll(response.Body)
-		utils.AssertNoError(t, err)
-		utils.AssertTrue(t, strings.Contains(string(bodyBytes), "<!DOCTYPE html>"))
-		utils.AssertTrue(t, strings.Contains(string(bodyBytes), "</html>"))
-		utils.AssertTrue(t, strings.Contains(string(bodyBytes), "Joined"))
 	})
 }
 
