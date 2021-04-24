@@ -197,7 +197,7 @@ func (s *shed) Start(playerInfo []protocol.PlayerInfo) error {
 
 	rand.Seed(time.Now().UnixNano())
 	s.CurrentTurnIdx = rand.Intn(len(s.PlayerInfo) - 1)
-	s.CurrentPlayer = s.PlayerInfo[s.CurrentTurnIdx]
+	s.turn()
 
 	return nil
 }
