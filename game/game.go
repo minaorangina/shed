@@ -86,9 +86,9 @@ type shed struct {
 	PlayerInfo      []protocol.PlayerInfo
 	ActivePlayers   []protocol.PlayerInfo
 	FinishedPlayers []protocol.PlayerInfo
-	CurrentPlayer   protocol.PlayerInfo
-	NextPlayer      protocol.PlayerInfo
 	CurrentTurnIdx  int
+	CurrentPlayer   protocol.PlayerInfo
+	NextPlayer      func() protocol.PlayerInfo
 	Stage           Stage
 	ExpectedCommand protocol.Cmd
 	gameOver        bool
@@ -160,6 +160,8 @@ func NewShed(opts ShedOpts) *shed {
 		s.ActivePlayers = stillPlaying
 	}
 
+	s.NextPlayer = s.nextPlayer
+
 	return s
 }
 
@@ -197,7 +199,7 @@ func (s *shed) Start(playerInfo []protocol.PlayerInfo) error {
 
 	rand.Seed(time.Now().UnixNano())
 	s.CurrentTurnIdx = rand.Intn(len(s.PlayerInfo) - 1)
-	s.turn()
+	s.CurrentPlayer = s.ActivePlayers[s.CurrentTurnIdx]
 
 	return nil
 }
@@ -585,12 +587,17 @@ func (s *shed) onePlayerLeft() bool {
 	return len(s.ActivePlayers) == 1
 }
 
-func (s *shed) turn() {
-	s.CurrentTurnIdx = (s.CurrentTurnIdx + 1) % len(s.ActivePlayers)
-	nextTurnIdx := (s.CurrentTurnIdx + 2) % len(s.ActivePlayers)
+// nextPlayer returns the player who is next in line behind the current player.
+func (s *shed) nextPlayer() protocol.PlayerInfo {
+	idx := (s.CurrentTurnIdx + 1) % len(s.ActivePlayers)
+	return s.ActivePlayers[idx]
+}
 
-	s.CurrentPlayer = s.ActivePlayers[s.CurrentTurnIdx]
-	s.NextPlayer = s.ActivePlayers[nextTurnIdx]
+// turn changes the CurrentPlayer to the next Player in the queue.
+func (s *shed) turn() {
+	currTurnIdx := (s.CurrentTurnIdx + 1) % len(s.ActivePlayers)
+	s.CurrentTurnIdx = currTurnIdx
+	s.CurrentPlayer = s.ActivePlayers[currTurnIdx]
 }
 
 func (s *shed) moveToFinishedPlayers() {

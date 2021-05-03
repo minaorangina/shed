@@ -24,7 +24,7 @@ func TestBuildBaseMessage(t *testing.T) {
 
 	msgs, err := shed.Next()
 	require.NoError(t, err)
-	require.NotEmpty(t, msgs)
+	require.Equal(t, 2, len(msgs))
 
 	for _, m := range msgs {
 		require.NotEmpty(t, m.PlayerID)
@@ -36,5 +36,7 @@ func TestBuildBaseMessage(t *testing.T) {
 		require.NotEmpty(t, m.CurrentTurn.PlayerID)
 		require.NotEmpty(t, m.NextTurn.Name)
 		require.NotEmpty(t, m.NextTurn.PlayerID)
+
+		require.NotEqual(t, m.NextTurn, m.CurrentTurn)
 	}
 }
