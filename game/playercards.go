@@ -2,6 +2,43 @@ package game
 
 import "github.com/minaorangina/shed/deck"
 
+type PlayerCards struct {
+	Hand, Seen, Unseen []deck.Card
+	UnseenVisibility   map[deck.Card]bool
+}
+
+func NewPlayerCards(
+	hand, seen, unseen []deck.Card,
+	unseenVisibility map[deck.Card]bool,
+) *PlayerCards {
+	if hand == nil {
+		hand = []deck.Card{}
+	}
+	if seen == nil {
+		seen = []deck.Card{}
+	}
+	if unseen == nil {
+		unseen = []deck.Card{}
+	}
+	if unseenVisibility == nil {
+		unseenVisibility = map[deck.Card]bool{}
+		for _, c := range unseen {
+			unseenVisibility[c] = false
+		}
+	}
+
+	pc := &PlayerCards{
+		Hand:             hand,
+		Seen:             seen,
+		Unseen:           unseen,
+		UnseenVisibility: unseenVisibility,
+	}
+
+	// enforce validity
+
+	return pc
+}
+
 func playerCardsValid(cards *PlayerCards) bool {
 	if cards == nil {
 		return false

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"reflect"
 	"sort"
 	"time"
 
@@ -22,54 +23,13 @@ var (
 	ErrInvalidMove            = errors.New("invalid move")
 	ErrPlayOneCard            = errors.New("must play one card only")
 	ErrInvalidGameState       = errors.New("invalid game state")
-)
-
-// Stage represents the main stages in the game
-type Stage int
-
-const (
-	preGame Stage = iota
-	clearDeck
-	clearCards
+	ErrGameNotStarted         = errors.New("game has not started")
 )
 
 const (
 	reorgSeenOffset = 3
 	numCardsInGroup = 3
 )
-
-type PlayerCards struct {
-	Hand, Seen, Unseen []deck.Card
-	UnseenVisibility   map[deck.Card]bool
-}
-
-func NewPlayerCards(
-	hand, seen, unseen []deck.Card,
-	unseenVisibility map[deck.Card]bool,
-) *PlayerCards {
-	if hand == nil {
-		hand = []deck.Card{}
-	}
-	if seen == nil {
-		seen = []deck.Card{}
-	}
-	if unseen == nil {
-		unseen = []deck.Card{}
-	}
-	if unseenVisibility == nil {
-		unseenVisibility = map[deck.Card]bool{}
-		for _, c := range unseen {
-			unseenVisibility[c] = false
-		}
-	}
-
-	return &PlayerCards{
-		Hand:             hand,
-		Seen:             seen,
-		Unseen:           unseen,
-		UnseenVisibility: unseenVisibility,
-	}
-}
 
 type Game interface {
 	Start(playerInfo []protocol.PlayerInfo) error
@@ -88,8 +48,9 @@ type shed struct {
 	FinishedPlayers []protocol.PlayerInfo
 	CurrentTurnIdx  int
 	CurrentPlayer   protocol.PlayerInfo
-	NextPlayer      func() protocol.PlayerInfo
+	NextPlayer      func() protocol.PlayerInfo // not serialisable
 	Stage           Stage
+	gamePlay        GamePlayState
 	ExpectedCommand protocol.Cmd
 	gameOver        bool
 	unseenDecision  *protocol.InboundMessage
@@ -108,6 +69,20 @@ type ShedOpts struct {
 
 // NewShed constructs a new game of Shed
 func NewShed(opts ShedOpts) *shed {
+	if reflect.ValueOf(opts).IsZero() {
+		// new game flow
+		s := &shed{
+			Deck:            deck.New(),
+			Pile:            []deck.Card{},
+			PlayerCards:     map[string]*PlayerCards{},
+			PlayerInfo:      []protocol.PlayerInfo{},
+			ActivePlayers:   []protocol.PlayerInfo{},
+			FinishedPlayers: []protocol.PlayerInfo{},
+		}
+		s.NextPlayer = s.nextPlayer
+		return s
+	}
+
 	s := &shed{
 		Deck:            opts.Deck,
 		Pile:            opts.Pile,
@@ -119,6 +94,7 @@ func NewShed(opts ShedOpts) *shed {
 		ExpectedCommand: opts.ExpectedCommand,
 	}
 
+	// if existing game, check it's valid, set to gameStarted
 	if len(s.PlayerInfo) > 0 {
 		for i, info := range s.PlayerInfo {
 			if info.PlayerID == s.CurrentPlayer.PlayerID {
@@ -170,7 +146,7 @@ func (s *shed) AwaitingResponse() protocol.Cmd {
 }
 
 func (s *shed) GameOver() bool {
-	return s.gameOver
+	return s.gamePlay == gameOver
 }
 
 func (s *shed) Start(playerInfo []protocol.PlayerInfo) error {
@@ -200,6 +176,8 @@ func (s *shed) Start(playerInfo []protocol.PlayerInfo) error {
 	rand.Seed(time.Now().UnixNano())
 	s.CurrentTurnIdx = rand.Intn(len(s.PlayerInfo) - 1)
 	s.CurrentPlayer = s.ActivePlayers[s.CurrentTurnIdx]
+
+	s.gamePlay = gameStarted
 
 	return nil
 }
@@ -285,7 +263,10 @@ func (s *shed) ReceiveResponse(inboundMsgs []protocol.InboundMessage) ([]protoco
 	if s.ExpectedCommand == protocol.Null {
 		return nil, ErrGameUnexpectedResponse
 	}
-	if s.gameOver {
+	if s.gamePlay == gameNotStarted {
+		return nil, ErrGameNotStarted
+	}
+	if s.gamePlay == gameOver {
 		return s.buildGameOverMessages(), nil
 	}
 
@@ -407,7 +388,7 @@ func (s *shed) ReceiveResponse(inboundMsgs []protocol.InboundMessage) ([]protoco
 			s.moveToFinishedPlayers() // handles the next turn
 
 			if s.onePlayerLeft() {
-				s.gameOver = true
+				s.gamePlay = gameOver
 				// move the remaining player
 				s.moveToFinishedPlayers()
 				return s.buildGameOverMessages(), nil

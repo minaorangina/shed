@@ -700,6 +700,8 @@ func TestGameStageOne(t *testing.T) {
 	})
 }
 
+// stage 1 to 2
+
 func TestGameStageTwo(t *testing.T) {
 	t.Run("stage 2: hand gets smaller", func(t *testing.T) {
 
@@ -1274,7 +1276,10 @@ func TestGameStageTwo(t *testing.T) {
 		utils.AssertTrue(t, game.CurrentPlayer.PlayerID != previousPlayerID)
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.Null)
 	})
+}
 
+// this may not belong here
+func TestGameStageTwoToGameOver(t *testing.T) {
 	t.Run("stage 2: game ends when n-1 players have finished (Unseen card)", func(t *testing.T) {
 
 		// Given a game in stage 2

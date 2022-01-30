@@ -6,13 +6,22 @@ type Stage int
 const (
 	preGame Stage = iota
 	clearDeck
-	clearCards
+	clearCards // should I add a 'finished' stage?
 )
 
 type GamePlayState int
 
 const (
-	notStarted GamePlayState = iota
-	started
-	finished
+	gameNotStarted GamePlayState = iota
+	gameStarted
+	gameOver
+)
+
+type PlayerCardState int
+
+const (
+	playHand PlayerCardState = iota
+	playSeen
+	playUnseen
+	empty
 )
