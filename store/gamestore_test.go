@@ -123,7 +123,7 @@ func TestInMemoryGameStore(t *testing.T) {
 		pendingID := "a-pending-game"
 		str := &InMemoryGameStore{
 			Games:          NewInactiveGame(pendingID, "creator-id", engine.SomePlayers()),
-			PendingPlayers: map[string][]protocol.PlayerInfo{},
+			PendingPlayers: map[string][]protocol.Player{},
 		}
 
 		game := str.FindInactiveGame(pendingID)
@@ -161,14 +161,14 @@ func NewInactiveGame(gameID, playerID string, ps engine.Players) map[string]engi
 // NewTestGameStore is a convenience function for creating InMemoryGameStore in tests
 func NewTestGameStore(
 	games map[string]engine.GameEngine,
-	pendingPlayers map[string][]protocol.PlayerInfo,
+	pendingPlayers map[string][]protocol.Player,
 ) *InMemoryGameStore {
 	if games == nil {
 		games = map[string]engine.GameEngine{}
 	}
 
 	if pendingPlayers == nil {
-		pendingPlayers = map[string][]protocol.PlayerInfo{}
+		pendingPlayers = map[string][]protocol.Player{}
 	}
 
 	return &InMemoryGameStore{

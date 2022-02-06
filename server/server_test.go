@@ -232,7 +232,7 @@ func TestWS(t *testing.T) {
 		p := engine.APlayer(playerID, name)
 		ps := engine.NewPlayers(p)
 
-		server, _ := newTestServerWithInactiveGame(t, ps, []protocol.PlayerInfo{
+		server, _ := newTestServerWithInactiveGame(t, ps, []protocol.Player{
 			{
 				PlayerID: playerID,
 				Name:     name,

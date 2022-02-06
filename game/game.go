@@ -32,7 +32,7 @@ const (
 )
 
 type Game interface {
-	Start(playerInfo []protocol.PlayerInfo) error
+	Start(playerInfo []protocol.Player) error
 	Next() ([]protocol.OutboundMessage, error)
 	ReceiveResponse([]protocol.InboundMessage) ([]protocol.OutboundMessage, error)
 	AwaitingResponse() protocol.Cmd
@@ -43,12 +43,12 @@ type shed struct {
 	Deck            deck.Deck
 	Pile            []deck.Card
 	PlayerCards     map[string]*PlayerCards
-	PlayerInfo      []protocol.PlayerInfo
-	ActivePlayers   []protocol.PlayerInfo
-	FinishedPlayers []protocol.PlayerInfo
+	PlayerInfo      []protocol.Player
+	ActivePlayers   []protocol.Player
+	FinishedPlayers []protocol.Player
 	CurrentTurnIdx  int
-	CurrentPlayer   protocol.PlayerInfo
-	NextPlayer      func() protocol.PlayerInfo // not serialisable
+	CurrentPlayer   protocol.Player
+	NextPlayer      func() protocol.Player // not serialisable
 	Stage           Stage
 	gamePlay        GamePlayState
 	ExpectedCommand protocol.Cmd
@@ -60,9 +60,9 @@ type ShedOpts struct {
 	Deck            deck.Deck
 	Pile            []deck.Card
 	PlayerCards     map[string]*PlayerCards
-	PlayerInfo      []protocol.PlayerInfo
-	FinishedPlayers []protocol.PlayerInfo
-	CurrentPlayer   protocol.PlayerInfo
+	PlayerInfo      []protocol.Player
+	FinishedPlayers []protocol.Player
+	CurrentPlayer   protocol.Player
 	Stage           Stage
 	ExpectedCommand protocol.Cmd
 }
@@ -75,9 +75,9 @@ func NewShed(opts ShedOpts) *shed {
 			Deck:            deck.New(),
 			Pile:            []deck.Card{},
 			PlayerCards:     map[string]*PlayerCards{},
-			PlayerInfo:      []protocol.PlayerInfo{},
-			ActivePlayers:   []protocol.PlayerInfo{},
-			FinishedPlayers: []protocol.PlayerInfo{},
+			PlayerInfo:      []protocol.Player{},
+			ActivePlayers:   []protocol.Player{},
+			FinishedPlayers: []protocol.Player{},
 		}
 		s.NextPlayer = s.nextPlayer
 		return s
@@ -95,6 +95,8 @@ func NewShed(opts ShedOpts) *shed {
 	}
 
 	// if existing game, check it's valid, set to gameStarted
+
+	// who's turn is it
 	if len(s.PlayerInfo) > 0 {
 		for i, info := range s.PlayerInfo {
 			if info.PlayerID == s.CurrentPlayer.PlayerID {
@@ -116,15 +118,15 @@ func NewShed(opts ShedOpts) *shed {
 	}
 	if s.PlayerInfo == nil {
 		// new game
-		s.PlayerInfo = []protocol.PlayerInfo{}
-		s.ActivePlayers = []protocol.PlayerInfo{}
-		s.FinishedPlayers = []protocol.PlayerInfo{}
+		s.PlayerInfo = []protocol.Player{}
+		s.ActivePlayers = []protocol.Player{}
+		s.FinishedPlayers = []protocol.Player{}
 	} else if s.FinishedPlayers == nil {
 		s.PlayerInfo = opts.PlayerInfo
 		s.ActivePlayers = opts.PlayerInfo
 	} else {
 		// work out who is still playing the game
-		stillPlaying := []protocol.PlayerInfo{}
+		stillPlaying := []protocol.Player{}
 		for _, pi := range opts.PlayerInfo {
 			for _, fp := range opts.FinishedPlayers {
 				if fp.PlayerID != pi.PlayerID {
@@ -149,9 +151,9 @@ func (s *shed) GameOver() bool {
 	return s.gamePlay == gameOver
 }
 
-func (s *shed) Start(playerInfo []protocol.PlayerInfo) error {
+func (s *shed) Start(playerInfo []protocol.Player) error {
 	if s == nil {
-		return ErrNilGame
+		return ErrNilGame // shouldn't even be possible
 	}
 	if len(playerInfo) < minPlayers {
 		return ErrTooFewPlayers
@@ -569,7 +571,7 @@ func (s *shed) onePlayerLeft() bool {
 }
 
 // nextPlayer returns the player who is next in line behind the current player.
-func (s *shed) nextPlayer() protocol.PlayerInfo {
+func (s *shed) nextPlayer() protocol.Player {
 	idx := (s.CurrentTurnIdx + 1) % len(s.ActivePlayers)
 	return s.ActivePlayers[idx]
 }
@@ -584,7 +586,7 @@ func (s *shed) turn() {
 func (s *shed) moveToFinishedPlayers() {
 	if len(s.ActivePlayers) == 1 {
 		s.FinishedPlayers = append(s.FinishedPlayers, s.ActivePlayers[0])
-		s.ActivePlayers = []protocol.PlayerInfo{}
+		s.ActivePlayers = []protocol.Player{}
 		return
 	}
 

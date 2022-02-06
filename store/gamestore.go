@@ -21,7 +21,7 @@ type GameStore interface {
 	FindGame(gameID string) engine.GameEngine
 	FindActiveGame(gameID string) engine.GameEngine
 	FindInactiveGame(gameID string) engine.GameEngine
-	FindPendingPlayer(gameID, playerID string) *protocol.PlayerInfo
+	FindPendingPlayer(gameID, playerID string) *protocol.Player
 	AddInactiveGame(engine engine.GameEngine) error
 	AddPendingPlayer(gameID, playerID, name string) error
 	AddPlayerToGame(gameID string, player engine.Player) error
@@ -30,14 +30,14 @@ type GameStore interface {
 // InMemoryGameStore maps game id to game engine
 type InMemoryGameStore struct {
 	Games          map[string]engine.GameEngine
-	PendingPlayers map[string][]protocol.PlayerInfo
+	PendingPlayers map[string][]protocol.Player
 }
 
 // NewInMemoryGameStore constructs an InMemoryGameStore
 func NewInMemoryGameStore() *InMemoryGameStore {
 	return &InMemoryGameStore{
 		Games:          map[string]engine.GameEngine{},
-		PendingPlayers: map[string][]protocol.PlayerInfo{},
+		PendingPlayers: map[string][]protocol.Player{},
 	}
 }
 
@@ -74,7 +74,7 @@ func (s *InMemoryGameStore) FindInactiveGame(ID string) engine.GameEngine {
 	return game
 }
 
-func (s *InMemoryGameStore) FindPendingPlayer(gameID, playerID string) *protocol.PlayerInfo {
+func (s *InMemoryGameStore) FindPendingPlayer(gameID, playerID string) *protocol.Player {
 	pendingPlayers, ok := s.PendingPlayers[gameID]
 	if !ok {
 		return nil
@@ -112,7 +112,7 @@ func (s *InMemoryGameStore) AddPendingPlayer(gameID, playerID, name string) erro
 	}
 
 	// mutex required
-	s.PendingPlayers[gameID] = append(s.PendingPlayers[gameID], protocol.PlayerInfo{playerID, name})
+	s.PendingPlayers[gameID] = append(s.PendingPlayers[gameID], protocol.Player{playerID, name})
 
 	return nil
 }

@@ -99,7 +99,7 @@ func containsCard(s []deck.Card, targets ...deck.Card) bool {
 	return false
 }
 
-func sliceContainsPlayerID(haystack []protocol.PlayerInfo, needle string) bool {
+func sliceContainsPlayerID(haystack []protocol.Player, needle string) bool {
 	var found bool
 	for _, h := range haystack {
 		if needle == h.PlayerID {

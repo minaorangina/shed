@@ -87,7 +87,7 @@ func TestCreateAndJoinNewGame(t *testing.T) {
 	err = json.Unmarshal(bodyBytes, &joinPayload)
 	utils.AssertNoError(t, err)
 	utils.AssertNotEmptyString(t, joinPayload.PlayerID)
-	utils.AssertDeepEqual(t, joinPayload.Players, []protocol.PlayerInfo{{createPayload.PlayerID, createPayload.Name}})
+	utils.AssertDeepEqual(t, joinPayload.Players, []protocol.Player{{createPayload.PlayerID, createPayload.Name}})
 	utils.AssertEqual(t, joinPayload.Admin, false)
 
 	// and a pending player is created
@@ -125,7 +125,7 @@ func TestStartGame(t *testing.T) {
 	// Given an inactive game and players with ws connections
 	creatorID, player2ID := "hersha-1", "penny-1"
 	creatorName, player2Name := "Hersha", "Penelope"
-	server, gameID := newTestServerWithInactiveGame(t, nil, []protocol.PlayerInfo{
+	server, gameID := newTestServerWithInactiveGame(t, nil, []protocol.Player{
 		{
 			PlayerID: creatorID,
 			Name:     creatorName,
@@ -191,7 +191,7 @@ func TestStartGame(t *testing.T) {
 
 func TestServerNotEnoughPlayers(t *testing.T) {
 	// Given a server with a game and one player with an active ws connection
-	server, gameID := newTestServerWithInactiveGame(t, nil, []protocol.PlayerInfo{
+	server, gameID := newTestServerWithInactiveGame(t, nil, []protocol.Player{
 		{
 			PlayerID: "pending-player-id",
 			Name:     "Penelope",
@@ -230,7 +230,7 @@ func TestServerGameStart(t *testing.T) {
 	// Given a server with an inactive game
 	creatorID := "player-1"
 	otherPlayerID := "player-2"
-	server, gameID := newTestServerWithInactiveGame(t, nil, []protocol.PlayerInfo{
+	server, gameID := newTestServerWithInactiveGame(t, nil, []protocol.Player{
 		{
 			PlayerID: creatorID,
 			Name:     "Penelope",

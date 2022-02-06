@@ -4,7 +4,7 @@ import (
 	"github.com/minaorangina/shed/deck"
 )
 
-type PlayerInfo struct {
+type Player struct {
 	PlayerID string `json:"playerID"`
 	Name     string `json:"name"`
 }
@@ -18,23 +18,23 @@ type InboundMessage struct {
 
 // OutboundMessage is a message from GameEngine to Player
 type OutboundMessage struct {
-	PlayerID        string       `json:"playerID"`
-	Command         Cmd          `json:"command"`
-	Name            string       `json:"name"` // pointless?
-	Message         string       `json:"message"`
-	Hand            []deck.Card  `json:"hand"`
-	Seen            []deck.Card  `json:"seen"`
-	Unseen          []deck.Card  `json:"unseen"`
-	Pile            []deck.Card  `json:"pile"`
-	DeckCount       int          `json:"deckCount"`
-	ShouldRespond   bool         `json:"shouldRespond"`
-	Joiner          PlayerInfo   `json:"joiner,omitempty"`
-	CurrentTurn     PlayerInfo   `json:"currentTurn,omitempty"`
-	NextTurn        PlayerInfo   `json:"nextTurn,omitempty"`
-	Moves           []int        `json:"moves,omitempty"`
-	Opponents       []Opponent   `json:"opponents,omitempty"`
-	FinishedPlayers []PlayerInfo `json:"finishedPlayers,omitempty"`
-	Error           string       `json:"error,omitempty"`
+	PlayerID        string      `json:"playerID"`
+	Command         Cmd         `json:"command"`
+	Name            string      `json:"name"` // pointless?
+	Message         string      `json:"message"`
+	Hand            []deck.Card `json:"hand"`
+	Seen            []deck.Card `json:"seen"`
+	Unseen          []deck.Card `json:"unseen"`
+	Pile            []deck.Card `json:"pile"`
+	DeckCount       int         `json:"deckCount"`
+	ShouldRespond   bool        `json:"shouldRespond"`
+	Joiner          Player      `json:"joiner,omitempty"`
+	CurrentTurn     Player      `json:"currentTurn,omitempty"`
+	NextTurn        Player      `json:"nextTurn,omitempty"`
+	Moves           []int       `json:"moves,omitempty"`
+	Opponents       []Opponent  `json:"opponents,omitempty"`
+	FinishedPlayers []Player    `json:"finishedPlayers,omitempty"`
+	Error           string      `json:"error,omitempty"`
 }
 
 // Opponent is a representation of an opponent player

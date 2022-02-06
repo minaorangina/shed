@@ -21,7 +21,7 @@ func (g *SpyGame) AwaitingResponse() protocol.Cmd {
 	return protocol.Null
 }
 
-func (g *SpyGame) Start(info []protocol.PlayerInfo) error {
+func (g *SpyGame) Start(info []protocol.Player) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.startCalled = true
@@ -59,7 +59,7 @@ func playersToNames(players Players) []string {
 	return names
 }
 
-func playerInfoToPlayers(playerInfo []protocol.PlayerInfo) Players {
+func playerInfoToPlayers(playerInfo []protocol.Player) Players {
 	ps := []Player{}
 	for _, info := range playerInfo {
 		ps = append(ps, NewTestPlayer(info.PlayerID, info.Name, os.Stdin, os.Stdout))

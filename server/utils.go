@@ -70,8 +70,8 @@ func (s fakeStore) FindInactiveGame(ID string) engine.GameEngine {
 	return game
 }
 
-func (s fakeStore) FindPendingPlayer(gameID, playerID string) *protocol.PlayerInfo {
-	return &protocol.PlayerInfo{}
+func (s fakeStore) FindPendingPlayer(gameID, playerID string) *protocol.Player {
+	return &protocol.Player{}
 }
 
 func (s fakeStore) AddInactiveGame(game engine.GameEngine) error {
@@ -97,7 +97,7 @@ func (s fakeStore) FindGame(gameID string) engine.GameEngine {
 func NewBasicStore() *store.InMemoryGameStore {
 	return &store.InMemoryGameStore{
 		Games:          map[string]engine.GameEngine{},
-		PendingPlayers: map[string][]protocol.PlayerInfo{},
+		PendingPlayers: map[string][]protocol.Player{},
 	}
 }
 
@@ -146,7 +146,7 @@ func newServerWithGame(game engine.GameEngine) http.Handler {
 		Games: map[string]engine.GameEngine{
 			id: game,
 		},
-		PendingPlayers: map[string][]protocol.PlayerInfo{},
+		PendingPlayers: map[string][]protocol.Player{},
 	}
 
 	return NewServer(store)
@@ -172,8 +172,8 @@ func newServerWithInactiveGame(t *testing.T, ps engine.Players) (*GameServer, st
 		Games: map[string]engine.GameEngine{
 			gameID: game,
 		},
-		PendingPlayers: map[string][]protocol.PlayerInfo{
-			gameID: []protocol.PlayerInfo{
+		PendingPlayers: map[string][]protocol.Player{
+			gameID: []protocol.Player{
 				{
 					PlayerID: "hersha-1",
 					Name:     "Hersha",
@@ -193,10 +193,10 @@ func newServerWithInactiveGame(t *testing.T, ps engine.Players) (*GameServer, st
 
 // newTestServerWithInactiveGame returns an httptest.Server and
 // the game id of an inactive game
-func newTestServerWithInactiveGame(t *testing.T, ps engine.Players, info []protocol.PlayerInfo) (*httptest.Server, string) {
+func newTestServerWithInactiveGame(t *testing.T, ps engine.Players, info []protocol.Player) (*httptest.Server, string) {
 	store := &store.InMemoryGameStore{
 		Games:          map[string]engine.GameEngine{},
-		PendingPlayers: map[string][]protocol.PlayerInfo{},
+		PendingPlayers: map[string][]protocol.Player{},
 	}
 
 	gameID := "some-pending-id"

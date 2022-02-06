@@ -14,26 +14,26 @@ import (
 )
 
 var (
-	twoPlayers   = func() []protocol.PlayerInfo { return []protocol.PlayerInfo{{PlayerID: "p1"}, {PlayerID: "p2"}} }
-	threePlayers = func() []protocol.PlayerInfo {
-		return []protocol.PlayerInfo{{PlayerID: "p1"}, {PlayerID: "p2"}, {PlayerID: "p3"}}
+	twoPlayers   = func() []protocol.Player { return []protocol.Player{{PlayerID: "p1"}, {PlayerID: "p2"}} }
+	threePlayers = func() []protocol.Player {
+		return []protocol.Player{{PlayerID: "p1"}, {PlayerID: "p2"}, {PlayerID: "p3"}}
 	}
-	fourPlayers = func() []protocol.PlayerInfo {
-		return []protocol.PlayerInfo{{PlayerID: "p1"}, {PlayerID: "p2"}, {PlayerID: "p3"}, {PlayerID: "p4"}}
+	fourPlayers = func() []protocol.Player {
+		return []protocol.Player{{PlayerID: "p1"}, {PlayerID: "p2"}, {PlayerID: "p3"}, {PlayerID: "p4"}}
 	}
 )
 
 func TestGameTurn(t *testing.T) {
+	rand.Seed(time.Now().UnixNano())
 	gameWithRandomPlayers := func() (int, *shed) {
-		rand.Seed(time.Now().UnixNano())
 		randomNumberOfPlayers := rand.Intn(2) + 2
 
 		players := map[string]*PlayerCards{}
-		playerInfo := []protocol.PlayerInfo{}
+		playerInfo := []protocol.Player{}
 
 		for i := 0; i < randomNumberOfPlayers; i++ {
 			id := fmt.Sprintf("player-%d", i)
-			playerInfo = append(playerInfo, protocol.PlayerInfo{PlayerID: id})
+			playerInfo = append(playerInfo, protocol.Player{PlayerID: id})
 			players[id] = &PlayerCards{}
 		}
 

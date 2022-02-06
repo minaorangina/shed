@@ -10,17 +10,7 @@ import (
 	"github.com/minaorangina/shed/protocol"
 )
 
-var (
-	ErrNilGame                = errors.New("game is nil")
-	ErrTooFewPlayers          = errors.New("minimum of 2 players required")
-	ErrTooManyPlayers         = errors.New("maximum of 4 players allowed")
-	ErrNoPlayers              = errors.New("game has no players")
-	ErrGameUnexpectedResponse = errors.New("game received unexpected response")
-	ErrGameAwaitingResponse   = errors.New("game is awaiting a response")
-	ErrInvalidMove            = errors.New("invalid move")
-	ErrPlayOneCard            = errors.New("must play one card only")
-	ErrInvalidGameState       = errors.New("invalid game state")
-)
+var ErrNilGame = errors.New("game is nil")
 
 // PlayState represents the state of the current game
 // idle -> no game play (pre game and post game)

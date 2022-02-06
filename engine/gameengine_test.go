@@ -150,12 +150,12 @@ func TestGameEngineStart(t *testing.T) {
 			{
 				"too few players",
 				namesToPlayers([]string{"Grace"}),
-				ErrTooFewPlayers,
+				game.ErrTooFewPlayers,
 			},
 			{
 				"too many players",
 				namesToPlayers([]string{"Ada", "Katherine", "Grace", "Hedy", "Marlyn"}),
-				ErrTooManyPlayers,
+				game.ErrTooManyPlayers,
 			},
 			{
 				"just right",

@@ -9,7 +9,7 @@ import (
 
 func TestBuildBaseMessage(t *testing.T) {
 	shed := NewShed(ShedOpts{})
-	players := []protocol.PlayerInfo{
+	players := []protocol.Player{
 		{
 			PlayerID: "1",
 			Name:     "Helga",

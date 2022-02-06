@@ -43,8 +43,8 @@ func NewTestPlayer(id, name string, in io.Reader, out io.Writer) *TestPlayer {
 	}
 }
 
-func (tp *TestPlayer) Info() protocol.PlayerInfo {
-	return protocol.PlayerInfo{
+func (tp *TestPlayer) Info() protocol.Player {
+	return protocol.Player{
 		PlayerID: tp.id,
 		Name:     tp.name,
 	}
