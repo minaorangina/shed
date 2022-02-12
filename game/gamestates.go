@@ -25,3 +25,16 @@ const (
 	playUnseen
 	empty
 )
+
+func validateStateMachine(s *shed) bool {
+	// stages to validate
+	// pre game
+	// clear deck
+	// - all players have three cards or more
+	// - deck has at least one card
+	// - no finished players
+	// - expected commands: playhand, replenishhand, endofturn, skipturn, burn etc
+	// clear cards
+	// end game?
+	return false
+}

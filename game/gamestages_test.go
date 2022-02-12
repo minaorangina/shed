@@ -206,7 +206,7 @@ func TestGameStageOne(t *testing.T) {
 			Stage:         clearDeck,
 			Deck:          someDeck(4),
 			Pile:          pile,
-			PlayerInfo:    twoPlayers(),
+			Player:        twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -294,7 +294,7 @@ func TestGameStageOne(t *testing.T) {
 			Stage:         clearDeck,
 			Deck:          someDeck(4),
 			Pile:          pile,
-			PlayerInfo:    twoPlayers(),
+			Player:        twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -378,7 +378,7 @@ func TestGameStageOne(t *testing.T) {
 			Stage:         clearDeck,
 			Deck:          someDeck(4),
 			Pile:          pile,
-			PlayerInfo:    twoPlayers(),
+			Player:        twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -443,7 +443,7 @@ func TestGameStageOne(t *testing.T) {
 			Stage:         clearDeck,
 			Deck:          someDeck(4),
 			Pile:          pile,
-			PlayerInfo:    twoPlayers(),
+			Player:        twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -513,7 +513,7 @@ func TestGameStageOne(t *testing.T) {
 			Stage:         clearDeck,
 			Deck:          someDeck(4),
 			Pile:          []deck.Card{highValueCard},
-			PlayerInfo:    twoPlayers(),
+			Player:        twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": {Hand: deck.Deck(lowValueCards)},
@@ -585,7 +585,7 @@ func TestGameStageOne(t *testing.T) {
 			Stage:         clearDeck,
 			Deck:          someDeck(1),
 			Pile:          []deck.Card{lowValueCard},
-			PlayerInfo:    twoPlayers(),
+			Player:        twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -663,7 +663,7 @@ func TestGameStageOne(t *testing.T) {
 			Stage:         clearDeck,
 			Deck:          someDeck(1),
 			Pile:          []deck.Card{lowValueCard},
-			PlayerInfo:    twoPlayers(),
+			Player:        twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -725,7 +725,7 @@ func TestGameStageTwo(t *testing.T) {
 			Stage:         clearCards,
 			Deck:          deck.Deck{},
 			Pile:          pile,
-			PlayerInfo:    twoPlayers(),
+			Player:        twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -799,7 +799,7 @@ func TestGameStageTwo(t *testing.T) {
 			Stage:         clearCards,
 			Deck:          deck.Deck{},
 			Pile:          pile,
-			PlayerInfo:    twoPlayers(),
+			Player:        twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -893,7 +893,7 @@ func TestGameStageTwo(t *testing.T) {
 			Stage:         clearCards,
 			Deck:          deck.Deck{},
 			Pile:          pile,
-			PlayerInfo:    twoPlayers(),
+			Player:        twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -971,7 +971,7 @@ func TestGameStageTwo(t *testing.T) {
 			Stage:         clearCards,
 			Deck:          deck.Deck{},
 			Pile:          pile,
-			PlayerInfo:    twoPlayers(),
+			Player:        twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -1066,7 +1066,7 @@ func TestGameStageTwo(t *testing.T) {
 			Stage:         clearCards,
 			Deck:          deck.Deck{},
 			Pile:          pile,
-			PlayerInfo:    twoPlayers(),
+			Player:        twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -1155,7 +1155,7 @@ func TestGameStageTwo(t *testing.T) {
 			Stage:         clearCards,
 			Deck:          deck.Deck{},
 			Pile:          pile,
-			PlayerInfo:    threePlayers(),
+			Player:        threePlayers(),
 			CurrentPlayer: threePlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -1230,7 +1230,7 @@ func TestGameStageTwo(t *testing.T) {
 			Stage:         clearCards,
 			Deck:          deck.Deck{},
 			Pile:          pile,
-			PlayerInfo:    threePlayers(),
+			Player:        threePlayers(),
 			CurrentPlayer: threePlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -1294,7 +1294,7 @@ func TestGameStageTwoToGameOver(t *testing.T) {
 			Stage:         clearCards,
 			Deck:          deck.Deck{},
 			Pile:          pile,
-			PlayerInfo:    twoPlayers(),
+			Player:        twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -1365,7 +1365,7 @@ func TestGameStageTwoToGameOver(t *testing.T) {
 			Stage:         clearCards,
 			Deck:          deck.Deck{},
 			Pile:          pile,
-			PlayerInfo:    twoPlayers(),
+			Player:        twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,

@@ -40,27 +40,27 @@ type Game interface {
 }
 
 type shed struct {
-	Deck            deck.Deck
-	Pile            []deck.Card
-	PlayerCards     map[string]*PlayerCards
-	PlayerInfo      []protocol.Player
-	ActivePlayers   []protocol.Player
-	FinishedPlayers []protocol.Player
-	CurrentTurnIdx  int
-	CurrentPlayer   protocol.Player
-	NextPlayer      func() protocol.Player // not serialisable
-	Stage           Stage
-	gamePlay        GamePlayState
-	ExpectedCommand protocol.Cmd
-	gameOver        bool
-	unseenDecision  *protocol.InboundMessage
+	Deck              deck.Deck
+	Pile              []deck.Card
+	PlayerCards       map[string]*PlayerCards
+	PlayerInfo        []protocol.Player
+	ActivePlayers     []protocol.Player
+	FinishedPlayers   []protocol.Player
+	CurrentTurnIdx    int
+	CurrentPlayer     protocol.Player
+	playerRepeatsTurn bool // not serialisable
+	Stage             Stage
+	gamePlay          GamePlayState
+	ExpectedCommand   protocol.Cmd
+	gameOver          bool
+	unseenDecision    *protocol.InboundMessage
 }
 
 type ShedOpts struct {
 	Deck            deck.Deck
 	Pile            []deck.Card
 	PlayerCards     map[string]*PlayerCards
-	PlayerInfo      []protocol.Player
+	Player          []protocol.Player
 	FinishedPlayers []protocol.Player
 	CurrentPlayer   protocol.Player
 	Stage           Stage
@@ -79,7 +79,6 @@ func NewShed(opts ShedOpts) *shed {
 			ActivePlayers:   []protocol.Player{},
 			FinishedPlayers: []protocol.Player{},
 		}
-		s.NextPlayer = s.nextPlayer
 		return s
 	}
 
@@ -87,7 +86,7 @@ func NewShed(opts ShedOpts) *shed {
 		Deck:            opts.Deck,
 		Pile:            opts.Pile,
 		PlayerCards:     opts.PlayerCards,
-		PlayerInfo:      opts.PlayerInfo,
+		PlayerInfo:      opts.Player,
 		FinishedPlayers: opts.FinishedPlayers,
 		CurrentPlayer:   opts.CurrentPlayer,
 		Stage:           opts.Stage,
@@ -122,23 +121,21 @@ func NewShed(opts ShedOpts) *shed {
 		s.ActivePlayers = []protocol.Player{}
 		s.FinishedPlayers = []protocol.Player{}
 	} else if s.FinishedPlayers == nil {
-		s.PlayerInfo = opts.PlayerInfo
-		s.ActivePlayers = opts.PlayerInfo
+		s.PlayerInfo = opts.Player
+		s.ActivePlayers = opts.Player
 	} else {
 		// work out who is still playing the game
 		stillPlaying := []protocol.Player{}
-		for _, pi := range opts.PlayerInfo {
+		for _, pi := range opts.Player {
 			for _, fp := range opts.FinishedPlayers {
 				if fp.PlayerID != pi.PlayerID {
 					stillPlaying = append(stillPlaying, pi)
 				}
 			}
 		}
-		s.PlayerInfo = opts.PlayerInfo
+		s.PlayerInfo = opts.Player
 		s.ActivePlayers = stillPlaying
 	}
-
-	s.NextPlayer = s.nextPlayer
 
 	return s
 }
@@ -165,6 +162,7 @@ func (s *shed) Start(playerInfo []protocol.Player) error {
 	s.PlayerInfo = playerInfo
 	s.ActivePlayers = s.PlayerInfo
 
+	// initial card deal
 	for _, info := range playerInfo {
 		playerCards := NewPlayerCards(
 			s.Deck.Deal(numCardsInGroup),
@@ -369,7 +367,7 @@ func (s *shed) ReceiveResponse(inboundMsgs []protocol.InboundMessage) ([]protoco
 			s.ExpectedCommand = protocol.ReplenishHand
 			return msgs, nil
 
-		case protocol.ReplenishHand:
+		case protocol.ReplenishHand: // ack
 			// If deck is empty, switch to stage 2
 			if len(s.Deck) == 0 {
 				s.Stage = clearCards

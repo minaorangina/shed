@@ -61,8 +61,8 @@ const (
 	ReplenishHand // might disappear if EndOfTurn is better
 	Turn
 	EndOfTurn
-	SkipTurn
-	Burn
+	SkipTurn // two way (outbound and ack)
+	Burn     // two way (outbound and ack)
 	UnseenSuccess
 	UnseenFailure
 	PlayerFinished

@@ -37,14 +37,27 @@ func TestGameTurn(t *testing.T) {
 			players[id] = &PlayerCards{}
 		}
 
-		game := NewShed(ShedOpts{Deck: deck.New(), PlayerCards: players, PlayerInfo: playerInfo})
+		game := NewShed(ShedOpts{Deck: deck.New(), PlayerCards: players, Player: playerInfo})
 
 		return randomNumberOfPlayers, game
 	}
 
+	t.Run("selects next player", func(t *testing.T) {
+		_, game := gameWithRandomPlayers()
+		currentTurnIdxAtStart := game.CurrentTurnIdx
+		playerAtStart := game.CurrentPlayer
+
+		game.turn()
+
+		utils.AssertEqual(t, game.CurrentTurnIdx, currentTurnIdxAtStart+1)
+		utils.AssertEqual(t, game.CurrentPlayer.PlayerID, "player-1")
+		utils.AssertNotDeepEqual(t, playerAtStart, game.CurrentPlayer)
+	})
+
 	t.Run("turns loop back through all players", func(t *testing.T) {
 		numPlayers, game := gameWithRandomPlayers()
 		currentTurnIdxAtStart := game.CurrentTurnIdx
+		playerAtStart := game.CurrentPlayer
 
 		for i := 0; i < numPlayers; i++ {
 			game.turn()
@@ -53,7 +66,7 @@ func TestGameTurn(t *testing.T) {
 		utils.AssertEqual(t, game.CurrentTurnIdx, currentTurnIdxAtStart)
 		utils.AssertEqual(t, game.CurrentPlayer, game.ActivePlayers[game.CurrentTurnIdx])
 
-		assert.NotEqual(t, game.CurrentPlayer, game.NextPlayer())
+		assert.NotEqual(t, playerAtStart, game.CurrentPlayer)
 
 		for i := 0; i < numPlayers+1; i++ {
 			game.turn()
@@ -62,52 +75,6 @@ func TestGameTurn(t *testing.T) {
 		utils.AssertEqual(t, game.CurrentTurnIdx, currentTurnIdxAtStart+1)
 		utils.AssertEqual(t, game.CurrentPlayer.PlayerID, "player-1")
 	})
-}
-
-func TestNewShed(t *testing.T) {
-	t.Run("game with no options sets up correctly", func(t *testing.T) {
-		t.Log("Given a new game")
-		game := NewShed(ShedOpts{})
-		playerInfo := fourPlayers()
-
-		t.Log("When the game starts")
-		err := game.Start(playerInfo)
-
-		utils.AssertNoError(t, err)
-
-		t.Log("Then the players are initiated correctly")
-		utils.AssertTrue(t, len(game.PlayerInfo) > 1)
-		utils.AssertTrue(t, len(game.ActivePlayers) == len(game.PlayerInfo))
-		utils.AssertNotEmptyString(t, game.CurrentPlayer.PlayerID)
-
-		t.Log("And the game is in the correct gameplay state")
-		assert.Equal(t, gameStarted, game.gamePlay)
-		assert.False(t, game.GameOver())
-
-		t.Log("And players' cards are set correctly")
-		for _, p := range game.PlayerCards {
-			utils.AssertEqual(t, len(p.UnseenVisibility), 3)
-		}
-
-		for _, info := range playerInfo {
-			id := info.PlayerID
-			playerCards := game.PlayerCards[id]
-			utils.AssertEqual(t, len(playerCards.Hand), 3)
-			utils.AssertEqual(t, len(playerCards.Seen), 3)
-			utils.AssertEqual(t, len(playerCards.Unseen), 3)
-		}
-	})
-
-	t.Run("existing game must have players", func(t *testing.T) {
-		tf := func() {
-			NewShed(ShedOpts{Pile: someDeck(6)})
-		}
-		assert.Panics(t, tf)
-	})
-
-	// t.Run("game with options sets up correctly", func(t *testing.T) {
-
-	// })
 }
 
 func TestGameNext(t *testing.T) {
@@ -162,7 +129,7 @@ func TestGameNext(t *testing.T) {
 	})
 
 	t.Run("last card on Deck: stage switches", func(t *testing.T) {
-		t.SkipNow()
+		// t.SkipNow()
 		// Given a game in stage 1
 		// with a low-value card on the pile and one card left on the deck
 		lowValueCard := deck.NewCard(deck.Four, deck.Hearts)
@@ -172,7 +139,7 @@ func TestGameNext(t *testing.T) {
 			Stage:         clearDeck,
 			Deck:          someDeck(1),
 			Pile:          pile,
-			PlayerInfo:    twoPlayers(),
+			Player:        twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": somePlayerCards(3),
@@ -187,6 +154,9 @@ func TestGameNext(t *testing.T) {
 		utils.AssertEqual(t, game.AwaitingResponse(), protocol.PlayHand)
 
 		utils.AssertEqual(t, msgs[0].PlayerID, game.CurrentPlayer.PlayerID)
+		// Then the outbound message updates the next player
+		// this could fail if the
+		utils.AssertEqual(t, msgs[0].NextTurn.PlayerID, twoPlayers()[1].PlayerID)
 
 		playerMoves := msgs[0].Moves
 		utils.AssertTrue(t, len(playerMoves) > 0)
@@ -406,7 +376,7 @@ func TestGameBurn(t *testing.T) {
 					deck.NewCard(deck.Seven, deck.Clubs),
 					deck.NewCard(deck.Four, deck.Spades),
 				},
-				PlayerInfo:    ps1,
+				Player:        ps1,
 				CurrentPlayer: ps1[1],
 				PlayerCards: map[string]*PlayerCards{
 					"p1": somePlayerCards(3),
@@ -434,7 +404,7 @@ func TestGameBurn(t *testing.T) {
 					deck.NewCard(deck.Six, deck.Spades),
 					deck.NewCard(deck.Six, deck.Clubs),
 				},
-				PlayerInfo:    ps2,
+				Player:        ps2,
 				CurrentPlayer: ps2[0],
 				PlayerCards: map[string]*PlayerCards{
 					"p1": {
@@ -506,7 +476,7 @@ func TestGameBurn(t *testing.T) {
 			Stage:         clearCards,
 			Deck:          []deck.Card{},
 			Pile:          []deck.Card{deck.NewCard(deck.Four, deck.Diamonds)},
-			PlayerInfo:    ps3,
+			Player:        ps3,
 			CurrentPlayer: ps3[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": NewPlayerCards(nil, nil, []deck.Card{
