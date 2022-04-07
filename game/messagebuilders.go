@@ -13,7 +13,7 @@ func (s *shed) buildBaseMessage(playerID string) protocol.OutboundMessage {
 	return protocol.OutboundMessage{
 		PlayerID:    playerID,
 		CurrentTurn: s.CurrentPlayer,
-		NextTurn:    s.CurrentPlayer, // TODO: make this right
+		NextTurn:    s.nextPlayer(),
 		Hand:        playerCards.Hand,
 		Seen:        playerCards.Seen,
 		Unseen:      publicUnseen,
