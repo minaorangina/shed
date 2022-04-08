@@ -8,7 +8,6 @@ import (
 )
 
 func TestBuildBaseMessage(t *testing.T) {
-	shed := NewShed(ShedOpts{})
 	players := []protocol.Player{
 		{
 			PlayerID: "1",
@@ -19,7 +18,7 @@ func TestBuildBaseMessage(t *testing.T) {
 			Name:     "Helena",
 		},
 	}
-	err := shed.Start(players)
+	shed, err := NewShed(players)
 	require.NoError(t, err)
 
 	msgs, err := shed.Next()

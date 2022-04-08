@@ -143,7 +143,7 @@ func newActiveGame(gameID, playerID string, ps engine.Players) map[string]engine
 		CreatorID: playerID,
 		Players:   ps,
 		PlayState: engine.InProgress,
-		Game:      game.NewShed(game.ShedOpts{}),
+		Game:      game.ExistingShed(game.ShedOpts{}),
 	})
 	return map[string]engine.GameEngine{gameID: game}
 }
@@ -153,7 +153,7 @@ func NewInactiveGame(gameID, playerID string, ps engine.Players) map[string]engi
 		GameID:    gameID,
 		CreatorID: playerID,
 		Players:   ps,
-		Game:      game.NewShed(game.ShedOpts{}),
+		Game:      game.ExistingShed(game.ShedOpts{}),
 	})
 	return map[string]engine.GameEngine{gameID: game}
 }

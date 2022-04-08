@@ -11,11 +11,8 @@ import (
 
 func TestGameStageZero(t *testing.T) {
 	t.Run("players asked to reorganise their hand", func(t *testing.T) {
-		t.Log("Given a new game")
-		game := NewShed(ShedOpts{})
-
-		t.Log("When the game starts")
-		err := game.Start(threePlayers())
+		t.Log("When a new game starts")
+		game, err := NewShed(threePlayers())
 		utils.AssertNoError(t, err)
 
 		msgs, err := game.Next()
@@ -34,11 +31,10 @@ func TestGameStageZero(t *testing.T) {
 
 	t.Run("reorganised cards handled correctly", func(t *testing.T) {
 		t.Log("Given a new game")
-		game := NewShed(ShedOpts{})
-
-		t.Log("When the game has started and Next is called")
-		err := game.Start(threePlayers())
+		game, err := NewShed(threePlayers())
 		utils.AssertNoError(t, err)
+
+		t.Log("When Next is called")
 		_, err = game.Next()
 		utils.AssertNoError(t, err)
 
@@ -100,7 +96,7 @@ func TestGameStageZero(t *testing.T) {
 
 func TestGameStageZeroToOne(t *testing.T) {
 	// Given a new game
-	game := NewShed(ShedOpts{})
+	game := ExistingShed(ShedOpts{})
 
 	// When the game has started and Next is called
 	err := game.Start(twoPlayers())
@@ -202,11 +198,11 @@ func TestGameStageOne(t *testing.T) {
 
 		pc := NewPlayerCards(hand, nil, nil, nil)
 
-		game := NewShed(ShedOpts{
+		game := ExistingShed(ShedOpts{
 			Stage:         clearDeck,
 			Deck:          someDeck(4),
 			Pile:          pile,
-			Player:        twoPlayers(),
+			Players:       twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -290,11 +286,11 @@ func TestGameStageOne(t *testing.T) {
 
 		pc := NewPlayerCards(hand, nil, nil, nil)
 
-		game := NewShed(ShedOpts{
+		game := ExistingShed(ShedOpts{
 			Stage:         clearDeck,
 			Deck:          someDeck(4),
 			Pile:          pile,
-			Player:        twoPlayers(),
+			Players:       twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -374,11 +370,11 @@ func TestGameStageOne(t *testing.T) {
 		// And a player with two cards of the same value in their hand
 		pc := NewPlayerCards(append(targetCards, deck.NewCard(deck.Eight, deck.Hearts)), nil, nil, nil)
 
-		game := NewShed(ShedOpts{
+		game := ExistingShed(ShedOpts{
 			Stage:         clearDeck,
 			Deck:          someDeck(4),
 			Pile:          pile,
-			Player:        twoPlayers(),
+			Players:       twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -439,11 +435,11 @@ func TestGameStageOne(t *testing.T) {
 			nil, nil, nil,
 		)
 
-		game := NewShed(ShedOpts{
+		game := ExistingShed(ShedOpts{
 			Stage:         clearDeck,
 			Deck:          someDeck(4),
 			Pile:          pile,
-			Player:        twoPlayers(),
+			Players:       twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -509,11 +505,11 @@ func TestGameStageOne(t *testing.T) {
 			deck.NewCard(deck.Six, deck.Diamonds),
 		}
 
-		game := NewShed(ShedOpts{
+		game := ExistingShed(ShedOpts{
 			Stage:         clearDeck,
 			Deck:          someDeck(4),
 			Pile:          []deck.Card{highValueCard},
-			Player:        twoPlayers(),
+			Players:       twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": {Hand: deck.Deck(lowValueCards)},
@@ -581,11 +577,11 @@ func TestGameStageOne(t *testing.T) {
 			nil, nil, nil,
 		)
 
-		game := NewShed(ShedOpts{
+		game := ExistingShed(ShedOpts{
 			Stage:         clearDeck,
 			Deck:          someDeck(1),
 			Pile:          []deck.Card{lowValueCard},
-			Player:        twoPlayers(),
+			Players:       twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -659,11 +655,11 @@ func TestGameStageOne(t *testing.T) {
 			nil, nil, nil,
 		)
 
-		game := NewShed(ShedOpts{
+		game := ExistingShed(ShedOpts{
 			Stage:         clearDeck,
 			Deck:          someDeck(1),
 			Pile:          []deck.Card{lowValueCard},
-			Player:        twoPlayers(),
+			Players:       twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -721,11 +717,11 @@ func TestGameStageTwo(t *testing.T) {
 			nil, nil, nil,
 		)
 
-		game := NewShed(ShedOpts{
+		game := ExistingShed(ShedOpts{
 			Stage:         clearCards,
 			Deck:          deck.Deck{},
 			Pile:          pile,
-			Player:        twoPlayers(),
+			Players:       twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -795,11 +791,11 @@ func TestGameStageTwo(t *testing.T) {
 			someCards(3),
 			nil,
 		)
-		game := NewShed(ShedOpts{
+		game := ExistingShed(ShedOpts{
 			Stage:         clearCards,
 			Deck:          deck.Deck{},
 			Pile:          pile,
-			Player:        twoPlayers(),
+			Players:       twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -889,11 +885,11 @@ func TestGameStageTwo(t *testing.T) {
 			nil, nil,
 		)
 
-		game := NewShed(ShedOpts{
+		game := ExistingShed(ShedOpts{
 			Stage:         clearCards,
 			Deck:          deck.Deck{},
 			Pile:          pile,
-			Player:        twoPlayers(),
+			Players:       twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -967,11 +963,11 @@ func TestGameStageTwo(t *testing.T) {
 			},
 		)
 
-		game := NewShed(ShedOpts{
+		game := ExistingShed(ShedOpts{
 			Stage:         clearCards,
 			Deck:          deck.Deck{},
 			Pile:          pile,
-			Player:        twoPlayers(),
+			Players:       twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -1062,11 +1058,11 @@ func TestGameStageTwo(t *testing.T) {
 			},
 		)
 
-		game := NewShed(ShedOpts{
+		game := ExistingShed(ShedOpts{
 			Stage:         clearCards,
 			Deck:          deck.Deck{},
 			Pile:          pile,
-			Player:        twoPlayers(),
+			Players:       twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -1151,11 +1147,11 @@ func TestGameStageTwo(t *testing.T) {
 		// And a player with one remaining Unseen card
 		pc := NewPlayerCards(nil, nil, []deck.Card{highValueCard}, nil)
 
-		game := NewShed(ShedOpts{
+		game := ExistingShed(ShedOpts{
 			Stage:         clearCards,
 			Deck:          deck.Deck{},
 			Pile:          pile,
-			Player:        threePlayers(),
+			Players:       threePlayers(),
 			CurrentPlayer: threePlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -1226,11 +1222,11 @@ func TestGameStageTwo(t *testing.T) {
 			nil, nil, nil,
 		)
 
-		game := NewShed(ShedOpts{
+		game := ExistingShed(ShedOpts{
 			Stage:         clearCards,
 			Deck:          deck.Deck{},
 			Pile:          pile,
-			Player:        threePlayers(),
+			Players:       threePlayers(),
 			CurrentPlayer: threePlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -1281,7 +1277,6 @@ func TestGameStageTwo(t *testing.T) {
 // this may not belong here
 func TestGameStageTwoToGameOver(t *testing.T) {
 	t.Run("stage 2: game ends when n-1 players have finished (Unseen card)", func(t *testing.T) {
-
 		// Given a game in stage 2
 		lowValueCard := deck.NewCard(deck.Four, deck.Spades)
 		highValueCard := deck.NewCard(deck.Ace, deck.Spades)
@@ -1290,11 +1285,11 @@ func TestGameStageTwoToGameOver(t *testing.T) {
 		// And a player with one remaining Unseen card
 		pc := NewPlayerCards(nil, nil, []deck.Card{highValueCard}, nil)
 
-		game := NewShed(ShedOpts{
+		game := ExistingShed(ShedOpts{
 			Stage:         clearCards,
 			Deck:          deck.Deck{},
 			Pile:          pile,
-			Player:        twoPlayers(),
+			Players:       twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,
@@ -1361,11 +1356,11 @@ func TestGameStageTwoToGameOver(t *testing.T) {
 		// And a player with one remaining Hand card
 		pc := NewPlayerCards([]deck.Card{highValueCard}, nil, nil, nil)
 
-		game := NewShed(ShedOpts{
+		game := ExistingShed(ShedOpts{
 			Stage:         clearCards,
 			Deck:          deck.Deck{},
 			Pile:          pile,
-			Player:        twoPlayers(),
+			Players:       twoPlayers(),
 			CurrentPlayer: twoPlayers()[0],
 			PlayerCards: map[string]*PlayerCards{
 				"p1": pc,

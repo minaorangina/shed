@@ -12,13 +12,9 @@ import (
 
 func TestNewShedNewGame(t *testing.T) {
 	t.Run("game with no options sets up correctly", func(t *testing.T) {
-		t.Log("Given a new game")
-		game := NewShed(ShedOpts{})
+		t.Log("When a new game is created")
 		playerInfo := fourPlayers()
-
-		t.Log("When the game starts")
-		err := game.Start(playerInfo)
-
+		game, err := NewShed(playerInfo)
 		utils.AssertNoError(t, err)
 
 		t.Log("Then the players are initiated correctly")
@@ -27,7 +23,7 @@ func TestNewShedNewGame(t *testing.T) {
 		utils.AssertNotEmptyString(t, game.CurrentPlayer.PlayerID)
 
 		t.Log("And the game is in the correct gameplay state")
-		assert.Equal(t, gameStarted, game.gamePlay)
+		assert.Equal(t, gameInProgress, game.gamePlay)
 		assert.False(t, game.GameOver())
 
 		t.Log("And players' cards are set correctly")
@@ -74,7 +70,7 @@ func TestNewShedExistingGame(t *testing.T) {
 					Deck:            d,
 					Pile:            nil,
 					PlayerCards:     cards,
-					Player:          plrs,
+					Players:         plrs,
 					FinishedPlayers: nil,
 					CurrentPlayer:   plrs[0],
 					Stage:           clearDeck,
@@ -106,7 +102,7 @@ func TestNewShedExistingGame(t *testing.T) {
 					Deck:            d,
 					Pile:            nil,
 					PlayerCards:     cards,
-					Player:          plrs,
+					Players:         plrs,
 					FinishedPlayers: nil,
 					CurrentPlayer:   plrs[0],
 					Stage:           clearDeck,
@@ -119,7 +115,7 @@ func TestNewShedExistingGame(t *testing.T) {
 	for _, tc := range shouldSucceed {
 		t.Run(tc.name, func(t *testing.T) {
 			internal.ShouldNotPanic(t, func() {
-				NewShed(tc.gameOpts())
+				ExistingShed(tc.gameOpts())
 			})
 		})
 	}
@@ -134,7 +130,7 @@ func TestNewShedExistingGameFailures(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			internal.ShouldPanic(t, func() {
-				NewShed(tc.gameOpts())
+				ExistingShed(tc.gameOpts())
 			})
 		})
 	}

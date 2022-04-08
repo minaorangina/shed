@@ -1,6 +1,6 @@
 package game
 
-// Stage represents the main stages in the game
+// Stage represents the game-specific stages.
 type Stage int
 
 const (
@@ -9,11 +9,11 @@ const (
 	clearCards // should I add a 'finished' stage?
 )
 
+// GamePlayState describes the current state of game play, i.e. game in progress or game over
 type GamePlayState int
 
 const (
-	gameNotStarted GamePlayState = iota
-	gameStarted
+	gameInProgress GamePlayState = iota
 	gameOver
 )
 

@@ -23,7 +23,7 @@ var (
 	ErrInvalidMove            = errors.New("invalid move")
 	ErrPlayOneCard            = errors.New("must play one card only")
 	ErrInvalidGameState       = errors.New("invalid game state")
-	ErrGameNotStarted         = errors.New("game has not started")
+	ErrGameOver               = errors.New("game is already over")
 )
 
 const (
@@ -60,15 +60,57 @@ type ShedOpts struct {
 	Deck            deck.Deck
 	Pile            []deck.Card
 	PlayerCards     map[string]*PlayerCards
-	Player          []protocol.Player
+	Players         []protocol.Player
 	FinishedPlayers []protocol.Player
 	CurrentPlayer   protocol.Player
 	Stage           Stage
+	State           GamePlayState
 	ExpectedCommand protocol.Cmd
 }
 
 // NewShed constructs a new game of Shed
-func NewShed(opts ShedOpts) *shed {
+func NewShed(playerInfo []protocol.Player) (*shed, error) {
+	if len(playerInfo) < minPlayers {
+		return nil, ErrTooFewPlayers
+	}
+	if len(playerInfo) > maxPlayers {
+		return nil, ErrTooManyPlayers
+	}
+
+	s := &shed{
+		Deck:            deck.New(),
+		Pile:            []deck.Card{},
+		PlayerCards:     map[string]*PlayerCards{},
+		PlayerInfo:      []protocol.Player{},
+		ActivePlayers:   []protocol.Player{},
+		FinishedPlayers: []protocol.Player{},
+	}
+
+	s.PlayerInfo = playerInfo
+	s.ActivePlayers = s.PlayerInfo
+
+	// initial card deal
+	for _, info := range playerInfo {
+		playerCards := NewPlayerCards(
+			s.Deck.Deal(numCardsInGroup),
+			s.Deck.Deal(numCardsInGroup),
+			s.Deck.Deal(numCardsInGroup),
+			nil,
+		)
+		s.PlayerCards[info.PlayerID] = playerCards
+	}
+
+	rand.Seed(time.Now().UnixNano())
+	s.CurrentTurnIdx = rand.Intn(len(s.PlayerInfo) - 1)
+	s.CurrentPlayer = s.ActivePlayers[s.CurrentTurnIdx]
+
+	s.gamePlay = gameInProgress
+
+	return s, nil
+}
+
+// ExistingShed constructs an existing game of Shed
+func ExistingShed(opts ShedOpts) *shed {
 	if reflect.ValueOf(opts).IsZero() {
 		// new game flow
 		s := &shed{
@@ -86,11 +128,13 @@ func NewShed(opts ShedOpts) *shed {
 		Deck:            opts.Deck,
 		Pile:            opts.Pile,
 		PlayerCards:     opts.PlayerCards,
-		PlayerInfo:      opts.Player,
+		PlayerInfo:      opts.Players,
 		FinishedPlayers: opts.FinishedPlayers,
 		CurrentPlayer:   opts.CurrentPlayer,
 		Stage:           opts.Stage,
+		gamePlay:        opts.State,
 		ExpectedCommand: opts.ExpectedCommand,
+		gameOver:        opts.State == gameOver,
 	}
 
 	// if existing game, check it's valid, set to gameStarted
@@ -121,21 +165,25 @@ func NewShed(opts ShedOpts) *shed {
 		s.ActivePlayers = []protocol.Player{}
 		s.FinishedPlayers = []protocol.Player{}
 	} else if s.FinishedPlayers == nil {
-		s.PlayerInfo = opts.Player
-		s.ActivePlayers = opts.Player
+		s.PlayerInfo = opts.Players
+		activePlayers := make([]protocol.Player, len(opts.Players)-len(opts.FinishedPlayers))
+		copy(activePlayers, opts.Players)
+		s.ActivePlayers = activePlayers
 	} else {
 		// work out who is still playing the game
 		stillPlaying := []protocol.Player{}
-		for _, pi := range opts.Player {
+		for _, pi := range opts.Players {
 			for _, fp := range opts.FinishedPlayers {
 				if fp.PlayerID != pi.PlayerID {
 					stillPlaying = append(stillPlaying, pi)
 				}
 			}
 		}
-		s.PlayerInfo = opts.Player
+		s.PlayerInfo = opts.Players
 		s.ActivePlayers = stillPlaying
 	}
+
+	s.gamePlay = gameInProgress
 
 	return s
 }
@@ -177,7 +225,7 @@ func (s *shed) Start(playerInfo []protocol.Player) error {
 	s.CurrentTurnIdx = rand.Intn(len(s.PlayerInfo) - 1)
 	s.CurrentPlayer = s.ActivePlayers[s.CurrentTurnIdx]
 
-	s.gamePlay = gameStarted
+	s.gamePlay = gameInProgress
 
 	return nil
 }
@@ -192,7 +240,7 @@ func (s *shed) Next() ([]protocol.OutboundMessage, error) {
 	if s.ExpectedCommand != protocol.Null {
 		return nil, ErrGameAwaitingResponse
 	}
-	if s.gameOver {
+	if s.gameOver || s.gamePlay == gameOver { // TODO: consolidate
 		return s.buildGameOverMessages(), nil
 	}
 
@@ -263,10 +311,7 @@ func (s *shed) ReceiveResponse(inboundMsgs []protocol.InboundMessage) ([]protoco
 	if s.ExpectedCommand == protocol.Null {
 		return nil, ErrGameUnexpectedResponse
 	}
-	if s.gamePlay == gameNotStarted {
-		return nil, ErrGameNotStarted
-	}
-	if s.gamePlay == gameOver {
+	if s.gamePlay == gameOver || s.gameOver == true { //todo: consolidate
 		return s.buildGameOverMessages(), nil
 	}
 
@@ -570,6 +615,10 @@ func (s *shed) onePlayerLeft() bool {
 
 // nextPlayer returns the player who is next in line behind the current player.
 func (s *shed) nextPlayer() protocol.Player {
+	// Return empty player if there are no players left (for game over message)
+	if len(s.ActivePlayers) == 0 {
+		return protocol.Player{}
+	}
 	idx := (s.CurrentTurnIdx + 1) % len(s.ActivePlayers)
 	return s.ActivePlayers[idx]
 }
@@ -585,6 +634,7 @@ func (s *shed) moveToFinishedPlayers() {
 	if len(s.ActivePlayers) == 1 {
 		s.FinishedPlayers = append(s.FinishedPlayers, s.ActivePlayers[0])
 		s.ActivePlayers = []protocol.Player{}
+		// zero out CurrentPlayer?
 		return
 	}
 
